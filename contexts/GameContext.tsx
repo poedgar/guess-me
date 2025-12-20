@@ -11,6 +11,9 @@ export interface Game {
   participants: Participant[];
   createdAt: any;
   status: 'waiting' | 'active' | 'finished';
+  currentRound?: Round;
+  rounds?: Round[];
+  scores?: { [userId: string]: number };
 }
 
 export interface Participant {
@@ -18,6 +21,25 @@ export interface Participant {
   userName: string;
   userEmail: string;
   joinedAt: any;
+  totalPoints?: number;
+}
+
+export interface Round {
+  roundNumber: number;
+  targetUserId: string;
+  targetUserName: string;
+  comments: Comment[];
+  commentsVisible: boolean;
+  pointsGiven: boolean;
+  startedAt: any;
+}
+
+export interface Comment {
+  id: string;
+  authorId: string;
+  text: string;
+  submittedAt: any;
+  points?: number;
 }
 
 interface GameContextType {
@@ -27,6 +49,11 @@ interface GameContextType {
   joinGame: (gameId: string) => Promise<void>;
   leaveGame: () => Promise<void>;
   refreshGame: (gameId: string) => Promise<void>;
+  startGame: () => Promise<void>;
+  submitComment: (commentText: string) => Promise<void>;
+  showComments: () => Promise<void>;
+  givePoints: (commentId: string, points: number) => Promise<void>;
+  startNextRound: () => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -214,6 +241,261 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  // Helper function to randomly select a participant (excluding admin)
+  const selectRandomParticipant = (participants: Participant[], adminId: string): Participant | null => {
+    const nonAdminParticipants = participants.filter(p => p.userId !== adminId);
+    if (nonAdminParticipants.length === 0) return null;
+    const randomIndex = Math.floor(Math.random() * nonAdminParticipants.length);
+    return nonAdminParticipants[randomIndex];
+  };
+
+  const startGame = async (): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can start the game');
+    }
+
+    if (currentGame.participants.length < 2) {
+      throw new Error('Need at least 2 participants to start the game');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      
+      // Select random participant (excluding admin)
+      const target = selectRandomParticipant(currentGame.participants, currentGame.adminId);
+      if (!target) {
+        throw new Error('No valid participants to select');
+      }
+
+      const round: Round = {
+        roundNumber: 1,
+        targetUserId: target.userId,
+        targetUserName: target.userName,
+        comments: [],
+        commentsVisible: false,
+        pointsGiven: false,
+        startedAt: new Date(),
+      };
+
+      await updateDoc(gameRef, {
+        status: 'active',
+        currentRound: round,
+        rounds: [round],
+        scores: {},
+      });
+    } catch (error: any) {
+      console.error('Error starting game:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitComment = async (commentText: string): Promise<void> => {
+    if (!currentGame || !user || !currentGame.currentRound) {
+      throw new Error('No active round');
+    }
+
+    if (user.uid === currentGame.currentRound.targetUserId) {
+      throw new Error('You cannot comment about yourself');
+    }
+
+    if (!commentText.trim()) {
+      throw new Error('Comment cannot be empty');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      
+      if (!gameDoc.exists()) {
+        throw new Error('Game not found');
+      }
+
+      const gameData = gameDoc.data() as Game;
+      const currentRound = gameData.currentRound;
+      
+      if (!currentRound) {
+        throw new Error('No active round');
+      }
+
+      // Check if user already submitted a comment
+      const existingComment = currentRound.comments?.find(c => c.authorId === user.uid);
+      if (existingComment) {
+        throw new Error('You have already submitted a comment for this round');
+      }
+
+      const newComment: Comment = {
+        id: `${Date.now()}-${user.uid}`,
+        authorId: user.uid,
+        text: commentText.trim(),
+        submittedAt: new Date(),
+      };
+
+      const updatedComments = [...(currentRound.comments || []), newComment];
+
+      await updateDoc(gameRef, {
+        'currentRound.comments': updatedComments,
+      });
+    } catch (error: any) {
+      console.error('Error submitting comment:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showComments = async (): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can show comments');
+    }
+
+    if (!currentGame.currentRound) {
+      throw new Error('No active round');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      
+      await updateDoc(gameRef, {
+        'currentRound.commentsVisible': true,
+      });
+    } catch (error: any) {
+      console.error('Error showing comments:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const givePoints = async (commentId: string, points: number): Promise<void> => {
+    if (!currentGame || !user || !currentGame.currentRound) {
+      throw new Error('No active round');
+    }
+
+    if (user.uid !== currentGame.currentRound.targetUserId) {
+      throw new Error('Only the target person can give points');
+    }
+
+    if (currentGame.currentRound.pointsGiven) {
+      throw new Error('Points have already been given for this round');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      
+      if (!gameDoc.exists()) {
+        throw new Error('Game not found');
+      }
+
+      const gameData = gameDoc.data() as Game;
+      const currentRound = gameData.currentRound;
+      
+      if (!currentRound) {
+        throw new Error('No active round');
+      }
+
+      // Find the comment and update it with points
+      const updatedComments = currentRound.comments.map(comment => {
+        if (comment.id === commentId) {
+          return { ...comment, points };
+        }
+        return comment;
+      });
+
+      // Update scores
+      const comment = updatedComments.find(c => c.id === commentId);
+      if (comment) {
+        const currentScores = gameData.scores || {};
+        const authorCurrentScore = currentScores[comment.authorId] || 0;
+        const newScores = {
+          ...currentScores,
+          [comment.authorId]: authorCurrentScore + points,
+        };
+
+        await updateDoc(gameRef, {
+          'currentRound.comments': updatedComments,
+          'currentRound.pointsGiven': true,
+          scores: newScores,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error giving points:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startNextRound = async (): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can start the next round');
+    }
+
+    if (!currentGame.currentRound) {
+      throw new Error('No active round');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      
+      if (!gameDoc.exists()) {
+        throw new Error('Game not found');
+      }
+
+      const gameData = gameDoc.data() as Game;
+      const previousRounds = gameData.rounds || [];
+      const usedTargets = previousRounds.map(r => r.targetUserId);
+      
+      // Get participants who haven't been targets yet (excluding admin)
+      const availableParticipants = currentGame.participants.filter(
+        p => p.userId !== currentGame.adminId && !usedTargets.includes(p.userId)
+      );
+
+      if (availableParticipants.length === 0) {
+        // All participants have been targets, game finished
+        await updateDoc(gameRef, {
+          status: 'finished',
+          currentRound: null,
+        });
+        return;
+      }
+
+      // Select random participant from available ones
+      const randomIndex = Math.floor(Math.random() * availableParticipants.length);
+      const target = availableParticipants[randomIndex];
+
+      const nextRound: Round = {
+        roundNumber: previousRounds.length + 1,
+        targetUserId: target.userId,
+        targetUserName: target.userName,
+        comments: [],
+        commentsVisible: false,
+        pointsGiven: false,
+        startedAt: new Date(),
+      };
+
+      const updatedRounds = [...previousRounds, nextRound];
+      
+      await updateDoc(gameRef, {
+        currentRound: nextRound,
+        rounds: updatedRounds,
+      });
+    } catch (error: any) {
+      console.error('Error starting next round:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: GameContextType = {
     currentGame,
     loading,
@@ -221,6 +503,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     joinGame,
     leaveGame,
     refreshGame,
+    startGame,
+    submitComment,
+    showComments,
+    givePoints,
+    startNextRound,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

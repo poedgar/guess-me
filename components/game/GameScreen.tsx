@@ -15,15 +15,17 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/contexts/AuthContext';
-import { useGame, Participant } from '@/contexts/GameContext';
+import { useGame, Participant, Comment } from '@/contexts/GameContext';
 import * as Haptics from 'expo-haptics';
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
-  const { currentGame, loading, createGame, joinGame, leaveGame } = useGame();
+  const { currentGame, loading, createGame, joinGame, leaveGame, startGame, submitComment, showComments, givePoints, startNextRound } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -109,6 +111,70 @@ export const GameScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  const handleStartGame = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await startGame();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error.message || 'Failed to start game.');
+    }
+  };
+
+  const handleSubmitComment = async () => {
+    if (!commentText.trim()) {
+      Alert.alert('Error', 'Please enter a comment.');
+      return;
+    }
+
+    try {
+      setIsSubmittingComment(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await submitComment(commentText.trim());
+      setCommentText('');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error.message || 'Failed to submit comment.');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleShowComments = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await showComments();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error.message || 'Failed to show comments.');
+    }
+  };
+
+  const handleGivePoints = async (commentId: string, points: number) => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await givePoints(commentId, points);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error.message || 'Failed to give points.');
+    }
+  };
+
+  const handleStartNextRound = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await startNextRound();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error.message || 'Failed to start next round.');
+    }
   };
 
   const handleCopyGameId = () => {
@@ -206,6 +272,215 @@ export const GameScreen: React.FC = () => {
                   </View>
                 ))}
               </View>
+
+              {/* Game Flow UI */}
+              {currentGame.status === 'waiting' && (
+                <View style={styles.gameFlowContainer}>
+                  {isAdmin && (
+                    <TouchableOpacity
+                      style={[
+                        styles.startGameButton,
+                        {
+                          backgroundColor: '#4CAF50',
+                          shadowColor: '#000',
+                        },
+                        (loading || currentGame.participants.length < 2) && styles.buttonDisabled,
+                      ]}
+                      onPress={handleStartGame}
+                      disabled={loading || currentGame.participants.length < 2}
+                      activeOpacity={0.8}
+                    >
+                      <ThemedText style={styles.buttonText}>Start Game</ThemedText>
+                    </TouchableOpacity>
+                  )}
+                  {!isAdmin && (
+                    <ThemedText style={styles.waitingText}>
+                      Waiting for admin to start the game...
+                    </ThemedText>
+                  )}
+                </View>
+              )}
+
+              {currentGame.status === 'active' && currentGame.currentRound && (
+                <View style={styles.gameFlowContainer}>
+                  <View style={styles.roundInfo}>
+                    <ThemedText type="subtitle" style={styles.roundTitle}>
+                      Round {currentGame.currentRound.roundNumber}
+                    </ThemedText>
+                    <ThemedText style={styles.targetText}>
+                      Target: {currentGame.currentRound.targetUserName}
+                    </ThemedText>
+                  </View>
+
+                  {/* User is the target */}
+                  {user?.uid === currentGame.currentRound.targetUserId && (
+                    <View style={styles.targetView}>
+                      {!currentGame.currentRound.commentsVisible ? (
+                        <ThemedText style={styles.waitingText}>
+                          Waiting for others to write comments about you...
+                        </ThemedText>
+                      ) : (
+                        <View style={styles.commentsView}>
+                          <ThemedText type="subtitle" style={styles.commentsTitle}>
+                            Comments About You:
+                          </ThemedText>
+                          {currentGame.currentRound.comments?.map((comment: Comment) => (
+                            <View key={comment.id} style={styles.commentCard}>
+                              <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                              {!currentGame.currentRound?.pointsGiven && (
+                                <TouchableOpacity
+                                  style={styles.pointsButton}
+                                  onPress={() => handleGivePoints(comment.id, 1)}
+                                >
+                                  <ThemedText style={styles.pointsButtonText}>+1 Point</ThemedText>
+                                </TouchableOpacity>
+                              )}
+                              {comment.points !== undefined && (
+                                <ThemedText style={styles.pointsGivenText}>
+                                  Points given: {comment.points}
+                                </ThemedText>
+                              )}
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {/* User is not the target */}
+                  {user?.uid !== currentGame.currentRound.targetUserId && (
+                    <View style={styles.commentView}>
+                      {(() => {
+                        const userComment = currentGame.currentRound.comments?.find(
+                          (c: Comment) => c.authorId === user?.uid
+                        );
+                        
+                        if (!userComment) {
+                          // User hasn't submitted comment yet
+                          return (
+                            <View>
+                              <ThemedText style={styles.commentPrompt}>
+                                Write an anonymous comment about {currentGame.currentRound.targetUserName}:
+                              </ThemedText>
+                              <TextInput
+                                style={[
+                                  styles.commentInput,
+                                  {
+                                    backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
+                                    color: isDark ? Colors.dark.text : Colors.light.text,
+                                    borderColor: isDark ? '#444' : '#ddd',
+                                  },
+                                ]}
+                                placeholder="Your anonymous comment..."
+                                placeholderTextColor={isDark ? '#888' : '#999'}
+                                value={commentText}
+                                onChangeText={setCommentText}
+                                multiline
+                                numberOfLines={4}
+                                textAlignVertical="top"
+                              />
+                              <TouchableOpacity
+                                style={[
+                                  styles.submitCommentButton,
+                                  {
+                                    backgroundColor: '#4285F4',
+                                    shadowColor: '#000',
+                                  },
+                                  (!commentText.trim() || isSubmittingComment) && styles.buttonDisabled,
+                                ]}
+                                onPress={handleSubmitComment}
+                                disabled={!commentText.trim() || isSubmittingComment}
+                                activeOpacity={0.8}
+                              >
+                                {isSubmittingComment ? (
+                                  <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                  <ThemedText style={styles.buttonText}>Submit Comment</ThemedText>
+                                )}
+                              </TouchableOpacity>
+                            </View>
+                          );
+                        } else if (!currentGame.currentRound.commentsVisible) {
+                          // User submitted, waiting for admin
+                          return (
+                            <ThemedText style={styles.waitingText}>
+                              Comment submitted! Waiting for admin to show all comments...
+                            </ThemedText>
+                          );
+                        } else {
+                          // Comments are visible
+                          return (
+                            <View style={styles.commentsView}>
+                              <ThemedText type="subtitle" style={styles.commentsTitle}>
+                                All Comments:
+                              </ThemedText>
+                              {currentGame.currentRound.comments?.map((comment: Comment) => (
+                                <View key={comment.id} style={styles.commentCard}>
+                                  <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                                  {comment.points !== undefined && (
+                                    <ThemedText style={styles.pointsGivenText}>
+                                      Points: {comment.points}
+                                    </ThemedText>
+                                  )}
+                                </View>
+                              ))}
+                            </View>
+                          );
+                        }
+                      })()}
+                    </View>
+                  )}
+
+                  {/* Admin controls */}
+                  {isAdmin && (
+                    <View style={styles.adminControls}>
+                      {!currentGame.currentRound.commentsVisible && (
+                        <TouchableOpacity
+                          style={[
+                            styles.adminButton,
+                            {
+                              backgroundColor: '#FF9800',
+                              shadowColor: '#000',
+                            },
+                            (currentGame.currentRound.comments?.length || 0) < (currentGame.participants.length - 1) && styles.buttonDisabled,
+                          ]}
+                          onPress={handleShowComments}
+                          disabled={(currentGame.currentRound.comments?.length || 0) < (currentGame.participants.length - 1)}
+                          activeOpacity={0.8}
+                        >
+                          <ThemedText style={styles.buttonText}>Show Comments</ThemedText>
+                        </TouchableOpacity>
+                      )}
+                      {currentGame.currentRound.commentsVisible && currentGame.currentRound.pointsGiven && (
+                        <TouchableOpacity
+                          style={[
+                            styles.adminButton,
+                            {
+                              backgroundColor: '#4CAF50',
+                              shadowColor: '#000',
+                            },
+                          ]}
+                          onPress={handleStartNextRound}
+                          activeOpacity={0.8}
+                        >
+                          <ThemedText style={styles.buttonText}>Start Next Round</ThemedText>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {currentGame.status === 'finished' && (
+                <View style={styles.gameFlowContainer}>
+                  <ThemedText type="title" style={styles.finishedTitle}>
+                    Game Finished! 🎉
+                  </ThemedText>
+                  <ThemedText style={styles.finishedText}>
+                    All rounds completed. Check the scores!
+                  </ThemedText>
+                </View>
+              )}
 
               {/* Leave Game Button */}
               <TouchableOpacity
@@ -526,6 +801,157 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  gameFlowContainer: {
+    marginTop: 24,
+    marginBottom: 24,
+  },
+  startGameButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  waitingText: {
+    textAlign: 'center',
+    opacity: 0.7,
+    fontSize: 16,
+    marginVertical: 16,
+  },
+  roundInfo: {
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  roundTitle: {
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  targetText: {
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  targetView: {
+    marginBottom: 20,
+  },
+  commentView: {
+    marginBottom: 20,
+  },
+  commentPrompt: {
+    marginBottom: 12,
+    fontSize: 16,
+  },
+  commentInput: {
+    minHeight: 100,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    textAlignVertical: 'top',
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  submitCommentButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  commentsView: {
+    marginTop: 16,
+  },
+  commentsTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  commentCard: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    marginBottom: 12,
+  },
+  commentText: {
+    fontSize: 16,
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  pointsButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+    alignSelf: 'flex-start',
+  },
+  pointsButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pointsGivenText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4CAF50',
+    marginTop: 8,
+  },
+  adminControls: {
+    marginTop: 24,
+  },
+  adminButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  finishedTitle: {
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  finishedText: {
+    textAlign: 'center',
+    opacity: 0.7,
+    fontSize: 16,
   },
 });
 
