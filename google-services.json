@@ -1,0 +1,105 @@
+{
+  "project_info": {
+    "project_number": "841856303776",
+    "project_id": "spygame-2fce3",
+    "storage_bucket": "spygame-2fce3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:841856303776:android:531935ba2219901b573fc5",
+        "android_client_info": {
+          "package_name": "com.company.gardariki"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJ_cI59hNSEExTWOBp73Reu-7JHq7O_lA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:841856303776:android:6ef6afeebdfd5b7b573fc5",
+        "android_client_info": {
+          "package_name": "com.poedgar.bayka"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJ_cI59hNSEExTWOBp73Reu-7JHq7O_lA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:841856303776:android:37e96deb6f0a4461573fc5",
+        "android_client_info": {
+          "package_name": "com.psycho.play"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "841856303776-3pnnn0l1je2kti8mvdequisk1j2q3bfv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.psycho.play",
+            "certificate_hash": "d8480e632afa6130e3b90a12bddf1fcda140122e"
+          }
+        },
+        {
+          "client_id": "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJ_cI59hNSEExTWOBp73Reu-7JHq7O_lA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
