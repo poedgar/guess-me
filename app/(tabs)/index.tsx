@@ -28,11 +28,13 @@ const googleSignIn = async () => {
     console.log('googleSignIn');
     const response = await GoogleLogin();
 
-    // retrieve user data
-    const { idToken, user } = response.data ?? {};
+    const { idToken, user } = response;
+
     if (idToken) {
-      await processUserData(idToken, user); // Server call to validate the token & process the user data for signing In
+      console.log("Google user:", user);
+      // await processUserData(idToken, user); // if you create this
     }
+
   } catch (error) {
     console.log('Error', error);
   }
