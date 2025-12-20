@@ -9,7 +9,6 @@ GoogleSignin.configure({
   scopes: ['profile', 'email'], // what API you want to access on behalf of the user, default is email and profile
   offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
   forceCodeForRefreshToken: false,
-  // androidClientId: "726884000116-mfedbdu3fkb8knq3v6u8hequ0oab68s9.apps.googleusercontent.com",
 });
 
 const GoogleLogin = async () => {

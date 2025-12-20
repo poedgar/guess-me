@@ -1,12 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import {
-    getAuth,
-    GoogleAuthProvider,
-    signInWithPopup,
-    onAuthStateChanged,
-} from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDEXWXgE_Rx44YPhlnH7fIHMfHwmQsRQhI",
@@ -32,20 +27,6 @@ export const signInWithGoogle = () => {
             const profilePic = result.user.photoURL;
 
             console.log(email);
-
-            // axios
-            //     .post("https://auth.blobsandtrees.online/login-with-google", {
-            //         email: email,
-            //         name: name,
-            //     })
-            //     .then((data) => {
-            //         console.log(data);
-            //         router.push("/GameLobby");
-            //     })
-            //     .catch((error) => {
-            //         console.log(error);
-            //         // Handle error response
-            //     });
         })
         .catch((error) => {
             console.log(error);
