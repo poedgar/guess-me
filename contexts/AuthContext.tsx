@@ -1,0 +1,101 @@
+import { auth } from '@/config/firebase';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, User } from 'firebase/auth';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  signIn: () => Promise<void>;
+  signOut: () => Promise<void>;
+  isSignedIn: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Configure Google Sign-In
+    GoogleSignin.configure({
+      webClientId: "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+      scopes: ['profile', 'email'],
+      offlineAccess: true,
+      forceCodeForRefreshToken: false,
+    });
+
+    // Listen to auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const signIn = async () => {
+    try {
+      setLoading(true);
+      // Check if device has Google Play Services
+      await GoogleSignin.hasPlayServices();
+      
+      // Get user info from Google Sign-In
+      const response = await GoogleSignin.signIn();
+      // Handle different response structures (v16+ uses data property)
+      const idToken = (response as any).data?.idToken || (response as any).idToken;
+      
+      if (!idToken) {
+        throw new Error('No ID token received from Google Sign-In');
+      }
+      
+      // Create a Google credential with the token
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+      
+      // Sign in the user with the credential
+      await signInWithCredential(auth, googleCredential);
+    } catch (error: any) {
+      console.error('Sign-in error:', error);
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      setLoading(true);
+      // Sign out from Firebase
+      await firebaseSignOut(auth);
+      // Sign out from Google Sign-In
+      await GoogleSignin.signOut();
+    } catch (error: any) {
+      console.error('Sign-out error:', error);
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    loading,
+    signIn,
+    signOut,
+    isSignedIn: !!user,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
