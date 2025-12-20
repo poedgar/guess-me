@@ -451,7 +451,28 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
 
       const gameData = gameDoc.data() as Game;
-      const previousRounds = gameData.rounds || [];
+      const currentRoundData = gameData.currentRound;
+      let previousRounds = gameData.rounds || [];
+      
+      // Save the current round as completed to the rounds array
+      if (currentRoundData && currentRoundData.commentsVisible && currentRoundData.pointsGiven) {
+        const completedRound: Round = {
+          ...currentRoundData,
+          commentsVisible: true,
+          pointsGiven: true,
+        };
+        
+        // Check if this round already exists in the rounds array
+        const roundIndex = previousRounds.findIndex(r => r.roundNumber === currentRoundData.roundNumber);
+        if (roundIndex >= 0) {
+          // Update existing round with completed state (preserve all data)
+          previousRounds[roundIndex] = completedRound;
+        } else {
+          // Add new completed round to the array
+          previousRounds = [...previousRounds, completedRound];
+        }
+      }
+      
       const usedTargets = previousRounds.map(r => r.targetUserId);
       
       // Get participants who haven't been targets yet (excluding admin)
@@ -461,9 +482,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
       if (availableParticipants.length === 0) {
         // All participants have been targets, game finished
+        // Make sure current round is saved as completed
         await updateDoc(gameRef, {
           status: 'finished',
           currentRound: null,
+          rounds: previousRounds, // Save all completed rounds
         });
         return;
       }
@@ -482,11 +505,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         startedAt: new Date(),
       };
 
-      const updatedRounds = [...previousRounds, nextRound];
-      
       await updateDoc(gameRef, {
         currentRound: nextRound,
-        rounds: updatedRounds,
+        rounds: previousRounds, // Save all completed rounds (without the new round yet)
       });
     } catch (error: any) {
       console.error('Error starting next round:', error);

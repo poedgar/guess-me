@@ -1,22 +1,22 @@
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { Comment, Participant, Round, useGame } from '@/contexts/GameContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Clipboard,
+  Platform,
+  ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Platform,
-  Clipboard,
+  View,
 } from 'react-native';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuth } from '@/contexts/AuthContext';
-import { useGame, Participant, Comment } from '@/contexts/GameContext';
-import * as Haptics from 'expo-haptics';
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
@@ -273,6 +273,59 @@ export const GameScreen: React.FC = () => {
                 ))}
               </View>
 
+              {/* Scores/Leaderboard */}
+              {(currentGame.status === 'active' || currentGame.status === 'finished') && currentGame.scores && (
+                <View style={styles.scoresContainer}>
+                  <ThemedText type="subtitle" style={styles.scoresTitle}>
+                    🏆 Leaderboard
+                  </ThemedText>
+                  {(() => {
+                    // Get participants with scores, sorted by points (highest first)
+                    const participantsWithScores = currentGame.participants
+                      .map(p => ({
+                        ...p,
+                        points: currentGame.scores?.[p.userId] || 0,
+                      }))
+                      .sort((a, b) => b.points - a.points);
+
+                    return (
+                      <View style={styles.leaderboard}>
+                        {participantsWithScores.map((participant, index) => (
+                          <View
+                            key={participant.userId}
+                            style={[
+                              styles.leaderboardItem,
+                              index === 0 && styles.leaderboardFirst,
+                              participant.userId === user?.uid && styles.leaderboardCurrentUser,
+                            ]}
+                          >
+                            <View style={styles.leaderboardRank}>
+                              {index === 0 && <ThemedText style={styles.rankEmoji}>🥇</ThemedText>}
+                              {index === 1 && <ThemedText style={styles.rankEmoji}>🥈</ThemedText>}
+                              {index === 2 && <ThemedText style={styles.rankEmoji}>🥉</ThemedText>}
+                              {index > 2 && (
+                                <ThemedText style={styles.rankNumber}>#{index + 1}</ThemedText>
+                              )}
+                            </View>
+                            <View style={styles.leaderboardInfo}>
+                              <ThemedText style={styles.leaderboardName}>
+                                {participant.userName}
+                                {participant.userId === currentGame.adminId && ' 👑'}
+                                {participant.userId === user?.uid && ' (You)'}
+                              </ThemedText>
+                            </View>
+                            <View style={styles.leaderboardPoints}>
+                              <ThemedText style={styles.pointsValue}>{participant.points}</ThemedText>
+                              <ThemedText style={styles.pointsLabel}>pts</ThemedText>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    );
+                  })()}
+                </View>
+              )}
+
               {/* Game Flow UI */}
               {currentGame.status === 'waiting' && (
                 <View style={styles.gameFlowContainer}>
@@ -481,6 +534,63 @@ export const GameScreen: React.FC = () => {
                   </ThemedText>
                 </View>
               )}
+
+              {/* Round History */}
+              {(() => {
+                // Get all rounds from rounds array (these are completed rounds)
+                const allRounds = currentGame.rounds || [];
+                
+                // Sort by round number to show them in order
+                const sortedRounds = [...allRounds].sort((a, b) => a.roundNumber - b.roundNumber);
+                
+                // Only show rounds that are completed (have comments visible and points given)
+                const completedRounds = sortedRounds.filter(
+                  (round) => round.commentsVisible && round.pointsGiven
+                );
+                
+                return completedRounds.length > 0 ? (
+                  <View style={styles.roundHistoryContainer}>
+                    <ThemedText type="subtitle" style={styles.roundHistoryTitle}>
+                      📜 Round History ({completedRounds.length} {completedRounds.length === 1 ? 'round' : 'rounds'})
+                    </ThemedText>
+                    {completedRounds.map((round: Round) => (
+                      <View key={round.roundNumber} style={styles.roundHistoryItem}>
+                        <View style={styles.roundHistoryHeader}>
+                          <ThemedText style={styles.roundHistoryRoundNumber}>
+                            Round {round.roundNumber}
+                          </ThemedText>
+                          <ThemedText style={styles.roundHistoryTarget}>
+                            Target: {round.targetUserName}
+                          </ThemedText>
+                        </View>
+                        <View style={styles.roundHistoryComments}>
+                          <ThemedText style={styles.roundHistoryCommentsTitle}>
+                            Comments ({round.comments?.length || 0}):
+                          </ThemedText>
+                          {round.comments && round.comments.length > 0 ? (
+                            round.comments.map((comment: Comment) => (
+                              <View key={comment.id} style={styles.roundHistoryComment}>
+                                <ThemedText style={styles.roundHistoryCommentText}>
+                                  "{comment.text}"
+                                </ThemedText>
+                                {comment.points !== undefined && (
+                                  <View style={styles.roundHistoryCommentPoints}>
+                                    <ThemedText style={styles.roundHistoryPointsValue}>
+                                      +{comment.points} pts
+                                    </ThemedText>
+                                  </View>
+                                )}
+                              </View>
+                            ))
+                          ) : (
+                            <ThemedText style={styles.noCommentsText}>No comments</ThemedText>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : null;
+              })()}
 
               {/* Leave Game Button */}
               <TouchableOpacity
@@ -952,6 +1062,143 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.7,
     fontSize: 16,
+  },
+  scoresContainer: {
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  scoresTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  leaderboard: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  leaderboardItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  leaderboardFirst: {
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 215, 0, 0.5)',
+  },
+  leaderboardCurrentUser: {
+    backgroundColor: 'rgba(66, 133, 244, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(66, 133, 244, 0.3)',
+  },
+  leaderboardRank: {
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankEmoji: {
+    fontSize: 24,
+  },
+  rankNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.6,
+  },
+  leaderboardInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  leaderboardName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  leaderboardPoints: {
+    alignItems: 'flex-end',
+  },
+  pointsValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#4CAF50',
+  },
+  pointsLabel: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginTop: 2,
+  },
+  roundHistoryContainer: {
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  roundHistoryTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  roundHistoryItem: {
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  roundHistoryHeader: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  roundHistoryRoundNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  roundHistoryTarget: {
+    fontSize: 16,
+    opacity: 0.7,
+  },
+  roundHistoryComments: {
+    marginTop: 8,
+  },
+  roundHistoryCommentsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    opacity: 0.8,
+  },
+  roundHistoryComment: {
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  roundHistoryCommentText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  roundHistoryCommentPoints: {
+    alignSelf: 'flex-end',
+  },
+  roundHistoryPointsValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  noRoundsText: {
+    textAlign: 'center',
+    opacity: 0.6,
+    fontSize: 14,
+    padding: 20,
+  },
+  noCommentsText: {
+    textAlign: 'center',
+    opacity: 0.5,
+    fontSize: 14,
+    fontStyle: 'italic',
+    padding: 8,
   },
 });
 
