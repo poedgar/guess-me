@@ -20,12 +20,14 @@ import {
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
-  const { currentGame, loading, createGame, joinGame, leaveGame, startGame, submitComment, showComments, givePoints, startNextRound } = useGame();
+  const { currentGame, loading, createGame, joinGame, leaveGame, startGame, submitComment, showComments, givePoints, givePointsToTarget, startNextRound } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
+  const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -156,16 +158,27 @@ export const GameScreen: React.FC = () => {
   };
 
   const handleGivePoints = async (commentId: string, points: number) => {
+    console.log('handleGivePoints called', { commentId, points, givePointsAvailable: !!givePoints });
+    if (!givePoints) {
+      Alert.alert('Not implemented', 'givePoints is not available on GameContext');
+      return;
+    }
     try {
+      setGivingPoints(prev => ({ ...prev, [commentId]: true }));
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await givePoints(commentId, points);
+      const res = await givePoints(commentId, points);
+      console.log('givePoints result', res);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Success', 'Point given.');
     } catch (error: any) {
+      console.error('givePoints error', error);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to give points.');
+      Alert.alert('Error', error?.message || JSON.stringify(error) || 'Failed to give points.');
+    } finally {
+      setGivingPoints(prev => ({ ...prev, [commentId]: false }));
     }
   };
-
+  
   const handleStartNextRound = async () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -185,6 +198,29 @@ export const GameScreen: React.FC = () => {
   };
 
   const isAdmin = currentGame?.adminId === user?.uid;
+
+  const handleGivePointsToTarget = async (points: number = 1) => {
+    if (!currentGame?.currentRound) return;
+    console.log('handleGivePointsToTarget called', { targetId: currentGame.currentRound.targetUserId, points, givePointsToTargetAvailable: !!givePointsToTarget });
+    if (!givePointsToTarget) {
+      Alert.alert('Not implemented', 'givePointsToTarget is not available on GameContext');
+      return;
+    }
+    try {
+      setGivingPointsToTarget(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const res = await givePointsToTarget(currentGame.currentRound.targetUserId, points);
+      console.log('givePointsToTarget result', res);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Success', 'Point given to target.');
+    } catch (error: any) {
+      console.error('givePointsToTarget error', error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error?.message || JSON.stringify(error) || 'Failed to give points to target.');
+    } finally {
+      setGivingPointsToTarget(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -384,8 +420,13 @@ export const GameScreen: React.FC = () => {
                                 <TouchableOpacity
                                   style={styles.pointsButton}
                                   onPress={() => handleGivePoints(comment.id, 1)}
+                                  disabled={!!givingPoints[comment.id]}
                                 >
-                                  <ThemedText style={styles.pointsButtonText}>+1 Point</ThemedText>
+                                  {givingPoints[comment.id] ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                  ) : (
+                                    <ThemedText style={styles.pointsButtonText}>+1 Point</ThemedText>
+                                  )}
                                 </TouchableOpacity>
                               )}
                               {comment.points !== undefined && (
@@ -477,6 +518,41 @@ export const GameScreen: React.FC = () => {
                                   )}
                                 </View>
                               ))}
+
+                              {/* Reviewer can give points to target after target gave points */}
+                              {currentGame.currentRound.pointsGiven && (
+                                (() => {
+                                  const alreadyGaveTargetPoints = currentGame.currentRound.targetPointsGivenBy?.includes(user?.uid) ?? false;
+                                  return (
+                                    <View style={{ marginTop: 16 }}>
+                                      <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
+                                        You can now give points to {currentGame.currentRound.targetUserName}
+                                      </ThemedText>
+                                      <TouchableOpacity
+                                        style={[
+                                          styles.submitCommentButton,
+                                          {
+                                            backgroundColor: '#4CAF50',
+                                            shadowColor: '#000',
+                                          },
+                                          alreadyGaveTargetPoints && styles.buttonDisabled,
+                                        ]}
+                                        onPress={() => handleGivePointsToTarget(1)}
+                                        disabled={alreadyGaveTargetPoints || givingPointsToTarget}
+                                        activeOpacity={0.8}
+                                      >
+                                        {givingPointsToTarget ? (
+                                          <ActivityIndicator size="small" color="#fff" />
+                                        ) : (
+                                          <ThemedText style={styles.buttonText}>
+                                            {alreadyGaveTargetPoints ? 'Points Given' : 'Give 1 Point to Target'}
+                                          </ThemedText>
+                                        )}
+                                      </TouchableOpacity>
+                                    </View>
+                                  );
+                                })()
+                              )}
                             </View>
                           );
                         }
@@ -562,6 +638,16 @@ export const GameScreen: React.FC = () => {
                           <ThemedText style={styles.roundHistoryTarget}>
                             Target: {round.targetUserName}
                           </ThemedText>
+
+                         {/* Show target's points (use explicit field or fall back to counting targetPointsGivenBy; show 0 if none) */}
+                          {(() => {
+                            const targetPoints = (round as any).targetPoints ?? round.targetPointsGivenBy?.length ?? 0;
+                            return (
+                              <ThemedText style={styles.roundHistoryTargetPoints}>
+                                Target points: +{targetPoints} pts
+                              </ThemedText>
+                            );
+                          })()}
                         </View>
                         <View style={styles.roundHistoryComments}>
                           <ThemedText style={styles.roundHistoryCommentsTitle}>
@@ -1157,6 +1243,12 @@ const styles = StyleSheet.create({
   roundHistoryTarget: {
     fontSize: 16,
     opacity: 0.7,
+  },
+  roundHistoryTargetPoints: {
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4CAF50',
   },
   roundHistoryComments: {
     marginTop: 8,

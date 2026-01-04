@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { db } from '@/config/firebase';
-import { collection, addDoc, doc, getDoc, updateDoc, arrayUnion, serverTimestamp, onSnapshot, Unsubscribe } from 'firebase/firestore';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { addDoc, arrayUnion, collection, doc, getDoc, onSnapshot, serverTimestamp, Unsubscribe, updateDoc } from 'firebase/firestore';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export interface Game {
   id: string;
@@ -32,6 +32,8 @@ export interface Round {
   commentsVisible: boolean;
   pointsGiven: boolean;
   startedAt: any;
+  targetPoints?: number;
+  targetPointsGivenBy?: string[];
 }
 
 export interface Comment {
@@ -54,6 +56,7 @@ interface GameContextType {
   showComments: () => Promise<void>;
   givePoints: (commentId: string, points: number) => Promise<void>;
   startNextRound: () => Promise<void>;
+  givePointsToTarget: (targetUserId: string, points?: number) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -432,6 +435,73 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const givePointsToTarget = async (targetUserId: string, points = 1) => {
+    if (!currentGame?.currentRound) throw new Error('No active round');
+    const userId = user?.uid;
+    if (!userId) throw new Error('Must be signed in to give points');
+    // Prevent duplicate giving
+    if (currentGame.currentRound.targetPointsGivenBy?.includes(userId)) {
+      throw new Error('You already gave points to this target this round');
+    }
+
+    // Keep previous state to rollback on failure
+    const prevGame = currentGame;
+
+    // Optimistic update locally
+    const updatedRound = {
+      ...currentGame.currentRound,
+      targetPoints: (currentGame.currentRound.targetPoints ?? 0) + points,
+      targetPointsGivenBy: [...(currentGame.currentRound.targetPointsGivenBy ?? []), userId],
+    };
+
+    const updatedScores = {
+      ...(currentGame.scores ?? {}),
+      [targetUserId]: ((currentGame.scores?.[targetUserId] ?? 0) + points),
+    };
+
+    setCurrentGame({
+      ...currentGame,
+      currentRound: updatedRound,
+      scores: updatedScores,
+    });
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      if (!gameDoc.exists()) {
+        throw new Error('Game not found');
+      }
+
+      const gameData = gameDoc.data() as Game;
+      const currentRoundFromServer = gameData.currentRound;
+      if (!currentRoundFromServer) {
+        throw new Error('No active round on server');
+      }
+
+      const newTargetPoints = (currentRoundFromServer.targetPoints ?? 0) + points;
+      // Persist to Firestore: update targetPoints, append userId to targetPointsGivenBy, and update scores
+      const newScores = {
+        ...(gameData.scores ?? {}),
+        [targetUserId]: ((gameData.scores?.[targetUserId] ?? 0) + points),
+      };
+
+      await updateDoc(gameRef, {
+        'currentRound.targetPoints': newTargetPoints,
+        'currentRound.targetPointsGivenBy': arrayUnion(userId),
+        scores: newScores,
+      });
+      // onSnapshot will replace local state with authoritative server state
+    } catch (err) {
+      // Rollback on error
+      setCurrentGame(prevGame);
+      console.error('Error giving points to target:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const startNextRound = async (): Promise<void> => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
       throw new Error('Only the admin can start the next round');
@@ -529,6 +599,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     showComments,
     givePoints,
     startNextRound,
+    givePointsToTarget,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
