@@ -73,6 +73,13 @@ interface GameContextType {
   loading: boolean;
   createGame: () => Promise<string>;
   joinGame: (gameId: string) => Promise<void>;
+  /**
+   * Accepts a single input string from the UI. If the input matches the admin password
+   * stored in Firestore (collection `password`, doc `YR20RZ67FKy88HQVF6yW`),
+   * it will create a new game and return the new game id. Otherwise it attempts to join
+   * a game with the input treated as the game id.
+   */
+  enterGame: (input: string) => Promise<string | void>;
   leaveGame: () => Promise<void>;
   refreshGame: (gameId: string) => Promise<void>;
   startGame: () => Promise<void>;
@@ -236,6 +243,30 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw error;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const enterGame = async (input: string): Promise<string | void> => {
+    if (!input || !input.trim()) {
+      throw new Error('Please enter a code or password');
+    }
+    try {
+      // Fetch the admin password from Firestore
+      const passwordRef = doc(db, 'password', 'YR20RZ67FKy88HQVF6yW');
+      const pwDoc = await getDoc(passwordRef);
+      const adminPassword = pwDoc.exists() ? (pwDoc.data() as any).password : null;
+
+      if (adminPassword && input === adminPassword) {
+        // Input matches the admin password -> create a new game and return its id
+        const newGameId = await createGame();
+        return newGameId;
+      } else {
+        // Otherwise treat the input as a game ID and attempt to join
+        await joinGame(input);
+      }
+    } catch (err) {
+      console.error('Error in enterGame:', err);
+      throw err;
     }
   };
 
@@ -933,6 +964,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     loading,
     createGame,
     joinGame,
+    enterGame,
     leaveGame,
     refreshGame,
     startGame,

@@ -23,8 +23,7 @@ export const GameScreen: React.FC = () => {
   const { 
     currentGame, 
     loading, 
-    createGame, 
-    joinGame, 
+    enterGame,
     leaveGame, 
     startGame, 
     submitComment, 
@@ -38,8 +37,7 @@ export const GameScreen: React.FC = () => {
     markPlayerGuessesSubmitted,
   } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
+  const [isProcessingEnter, setIsProcessingEnter] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
@@ -50,62 +48,55 @@ export const GameScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const handleCreateGame = async () => {
+  const handleEnterGame = async () => {
     if (!isSignedIn) {
-      Alert.alert('Sign In Required', 'You must be signed in to create a game.');
+      Alert.alert('Sign In Required', 'You must be signed in to create or join a game.');
       return;
     }
-    try {
-      setIsCreating(true);
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const gameId = await createGame();
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        'Game Created!',
-        `Your game ID is: ${gameId}\nShare this ID with others to let them join your game.`,
-        [
-          {
-            text: 'Copy ID',
-            onPress: () => {
-              Clipboard.setString(gameId);
-              Alert.alert('Copied!', 'Game ID copied to clipboard');
-            },
-          },
-          { text: 'OK' },
-        ]
-      );
-    } catch (error: any) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to create game. Please try again.');
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
-  const handleJoinGame = async () => {
-    if (!isSignedIn) {
-      Alert.alert('Sign In Required', 'You must be signed in to join a game.');
+    const input = gameIdInput.trim();
+    if (!input) {
+      Alert.alert('Invalid Input', 'Please enter a game ID or admin password.');
       return;
     }
-    const gameId = gameIdInput.trim();
-    if (!gameId) {
-      Alert.alert('Invalid Game ID', 'Please enter a game ID.');
-      return;
-    }
+
     try {
-      setIsJoining(true);
+      setIsProcessingEnter(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await joinGame(gameId);
+
+      const result = await enterGame(input);
+
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setGameIdInput('');
-      Alert.alert('Success!', 'You have joined the game successfully!');
+
+      // If enterGame returned a string, it is the new game id (created as admin)
+      if (typeof result === 'string') {
+        const gameId = result;
+        setGameIdInput('');
+        Alert.alert(
+          'Game Created!',
+          `Your game ID is: ${gameId}\nShare this ID with others to let them join your game.`,
+          [
+            {
+              text: 'Copy ID',
+              onPress: () => {
+                Clipboard.setString(gameId);
+                Alert.alert('Copied!', 'Game ID copied to clipboard');
+              },
+            },
+            { text: 'OK' },
+          ]
+        );
+      } else {
+        setGameIdInput('');
+        Alert.alert('Success!', 'You have joined the game successfully!');
+      }
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to join game. Please check the game ID and try again.');
+      Alert.alert('Error', error.message || 'Failed to create or join game. Please check the code and try again.');
     } finally {
-      setIsJoining(false);
+      setIsProcessingEnter(false);
     }
-  };
+  }; 
 
   const handleLeaveGame = async () => {
     Alert.alert(
@@ -986,41 +977,12 @@ export const GameScreen: React.FC = () => {
           <View style={styles.actionContainer}>
             <View style={styles.section}>
               <ThemedText type="title" style={styles.sectionTitle}>
-                Create New Game
+                Create or Join Game
               </ThemedText>
               <ThemedText style={styles.sectionDescription}>
-                Start a new game and become the admin. Share the game ID with others to let them join.
+                Enter the admin password to create a new game, or enter an existing game ID to join one.
               </ThemedText>
-              <TouchableOpacity
-                style={[
-                  styles.createButton,
-                  {
-                    backgroundColor: isDark ? Colors.dark.tint : Colors.light.tint,
-                    shadowColor: '#000',
-                  },
-                  (isCreating || loading) && styles.buttonDisabled,
-                ]}
-                onPress={handleCreateGame}
-                disabled={isCreating || loading}
-                activeOpacity={0.8}
-              >
-                {isCreating ? (
-                  <View style={styles.buttonLoading}>
-                    <ActivityIndicator size="small" color="#fff" />
-                    <ThemedText style={styles.buttonText}>Creating...</ThemedText>
-                  </View>
-                ) : (
-                  <ThemedText style={styles.buttonText}>Create Game</ThemedText>
-                )}
-              </TouchableOpacity>
-            </View>
-            <View style={styles.section}>
-              <ThemedText type="title" style={styles.sectionTitle}>
-                Join Existing Game
-              </ThemedText>
-              <ThemedText style={styles.sectionDescription}>
-                Enter a game ID to join a game created by someone else.
-              </ThemedText>
+
               <TextInput
                 style={[
                   styles.input,
@@ -1030,13 +992,14 @@ export const GameScreen: React.FC = () => {
                     borderColor: isDark ? '#444' : '#ddd',
                   },
                 ]}
-                placeholder="Enter Game ID"
+                placeholder="Enter admin password or game ID"
                 placeholderTextColor={isDark ? '#888' : '#999'}
                 value={gameIdInput}
                 onChangeText={setGameIdInput}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+
               <TouchableOpacity
                 style={[
                   styles.joinButton,
@@ -1044,19 +1007,19 @@ export const GameScreen: React.FC = () => {
                     backgroundColor: '#4CAF50',
                     shadowColor: '#000',
                   },
-                  (isJoining || loading || !gameIdInput.trim()) && styles.buttonDisabled,
+                  (isProcessingEnter || loading || !gameIdInput.trim()) && styles.buttonDisabled,
                 ]}
-                onPress={handleJoinGame}
-                disabled={isJoining || loading || !gameIdInput.trim()}
+                onPress={handleEnterGame}
+                disabled={isProcessingEnter || loading || !gameIdInput.trim()}
                 activeOpacity={0.8}
               >
-                {isJoining ? (
+                {isProcessingEnter ? (
                   <View style={styles.buttonLoading}>
                     <ActivityIndicator size="small" color="#fff" />
-                    <ThemedText style={styles.buttonText}>Joining...</ThemedText>
+                    <ThemedText style={styles.buttonText}>Processing...</ThemedText>
                   </View>
                 ) : (
-                  <ThemedText style={styles.buttonText}>Join Game</ThemedText>
+                  <ThemedText style={styles.buttonText}>Proceed</ThemedText>
                 )}
               </TouchableOpacity>
             </View>
