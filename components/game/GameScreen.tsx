@@ -32,9 +32,9 @@ export const GameScreen: React.FC = () => {
     givePoints, 
     givePointsToTarget, 
     startNextRound,
-    startGuessingPhase, // New function to start guessing phase
-    submitGuess, // New function to submit a guess
-    finalizeGuessingPhase, // New function to finalize guessing phase
+    startGuessingPhase,
+    submitGuess,
+    finalizeGuessingPhase,
     markPlayerGuessesSubmitted,
   } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
@@ -44,7 +44,7 @@ export const GameScreen: React.FC = () => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
   const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
-  const [selectedGuesses, setSelectedGuesses] = useState<Record<string, string>>({}); // For storing selected author guesses
+  const [selectedGuesses, setSelectedGuesses] = useState<Record<string, string>>({});
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
   const colorScheme = useColorScheme();
@@ -172,7 +172,6 @@ export const GameScreen: React.FC = () => {
   };
 
   const handleGivePoints = async (commentId: string, points: number) => {
-    console.log('handleGivePoints called', { commentId, points, givePointsAvailable: !!givePoints });
     if (!givePoints) {
       Alert.alert('Not implemented', 'givePoints is not available on GameContext');
       return;
@@ -180,14 +179,12 @@ export const GameScreen: React.FC = () => {
     try {
       setGivingPoints(prev => ({ ...prev, [commentId]: true }));
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const res = await givePoints(commentId, points);
-      console.log('givePoints result', res);
+      await givePoints(commentId, points);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Point given.');
     } catch (error: any) {
-      console.error('givePoints error', error);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error?.message || JSON.stringify(error) || 'Failed to give points.');
+      Alert.alert('Error', error?.message || 'Failed to give points.');
     } finally {
       setGivingPoints(prev => ({ ...prev, [commentId]: false }));
     }
@@ -213,19 +210,12 @@ export const GameScreen: React.FC = () => {
 
   const isAdmin = currentGame?.adminId === user?.uid;
   const commentsForPlayer = currentGame?.guessingData?.commentsByTarget?.[user?.uid || ''] || []; 
-  // Whether the player has selected answers for all comments (or has zero comments)
   const allCommentsHaveGuesses = commentsForPlayer.length === 0 || commentsForPlayer.every(c => !!selectedGuesses[c.id]);
-  // Number of targets equals participants minus the admin
   const totalTargets = currentGame?.participants?.filter(p => p.userId !== currentGame?.adminId).length ?? 0;
   const isFinalRound = !!currentGame?.currentRound && currentGame.currentRound.roundNumber === totalTargets;
 
   const handleGivePointsToTarget = async (points: number = 1) => {
     if (!currentGame?.currentRound) return;
-    console.log('handleGivePointsToTarget called', { 
-      targetId: currentGame.currentRound.targetUserId, 
-      points, 
-      givePointsToTargetAvailable: !!givePointsToTarget 
-    });
     if (!givePointsToTarget) {
       Alert.alert('Not implemented', 'givePointsToTarget is not available on GameContext');
       return;
@@ -233,20 +223,17 @@ export const GameScreen: React.FC = () => {
     try {
       setGivingPointsToTarget(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const res = await givePointsToTarget(currentGame.currentRound.targetUserId, points);
-      console.log('givePointsToTarget result', res);
+      await givePointsToTarget(currentGame.currentRound.targetUserId, points);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Point given to target.');
     } catch (error: any) {
-      console.error('givePointsToTarget error', error);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error?.message || JSON.stringify(error) || 'Failed to give points to target.');
+      Alert.alert('Error', error?.message || 'Failed to give points to target.');
     } finally {
       setGivingPointsToTarget(false);
     }
   };
 
-  // New function to start guessing phase (admin only)
   const handleStartGuessingPhase = async () => {
     if (!isAdmin) return;
     
@@ -260,23 +247,15 @@ export const GameScreen: React.FC = () => {
     }
   };
 
-  // New function to submit guesses
   const handleSubmitGuesses = async () => {
     if (!currentGame || !user) return;
-    console.log('handleSubmitGuesses called', { selectedGuesses, userId: user?.uid });
 
     try {
       setIsSubmittingGuesses(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      // Submit all guesses for this player (use the rounds array to find the round number for each comment)
       const commentsForPlayerLocal = currentGame.guessingData?.commentsByTarget?.[user?.uid || ''] || [];
-      console.log('handleSubmitGuesses: commentsForPlayerLocal', commentsForPlayerLocal.map(c => c.id));
-
-      // Provide immediate feedback so the user knows the button pressed
-      Alert.alert('Submitting...', `Submitting ${commentsForPlayerLocal.length} guesses`);
-
-      // Validate selections
+      
       const missing = commentsForPlayerLocal.filter(c => !selectedGuesses[c.id]);
       if (missing.length > 0) {
         Alert.alert('Incomplete', 'Please select an author for each comment before submitting.');
@@ -288,29 +267,24 @@ export const GameScreen: React.FC = () => {
 
       for (const comment of commentsForPlayerLocal) {
         const selectedAuthorId = selectedGuesses[comment.id];
-        if (!selectedAuthorId) continue; // should be impossible due to validation
+        if (!selectedAuthorId) continue;
 
-        // Find the round containing this comment in completed rounds or the currentRound (final round)
         let roundContaining = currentGame.rounds?.find(r => r.comments?.some(c => c.id === comment.id));
         if (!roundContaining && currentGame.currentRound?.comments?.some(c => c.id === comment.id)) {
           roundContaining = currentGame.currentRound;
         }
         if (!roundContaining) {
-          console.warn('Round for comment not found', comment.id);
           failures.push({ commentId: comment.id, error: 'Round not found' });
           continue;
         }
 
-        console.log('handleSubmitGuesses: submitting', { roundNumber: roundContaining.roundNumber, commentId: comment.id, selectedAuthorId });
         try {
           await submitGuess(roundContaining.roundNumber, comment.id, selectedAuthorId);
         } catch (err) {
-          console.error('submitGuess failed for comment', comment.id, err);
           failures.push({ commentId: comment.id, error: err });
         }
       }
 
-      // After attempting submits, mark submitted even if some failed (admin can see incomplete players)
       try {
         await markPlayerGuessesSubmitted();
       } catch (err) {
@@ -319,14 +293,13 @@ export const GameScreen: React.FC = () => {
 
       if (failures.length > 0) {
         const failedIds = failures.map(f => f.commentId).join(', ');
-        Alert.alert('Partial failure', `Failed to submit guesses for comments: ${failedIds}. Check logs.`);
+        Alert.alert('Partial failure', `Failed to submit guesses for comments: ${failedIds}`);
       } else {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Your guesses have been submitted!');
         setSelectedGuesses({});
       }
     } catch (error: any) {
-      console.error('submitGuesses error', error);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error?.message || 'Failed to submit your guesses.');
     } finally {
@@ -334,7 +307,6 @@ export const GameScreen: React.FC = () => {
     }
   };
 
-  // New function to finalize guessing phase (admin only)
   const handleFinalizeGuessingPhase = async () => {
     if (!isAdmin || !currentGame) return;
     
@@ -345,7 +317,6 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Success', 'Guessing phase finalized. Game is now finished!');
     } catch (error: any) {
-      console.error('finalizeGuessingPhase error', error);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', error?.message || 'Failed to finalize guessing phase.');
     } finally {
@@ -353,7 +324,6 @@ export const GameScreen: React.FC = () => {
     }
   };
 
-  // Handle selecting an author for a comment guess
   const handleGuessSelect = (commentId: string, authorId: string) => {
     setSelectedGuesses(prev => ({
       ...prev,
@@ -433,7 +403,7 @@ export const GameScreen: React.FC = () => {
                     </ThemedText>
                   )}
                 </View>
-                {currentGame.participants?.map((participant: Participant, index: number) => (
+                {currentGame.participants?.map((participant: Participant) => (
                   <View
                     key={participant.userId}
                     style={[
@@ -456,7 +426,7 @@ export const GameScreen: React.FC = () => {
                   </View>
                 ))}
               </View>
-              {/* Scores/Leaderboard */}
+              {/* Scores/Leaderboard - FIXED */}
               {(currentGame.status === 'active' || 
                 currentGame.status === 'guessing_phase' || 
                 currentGame.status === 'finished') && 
@@ -466,14 +436,31 @@ export const GameScreen: React.FC = () => {
                     🏆 Leaderboard
                   </ThemedText>
                   {(() => {
-                    // Get participants with scores, sorted by points (highest first)
+                    // Calculate game points (from rounds) and guess points separately
                     const participantsWithScores = currentGame.participants
-                      .map(p => ({
-                        ...p,
-                        points: currentGame.scores?.[p.userId] || 0,
-                        guessPoints: currentGame.guessResults?.[p.userId]?.correctGuesses || 0
-                      }))
-                      .sort((a, b) => b.points + (b.guessPoints || 0) - (a.points + (a.guessPoints || 0)));
+                      .map(p => {
+                        // Total points from Firestore (includes both game and guess points after finalization)
+                        const totalPoints = currentGame.scores?.[p.userId] || 0;
+                        
+                        // Guess points (only available after finalization)
+                        const guessPoints = currentGame.guessResults?.[p.userId]?.correctGuesses || 0;
+                        
+                        // Game points = total - guess points (during active/guessing phase, total doesn't include guesses yet)
+                        // After finalization, we need to subtract to get original game points
+                        const gamePoints = currentGame.status === 'finished' && currentGame.guessResults
+                          ? totalPoints - guessPoints
+                          : totalPoints;
+                        
+                        return {
+                          ...p,
+                          gamePoints,
+                          guessPoints,
+                          totalPoints: currentGame.status === 'finished' && currentGame.guessResults
+                            ? totalPoints  // Use the final total from Firestore
+                            : gamePoints   // During game, only show game points
+                        };
+                      })
+                      .sort((a, b) => b.totalPoints - a.totalPoints);
                     
                     return (
                       <View style={styles.leaderboard}>
@@ -502,18 +489,18 @@ export const GameScreen: React.FC = () => {
                               </ThemedText>
                               <View style={styles.pointsRow}>
                                 <ThemedText style={styles.pointsDetail}>
-                                  Game points: {participant.points}
+                                  Game: {participant.gamePoints}
                                 </ThemedText>
-                                {participant.guessPoints !== undefined && (
+                                {currentGame.status === 'finished' && currentGame.guessResults && (
                                   <ThemedText style={styles.pointsDetail}>
-                                    Guess points: {participant.guessPoints}
+                                    • Guessing: {participant.guessPoints}
                                   </ThemedText>
                                 )}
                               </View>
                             </View>
                             <View style={styles.leaderboardPoints}>
                               <ThemedText style={styles.pointsValue}>
-                                {participant.points + (participant.guessPoints || 0)}
+                                {participant.totalPoints}
                               </ThemedText>
                               <ThemedText style={styles.pointsLabel}>total</ThemedText>
                             </View>
@@ -608,7 +595,6 @@ export const GameScreen: React.FC = () => {
                           (c: Comment) => c.authorId === user?.uid
                         );
                         if (!userComment) {
-                          // User hasn't submitted comment yet
                           return (
                             <View>
                               <ThemedText style={styles.commentPrompt}>
@@ -653,14 +639,12 @@ export const GameScreen: React.FC = () => {
                             </View>
                           );
                         } else if (!currentGame.currentRound.commentsVisible) {
-                          // User submitted, waiting for admin
                           return (
                             <ThemedText style={styles.waitingText}>
                               Comment submitted! Waiting for admin to show all comments...
                             </ThemedText>
                           );
                         } else {
-                          // Comments are visible
                           return (
                             <View style={styles.commentsView}>
                               <ThemedText type="subtitle" style={styles.commentsTitle}>
@@ -676,10 +660,9 @@ export const GameScreen: React.FC = () => {
                                   )}
                                 </View>
                               ))}
-                              {/* Reviewer can give points to target after target gave points */}
                               {currentGame.currentRound.pointsGiven && (
                                 (() => {
-                                                          const alreadyGaveTargetPoints = 
+                                  const alreadyGaveTargetPoints = 
                                     currentGame.currentRound.targetPointsGivenBy?.includes(user?.uid ?? '') ?? false;
                                   return (
                                     <View style={{ marginTop: 16 }}>
@@ -758,7 +741,6 @@ export const GameScreen: React.FC = () => {
                         </TouchableOpacity>
                       )}
                       
-                      {/* Show start guessing phase button if this is the last target round */}
                       {isFinalRound && currentGame.currentRound.pointsGiven && (
                         <TouchableOpacity
                           style={[
@@ -790,11 +772,9 @@ export const GameScreen: React.FC = () => {
                     </ThemedText>
                   </View>
                   
-                  {/* If player has already submitted their guesses */}
                   {currentGame.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '') ? (
                     (() => {
                       const playerResult = currentGame.guessResults?.[user?.uid ?? ''];
-                      // Only show actual results after admin has finalized and we have guessResults
                       if (playerResult) {
                         return (
                           <View style={styles.guessResultsContainer}>
@@ -813,7 +793,6 @@ export const GameScreen: React.FC = () => {
                         );
                       }
 
-                      // If not finalized yet, show waiting state (for both player and admin)
                       return (
                         <View style={styles.guessResultsContainer}>
                           <ThemedText type="subtitle" style={styles.guessResultsTitle}>
@@ -831,17 +810,16 @@ export const GameScreen: React.FC = () => {
                       );
                     })()
                   ) : (
-                    /* Player hasn't submitted guesses yet */
                     <View style={styles.guessingContainer}>
                       <ThemedText style={styles.guessingInstructions}>
                         Below are all the comments written about you during the game.
-                        Try to guess who wrote each comment. After submitting, you will only see
-                        how many you guessed correctly, not which specific ones were right.
+                        Try to guess who wrote each comment. After submitting, you will see
+                        how many you guessed correctly.
                       </ThemedText>
                       
                       {commentsForPlayer.map((comment) => (
                         <View key={comment.id} style={styles.guessCard}>
-                          <ThemedText style={styles.commentText}>“{comment.text}”</ThemedText>
+                          <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
                           
                           <ThemedText style={styles.guessPrompt}>
                             Who do you think wrote this comment?
@@ -896,7 +874,6 @@ export const GameScreen: React.FC = () => {
                     </View>
                   )}
                   
-                  {/* Admin controls for finalizing guessing phase */}
                   {isAdmin && currentGame.guessingData.allPlayersSubmitted && (
                     <View style={styles.adminControls}>
                       <TouchableOpacity
@@ -928,17 +905,14 @@ export const GameScreen: React.FC = () => {
                     Game Finished! 🎉
                   </ThemedText>
                   <ThemedText style={styles.finishedText}>
-                    All rounds completed. Check the final scores below!
+                    All rounds completed. Check the final scores above!
                   </ThemedText>
                 </View>
               )}
               {/* Round History */}
               {(() => {
-                // Get all rounds from rounds array (these are completed rounds)
                 const allRounds = currentGame.rounds || [];
-                // Sort by round number to show them in order
                 const sortedRounds = [...allRounds].sort((a, b) => a.roundNumber - b.roundNumber);
-                // Only show rounds that are completed (have comments visible and points given)
                 const completedRounds = sortedRounds.filter(
                   (round) => round.commentsVisible && round.pointsGiven
                 );
@@ -956,9 +930,8 @@ export const GameScreen: React.FC = () => {
                           <ThemedText style={styles.roundHistoryTarget}>
                             Target: {round.targetUserName}
                           </ThemedText>
-                          {/* Show target's points (use explicit field or fall back to counting targetPointsGivenBy; show 0 if none) */}
                           {(() => {
-                            const targetPoints = (round as any).targetPoints ?? round.targetPointsGivenBy?.length ?? 0;
+                            const targetPoints = round.targetPointsGivenBy?.length ?? 0;
                             return (
                               <ThemedText style={styles.roundHistoryTargetPoints}>
                                 Target points: +{targetPoints} pts
@@ -974,7 +947,7 @@ export const GameScreen: React.FC = () => {
                             round.comments.map((comment: Comment) => (
                               <View key={comment.id} style={styles.roundHistoryComment}>
                                 <ThemedText style={styles.roundHistoryCommentText}>
-                                  “{comment.text}”
+                                  "{comment.text}"
                                 </ThemedText>
                                 {comment.points !== undefined && (
                                   <View style={styles.roundHistoryCommentPoints}>
@@ -994,7 +967,6 @@ export const GameScreen: React.FC = () => {
                   </View>
                 ) : null;
               })()}
-              {/* Leave Game Button */}
               <TouchableOpacity
                 style={[
                   styles.leaveButton,
@@ -1012,7 +984,6 @@ export const GameScreen: React.FC = () => {
           </View>
         ) : (
           <View style={styles.actionContainer}>
-            {/* Create Game Section */}
             <View style={styles.section}>
               <ThemedText type="title" style={styles.sectionTitle}>
                 Create New Game
@@ -1043,7 +1014,6 @@ export const GameScreen: React.FC = () => {
                 )}
               </TouchableOpacity>
             </View>
-            {/* Join Game Section */}
             <View style={styles.section}>
               <ThemedText type="title" style={styles.sectionTitle}>
                 Join Existing Game
@@ -1098,612 +1068,109 @@ export const GameScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-  },
-  notSignedInContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notSignedInText: {
-    textAlign: 'center',
-    opacity: 0.7,
-  },
-  actionContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    marginBottom: 8,
-  },
-  sectionDescription: {
-    opacity: 0.7,
-    marginBottom: 16,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  input: {
-    height: 50,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  createButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  joinButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  gameContainer: {
-    flex: 1,
-  },
-  gameInfoCard: {
-    backgroundColor: 'transparent',
-  },
-  gameHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  gameTitle: {
-    flex: 1,
-  },
-  adminBadge: {
-    backgroundColor: '#FFA500',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginLeft: 12,
-  },
-  adminBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  gameIdContainer: {
-    marginBottom: 20,
-  },
-  gameIdLabel: {
-    marginBottom: 8,
-  },
-  gameIdBox: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderWidth: 2,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-    borderStyle: 'dashed',
-  },
-  gameIdText: {
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'monospace',
-    marginBottom: 4,
-  },
-  copyHint: {
-    fontSize: 12,
-    opacity: 0.6,
-  },
-  gameStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  statusLabel: {
-    marginRight: 12,
-    fontSize: 16,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  participantsContainer: {
-    marginBottom: 24,
-  },
-  participantsTitle: {
-    marginBottom: 12,
-  },
-  participantItem: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  adminParticipant: {
-    backgroundColor: 'rgba(255, 165, 0, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 165, 0, 0.3)',
-  },
-  participantInfo: {
-    flex: 1,
-  },
-  participantName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  participantEmail: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  leaveButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  leaveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  gameFlowContainer: {
-    marginTop: 24,
-    marginBottom: 24,
-  },
-  startGameButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  waitingText: {
-    textAlign: 'center',
-    opacity: 0.7,
-    fontSize: 16,
-    marginVertical: 16,
-  },
-  roundInfo: {
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  roundTitle: {
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  targetText: {
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  targetView: {
-    marginBottom: 20,
-  },
-  commentView: {
-    marginBottom: 20,
-  },
-  commentPrompt: {
-    marginBottom: 12,
-    fontSize: 16,
-  },
-  commentInput: {
-    minHeight: 100,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    textAlignVertical: 'top',
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  submitCommentButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  commentsView: {
-    marginTop: 16,
-  },
-  commentsTitle: {
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  commentCard: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    marginBottom: 12,
-  },
-  commentText: {
-    fontSize: 16,
-    marginBottom: 12,
-    lineHeight: 22,
-  },
-  pointsButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    backgroundColor: '#4CAF50',
-    alignSelf: 'flex-start',
-  },
-  pointsButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  pointsGivenText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4CAF50',
-    marginTop: 8,
-  },
-  adminControls: {
-    marginTop: 24,
-  },
-  adminButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  finishedTitle: {
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  finishedText: {
-    textAlign: 'center',
-    opacity: 0.7,
-    fontSize: 16,
-  },
-  scoresContainer: {
-    marginBottom: 24,
-    marginTop: 8,
-  },
-  scoresTitle: {
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  leaderboard: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  leaderboardItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  leaderboardFirst: {
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 215, 0, 0.5)',
-  },
-  leaderboardCurrentUser: {
-    backgroundColor: 'rgba(66, 133, 244, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(66, 133, 244, 0.3)',
-  },
-  leaderboardRank: {
-    width: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rankEmoji: {
-    fontSize: 24,
-  },
-  rankNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    opacity: 0.6,
-  },
-  leaderboardInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  leaderboardName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  pointsRow: {
-    marginTop: 4,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  pointsDetail: {
-    fontSize: 12,
-    opacity: 0.8,
-    marginRight: 8,
-  },
-  leaderboardPoints: {
-    alignItems: 'flex-end',
-  },
-  pointsValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#4CAF50',
-  },
-  pointsLabel: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginTop: 2,
-  },
-  roundHistoryContainer: {
-    marginBottom: 24,
-    marginTop: 8,
-  },
-  roundHistoryTitle: {
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  roundHistoryItem: {
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  roundHistoryHeader: {
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  roundHistoryRoundNumber: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  roundHistoryTarget: {
-    fontSize: 16,
-    opacity: 0.7,
-  },
-  roundHistoryTargetPoints: {
-    marginTop: 6,
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#4CAF50',
-  },
-  roundHistoryComments: {
-    marginTop: 8,
-  },
-  roundHistoryCommentsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    opacity: 0.8,
-  },
-  roundHistoryComment: {
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  roundHistoryCommentText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 8,
-    fontStyle: 'italic',
-  },
-  roundHistoryCommentPoints: {
-    alignSelf: 'flex-end',
-  },
-  roundHistoryPointsValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4CAF50',
-  },
-  noRoundsText: {
-    textAlign: 'center',
-    opacity: 0.6,
-    fontSize: 14,
-    padding: 20,
-  },
-  noCommentsText: {
-    textAlign: 'center',
-    opacity: 0.5,
-    fontSize: 14,
-    fontStyle: 'italic',
-    padding: 8,
-  },
-  guessingContainer: {
-    marginTop: 16,
-  },
-  guessingInstructions: {
-    fontSize: 16,
-    marginBottom: 20,
-    lineHeight: 24,
-  },
-  guessCard: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    marginBottom: 20,
-  },
-  guessPrompt: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 12,
-    marginBottom: 8,
-    color: '#555',
-  },
-  authorOptionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  authorOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  selectedAuthorOption: {
-    backgroundColor: '#4285F4',
-    borderColor: '#4285F4',
-  },
-  authorName: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  selectedAuthorName: {
-    color: '#fff',
-  },
-  submitGuessButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
-  },
-  guessResultsContainer: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  guessResultsTitle: {
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  guessResultCard: {
-    padding: 20,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    alignItems: 'center',
-    width: '100%',
-  },
-  guessResultText: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    color: '#4CAF50',
-    marginBottom: 8,
-  },
-  guessResultDetail: {
-    fontSize: 14,
-    textAlign: 'center',
-    opacity: 0.8,
-  },
+  container: { flex: 1 },
+  scrollContent: { flexGrow: 1, padding: 20 },
+  notSignedInContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  notSignedInText: { textAlign: 'center', opacity: 0.7 },
+  actionContainer: { flex: 1, justifyContent: 'center' },
+  section: { marginBottom: 32 },
+  sectionTitle: { marginBottom: 8 },
+  sectionDescription: { opacity: 0.7, marginBottom: 16, fontSize: 14, lineHeight: 20 },
+  input: { height: 50, borderRadius: 8, paddingHorizontal: 16, fontSize: 16, marginBottom: 16, borderWidth: 1, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  createButton: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  joinButton: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  buttonDisabled: { opacity: 0.6 },
+  buttonLoading: { flexDirection: 'row', alignItems: 'center' },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+  gameContainer: { flex: 1 },
+  gameInfoCard: { backgroundColor: 'transparent' },
+  gameHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
+  gameTitle: { flex: 1 },
+  adminBadge: { backgroundColor: '#FFA500', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginLeft: 12 },
+  adminBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  gameIdContainer: { marginBottom: 20 },
+  gameIdLabel: { marginBottom: 8 },
+  gameIdBox: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.1)', borderStyle: 'dashed' },
+  gameIdText: { fontSize: 18, fontWeight: '700', fontFamily: 'monospace', marginBottom: 4 },
+  copyHint: { fontSize: 12, opacity: 0.6 },
+  gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  statusLabel: { marginRight: 12, fontSize: 16 },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  statusText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  participantsContainer: { marginBottom: 24 },
+  participantsTitle: { marginBottom: 12 },
+  participantItem: { padding: 12, borderRadius: 8, marginBottom: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+  adminParticipant: { backgroundColor: 'rgba(255, 165, 0, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 165, 0, 0.3)' },
+  participantInfo: { flex: 1 },
+  participantName: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  participantEmail: { fontSize: 14, opacity: 0.7 },
+  leaveButton: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  leaveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  gameFlowContainer: { marginTop: 24, marginBottom: 24 },
+  startGameButton: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16 },
+  roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+  roundTitle: { marginBottom: 8, textAlign: 'center' },
+  targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600' },
+  targetView: { marginBottom: 20 },
+  commentView: { marginBottom: 20 },
+  commentPrompt: { marginBottom: 12, fontSize: 16 },
+  commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16, borderWidth: 1, textAlignVertical: 'top', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  submitCommentButton: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  commentsView: { marginTop: 16 },
+  commentsTitle: { marginBottom: 16, textAlign: 'center' },
+  commentCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 12 },
+  commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22 },
+  pointsButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6, backgroundColor: '#4CAF50', alignSelf: 'flex-start' },
+  pointsButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  pointsGivenText: { fontSize: 14, fontWeight: '600', color: '#4CAF50', marginTop: 8 },
+  adminControls: { marginTop: 24 },
+  adminButton: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', marginBottom: 12, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  finishedTitle: { textAlign: 'center', marginBottom: 12 },
+  finishedText: { textAlign: 'center', opacity: 0.7, fontSize: 16 },
+  scoresContainer: { marginBottom: 24, marginTop: 8 },
+  scoresTitle: { marginBottom: 16, textAlign: 'center' },
+  leaderboard: { borderRadius: 8, overflow: 'hidden' },
+  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+  leaderboardFirst: { backgroundColor: 'rgba(255, 215, 0, 0.2)', borderWidth: 2, borderColor: 'rgba(255, 215, 0, 0.5)' },
+  leaderboardCurrentUser: { backgroundColor: 'rgba(66, 133, 244, 0.15)', borderWidth: 1, borderColor: 'rgba(66, 133, 244, 0.3)' },
+  leaderboardRank: { width: 40, alignItems: 'center', justifyContent: 'center' },
+  rankEmoji: { fontSize: 24 },
+  rankNumber: { fontSize: 14, fontWeight: '600', opacity: 0.6 },
+  leaderboardInfo: { flex: 1, marginLeft: 12 },
+  leaderboardName: { fontSize: 16, fontWeight: '600' },
+  pointsRow: { marginTop: 4, flexDirection: 'row', flexWrap: 'wrap' },
+  pointsDetail: { fontSize: 12, opacity: 0.8, marginRight: 8 },
+  leaderboardPoints: { alignItems: 'flex-end' },
+  pointsValue: { fontSize: 20, fontWeight: '700', color: '#4CAF50' },
+  pointsLabel: { fontSize: 12, opacity: 0.6, marginTop: 2 },
+  roundHistoryContainer: { marginBottom: 24, marginTop: 8 },
+  roundHistoryTitle: { marginBottom: 16, textAlign: 'center' },
+  roundHistoryItem: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.1)' },
+  roundHistoryHeader: { marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(0, 0, 0, 0.1)' },
+  roundHistoryRoundNumber: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  roundHistoryTarget: { fontSize: 16, opacity: 0.7 },
+  roundHistoryTargetPoints: { marginTop: 6, fontSize: 14, fontWeight: '700', color: '#4CAF50' },
+  roundHistoryComments: { marginTop: 8 },
+  roundHistoryCommentsTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8, opacity: 0.8 },
+  roundHistoryComment: { padding: 12, marginBottom: 8, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.5)' },
+  roundHistoryCommentText: { fontSize: 14, lineHeight: 20, marginBottom: 8, fontStyle: 'italic' },
+  roundHistoryCommentPoints: { alignSelf: 'flex-end' },
+  roundHistoryPointsValue: { fontSize: 14, fontWeight: '600', color: '#4CAF50' },
+  noCommentsText: { textAlign: 'center', opacity: 0.5, fontSize: 14, fontStyle: 'italic', padding: 8 },
+  guessingContainer: { marginTop: 16 },
+  guessingInstructions: { fontSize: 16, marginBottom: 20, lineHeight: 24 },
+  guessCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 20 },
+  guessPrompt: { fontSize: 14, fontWeight: '600', marginTop: 12, marginBottom: 8, color: '#555' },
+  authorOptionsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  authorOption: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.1)' },
+  selectedAuthorOption: { backgroundColor: '#4285F4', borderColor: '#4285F4' },
+  authorName: { fontSize: 14, fontWeight: '500' },
+  selectedAuthorName: { color: '#fff' },
+  submitGuessButton: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', marginTop: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  guessResultsContainer: { marginTop: 16, alignItems: 'center' },
+  guessResultsTitle: { marginBottom: 16, textAlign: 'center' },
+  guessResultCard: { padding: 20, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', alignItems: 'center', width: '100%' },
+  guessResultText: { fontSize: 18, fontWeight: '600', textAlign: 'center', color: '#4CAF50', marginBottom: 8 },
+  guessResultDetail: { fontSize: 14, textAlign: 'center', opacity: 0.8 },
 });
