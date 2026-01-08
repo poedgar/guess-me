@@ -20,7 +20,23 @@ import {
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
-  const { currentGame, loading, createGame, joinGame, leaveGame, startGame, submitComment, showComments, givePoints, givePointsToTarget, startNextRound } = useGame();
+  const { 
+    currentGame, 
+    loading, 
+    createGame, 
+    joinGame, 
+    leaveGame, 
+    startGame, 
+    submitComment, 
+    showComments, 
+    givePoints, 
+    givePointsToTarget, 
+    startNextRound,
+    startGuessingPhase, // New function to start guessing phase
+    submitGuess, // New function to submit a guess
+    finalizeGuessingPhase, // New function to finalize guessing phase
+    markPlayerGuessesSubmitted,
+  } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -28,6 +44,9 @@ export const GameScreen: React.FC = () => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
   const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
+  const [selectedGuesses, setSelectedGuesses] = useState<Record<string, string>>({}); // For storing selected author guesses
+  const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
+  const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -36,16 +55,14 @@ export const GameScreen: React.FC = () => {
       Alert.alert('Sign In Required', 'You must be signed in to create a game.');
       return;
     }
-
     try {
       setIsCreating(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const gameId = await createGame();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
       Alert.alert(
         'Game Created!',
-        `Your game ID is: ${gameId}\n\nShare this ID with others to let them join your game.`,
+        `Your game ID is: ${gameId}\nShare this ID with others to let them join your game.`,
         [
           {
             text: 'Copy ID',
@@ -70,13 +87,11 @@ export const GameScreen: React.FC = () => {
       Alert.alert('Sign In Required', 'You must be signed in to join a game.');
       return;
     }
-
     const gameId = gameIdInput.trim();
     if (!gameId) {
       Alert.alert('Invalid Game ID', 'Please enter a game ID.');
       return;
     }
-
     try {
       setIsJoining(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -131,7 +146,6 @@ export const GameScreen: React.FC = () => {
       Alert.alert('Error', 'Please enter a comment.');
       return;
     }
-
     try {
       setIsSubmittingComment(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -178,7 +192,7 @@ export const GameScreen: React.FC = () => {
       setGivingPoints(prev => ({ ...prev, [commentId]: false }));
     }
   };
-  
+
   const handleStartNextRound = async () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -198,10 +212,20 @@ export const GameScreen: React.FC = () => {
   };
 
   const isAdmin = currentGame?.adminId === user?.uid;
+  const commentsForPlayer = currentGame?.guessingData?.commentsByTarget?.[user?.uid || ''] || []; 
+  // Whether the player has selected answers for all comments (or has zero comments)
+  const allCommentsHaveGuesses = commentsForPlayer.length === 0 || commentsForPlayer.every(c => !!selectedGuesses[c.id]);
+  // Number of targets equals participants minus the admin
+  const totalTargets = currentGame?.participants?.filter(p => p.userId !== currentGame?.adminId).length ?? 0;
+  const isFinalRound = !!currentGame?.currentRound && currentGame.currentRound.roundNumber === totalTargets;
 
   const handleGivePointsToTarget = async (points: number = 1) => {
     if (!currentGame?.currentRound) return;
-    console.log('handleGivePointsToTarget called', { targetId: currentGame.currentRound.targetUserId, points, givePointsToTargetAvailable: !!givePointsToTarget });
+    console.log('handleGivePointsToTarget called', { 
+      targetId: currentGame.currentRound.targetUserId, 
+      points, 
+      givePointsToTargetAvailable: !!givePointsToTarget 
+    });
     if (!givePointsToTarget) {
       Alert.alert('Not implemented', 'givePointsToTarget is not available on GameContext');
       return;
@@ -220,6 +244,121 @@ export const GameScreen: React.FC = () => {
     } finally {
       setGivingPointsToTarget(false);
     }
+  };
+
+  // New function to start guessing phase (admin only)
+  const handleStartGuessingPhase = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await startGuessingPhase();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error.message || 'Failed to start guessing phase.');
+    }
+  };
+
+  // New function to submit guesses
+  const handleSubmitGuesses = async () => {
+    if (!currentGame || !user) return;
+    console.log('handleSubmitGuesses called', { selectedGuesses, userId: user?.uid });
+
+    try {
+      setIsSubmittingGuesses(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      // Submit all guesses for this player (use the rounds array to find the round number for each comment)
+      const commentsForPlayerLocal = currentGame.guessingData?.commentsByTarget?.[user?.uid || ''] || [];
+      console.log('handleSubmitGuesses: commentsForPlayerLocal', commentsForPlayerLocal.map(c => c.id));
+
+      // Provide immediate feedback so the user knows the button pressed
+      Alert.alert('Submitting...', `Submitting ${commentsForPlayerLocal.length} guesses`);
+
+      // Validate selections
+      const missing = commentsForPlayerLocal.filter(c => !selectedGuesses[c.id]);
+      if (missing.length > 0) {
+        Alert.alert('Incomplete', 'Please select an author for each comment before submitting.');
+        setIsSubmittingGuesses(false);
+        return;
+      }
+
+      const failures: { commentId: string; error: any }[] = [];
+
+      for (const comment of commentsForPlayerLocal) {
+        const selectedAuthorId = selectedGuesses[comment.id];
+        if (!selectedAuthorId) continue; // should be impossible due to validation
+
+        // Find the round containing this comment in completed rounds or the currentRound (final round)
+        let roundContaining = currentGame.rounds?.find(r => r.comments?.some(c => c.id === comment.id));
+        if (!roundContaining && currentGame.currentRound?.comments?.some(c => c.id === comment.id)) {
+          roundContaining = currentGame.currentRound;
+        }
+        if (!roundContaining) {
+          console.warn('Round for comment not found', comment.id);
+          failures.push({ commentId: comment.id, error: 'Round not found' });
+          continue;
+        }
+
+        console.log('handleSubmitGuesses: submitting', { roundNumber: roundContaining.roundNumber, commentId: comment.id, selectedAuthorId });
+        try {
+          await submitGuess(roundContaining.roundNumber, comment.id, selectedAuthorId);
+        } catch (err) {
+          console.error('submitGuess failed for comment', comment.id, err);
+          failures.push({ commentId: comment.id, error: err });
+        }
+      }
+
+      // After attempting submits, mark submitted even if some failed (admin can see incomplete players)
+      try {
+        await markPlayerGuessesSubmitted();
+      } catch (err) {
+        console.warn('Failed to mark player as submitted', err);
+      }
+
+      if (failures.length > 0) {
+        const failedIds = failures.map(f => f.commentId).join(', ');
+        Alert.alert('Partial failure', `Failed to submit guesses for comments: ${failedIds}. Check logs.`);
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Success', 'Your guesses have been submitted!');
+        setSelectedGuesses({});
+      }
+    } catch (error: any) {
+      console.error('submitGuesses error', error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error?.message || 'Failed to submit your guesses.');
+    } finally {
+      setIsSubmittingGuesses(false);
+    }
+  };
+
+  // New function to finalize guessing phase (admin only)
+  const handleFinalizeGuessingPhase = async () => {
+    if (!isAdmin || !currentGame) return;
+    
+    try {
+      setIsFinalizingGuesses(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await finalizeGuessingPhase();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Success', 'Guessing phase finalized. Game is now finished!');
+    } catch (error: any) {
+      console.error('finalizeGuessingPhase error', error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error?.message || 'Failed to finalize guessing phase.');
+    } finally {
+      setIsFinalizingGuesses(false);
+    }
+  };
+
+  // Handle selecting an author for a comment guess
+  const handleGuessSelect = (commentId: string, authorId: string) => {
+    setSelectedGuesses(prev => ({
+      ...prev,
+      [commentId]: authorId
+    }));
   };
 
   return (
@@ -248,7 +387,6 @@ export const GameScreen: React.FC = () => {
                   </View>
                 )}
               </View>
-
               <View style={styles.gameIdContainer}>
                 <ThemedText type="subtitle" style={styles.gameIdLabel}>
                   Game ID:
@@ -261,7 +399,6 @@ export const GameScreen: React.FC = () => {
                   <ThemedText style={styles.copyHint}>Tap to copy</ThemedText>
                 </TouchableOpacity>
               </View>
-
               <View style={styles.gameStatusContainer}>
                 <ThemedText style={styles.statusLabel}>Status:</ThemedText>
                 <View
@@ -273,21 +410,29 @@ export const GameScreen: React.FC = () => {
                           ? '#FFA500'
                           : currentGame.status === 'active'
                           ? '#4CAF50'
+                          : currentGame.status === 'guessing_phase'
+                          ? '#9C27B0'
                           : '#9E9E9E',
                     },
                   ]}
                 >
                   <ThemedText style={styles.statusText}>
-                    {currentGame.status.toUpperCase()}
+                    {currentGame.status.replace('_', ' ').toUpperCase()}
                   </ThemedText>
                 </View>
               </View>
-
               {/* Participants */}
               <View style={styles.participantsContainer}>
-                <ThemedText type="subtitle" style={styles.participantsTitle}>
-                  Participants ({currentGame.participants?.length || 0})
-                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <ThemedText type="subtitle" style={styles.participantsTitle}>
+                    Participants ({currentGame.participants?.length || 0})
+                  </ThemedText>
+                  {currentGame.status === 'guessing_phase' && (
+                    <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>
+                      Submitted: {currentGame.guessingData?.playersWhoSubmittedGuesses?.length || 0}/{totalTargets}
+                    </ThemedText>
+                  )}
+                </View>
                 {currentGame.participants?.map((participant: Participant, index: number) => (
                   <View
                     key={participant.userId}
@@ -300,6 +445,9 @@ export const GameScreen: React.FC = () => {
                       <ThemedText style={styles.participantName}>
                         {participant.userName}
                         {participant.userId === currentGame.adminId && ' 👑'}
+                        {currentGame.status === 'guessing_phase' && participant.userId !== currentGame.adminId && (
+                          (currentGame.guessingData?.playersWhoSubmittedGuesses?.includes(participant.userId)) ? ' ✅' : ' ⏳'
+                        )}
                       </ThemedText>
                       <ThemedText style={styles.participantEmail}>
                         {participant.userEmail}
@@ -308,9 +456,11 @@ export const GameScreen: React.FC = () => {
                   </View>
                 ))}
               </View>
-
               {/* Scores/Leaderboard */}
-              {(currentGame.status === 'active' || currentGame.status === 'finished') && currentGame.scores && (
+              {(currentGame.status === 'active' || 
+                currentGame.status === 'guessing_phase' || 
+                currentGame.status === 'finished') && 
+                currentGame.scores && (
                 <View style={styles.scoresContainer}>
                   <ThemedText type="subtitle" style={styles.scoresTitle}>
                     🏆 Leaderboard
@@ -321,9 +471,10 @@ export const GameScreen: React.FC = () => {
                       .map(p => ({
                         ...p,
                         points: currentGame.scores?.[p.userId] || 0,
+                        guessPoints: currentGame.guessResults?.[p.userId]?.correctGuesses || 0
                       }))
-                      .sort((a, b) => b.points - a.points);
-
+                      .sort((a, b) => b.points + (b.guessPoints || 0) - (a.points + (a.guessPoints || 0)));
+                    
                     return (
                       <View style={styles.leaderboard}>
                         {participantsWithScores.map((participant, index) => (
@@ -349,10 +500,22 @@ export const GameScreen: React.FC = () => {
                                 {participant.userId === currentGame.adminId && ' 👑'}
                                 {participant.userId === user?.uid && ' (You)'}
                               </ThemedText>
+                              <View style={styles.pointsRow}>
+                                <ThemedText style={styles.pointsDetail}>
+                                  Game points: {participant.points}
+                                </ThemedText>
+                                {participant.guessPoints !== undefined && (
+                                  <ThemedText style={styles.pointsDetail}>
+                                    Guess points: {participant.guessPoints}
+                                  </ThemedText>
+                                )}
+                              </View>
                             </View>
                             <View style={styles.leaderboardPoints}>
-                              <ThemedText style={styles.pointsValue}>{participant.points}</ThemedText>
-                              <ThemedText style={styles.pointsLabel}>pts</ThemedText>
+                              <ThemedText style={styles.pointsValue}>
+                                {participant.points + (participant.guessPoints || 0)}
+                              </ThemedText>
+                              <ThemedText style={styles.pointsLabel}>total</ThemedText>
                             </View>
                           </View>
                         ))}
@@ -361,7 +524,6 @@ export const GameScreen: React.FC = () => {
                   })()}
                 </View>
               )}
-
               {/* Game Flow UI */}
               {currentGame.status === 'waiting' && (
                 <View style={styles.gameFlowContainer}>
@@ -389,7 +551,6 @@ export const GameScreen: React.FC = () => {
                   )}
                 </View>
               )}
-
               {currentGame.status === 'active' && currentGame.currentRound && (
                 <View style={styles.gameFlowContainer}>
                   <View style={styles.roundInfo}>
@@ -400,7 +561,6 @@ export const GameScreen: React.FC = () => {
                       Target: {currentGame.currentRound.targetUserName}
                     </ThemedText>
                   </View>
-
                   {/* User is the target */}
                   {user?.uid === currentGame.currentRound.targetUserId && (
                     <View style={styles.targetView}>
@@ -440,7 +600,6 @@ export const GameScreen: React.FC = () => {
                       )}
                     </View>
                   )}
-
                   {/* User is not the target */}
                   {user?.uid !== currentGame.currentRound.targetUserId && (
                     <View style={styles.commentView}>
@@ -448,7 +607,6 @@ export const GameScreen: React.FC = () => {
                         const userComment = currentGame.currentRound.comments?.find(
                           (c: Comment) => c.authorId === user?.uid
                         );
-                        
                         if (!userComment) {
                           // User hasn't submitted comment yet
                           return (
@@ -518,11 +676,11 @@ export const GameScreen: React.FC = () => {
                                   )}
                                 </View>
                               ))}
-
                               {/* Reviewer can give points to target after target gave points */}
                               {currentGame.currentRound.pointsGiven && (
                                 (() => {
-                                  const alreadyGaveTargetPoints = currentGame.currentRound.targetPointsGivenBy?.includes(user?.uid) ?? false;
+                                                          const alreadyGaveTargetPoints = 
+                                    currentGame.currentRound.targetPointsGivenBy?.includes(user?.uid ?? '') ?? false;
                                   return (
                                     <View style={{ marginTop: 16 }}>
                                       <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
@@ -545,7 +703,9 @@ export const GameScreen: React.FC = () => {
                                           <ActivityIndicator size="small" color="#fff" />
                                         ) : (
                                           <ThemedText style={styles.buttonText}>
-                                            {alreadyGaveTargetPoints ? 'Points Given' : 'Give 1 Point to Target'}
+                                            {alreadyGaveTargetPoints 
+                                              ? 'Points Given' 
+                                              : 'Give 1 Point to Target'}
                                           </ThemedText>
                                         )}
                                       </TouchableOpacity>
@@ -559,7 +719,6 @@ export const GameScreen: React.FC = () => {
                       })()}
                     </View>
                   )}
-
                   {/* Admin controls */}
                   {isAdmin && (
                     <View style={styles.adminControls}>
@@ -571,16 +730,19 @@ export const GameScreen: React.FC = () => {
                               backgroundColor: '#FF9800',
                               shadowColor: '#000',
                             },
-                            (currentGame.currentRound.comments?.length || 0) < (currentGame.participants.length - 1) && styles.buttonDisabled,
+                            (currentGame.currentRound.comments?.length || 0) < 
+                              (currentGame.participants.length - 1) && styles.buttonDisabled,
                           ]}
                           onPress={handleShowComments}
-                          disabled={(currentGame.currentRound.comments?.length || 0) < (currentGame.participants.length - 1)}
+                          disabled={(currentGame.currentRound.comments?.length || 0) < 
+                            (currentGame.participants.length - 1)}
                           activeOpacity={0.8}
                         >
                           <ThemedText style={styles.buttonText}>Show Comments</ThemedText>
                         </TouchableOpacity>
                       )}
-                      {currentGame.currentRound.commentsVisible && currentGame.currentRound.pointsGiven && (
+                      {currentGame.currentRound.commentsVisible && 
+                        currentGame.currentRound.pointsGiven && (
                         <TouchableOpacity
                           style={[
                             styles.adminButton,
@@ -595,35 +757,191 @@ export const GameScreen: React.FC = () => {
                           <ThemedText style={styles.buttonText}>Start Next Round</ThemedText>
                         </TouchableOpacity>
                       )}
+                      
+                      {/* Show start guessing phase button if this is the last target round */}
+                      {isFinalRound && currentGame.currentRound.pointsGiven && (
+                        <TouchableOpacity
+                          style={[
+                            styles.adminButton,
+                            {
+                              backgroundColor: '#9C27B0',
+                              shadowColor: '#000',
+                            },
+                          ]}
+                          onPress={handleStartGuessingPhase}
+                          activeOpacity={0.8}
+                        >
+                          <ThemedText style={styles.buttonText}>Start Guessing Phase</ThemedText>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   )}
                 </View>
               )}
+              {/* Guessing Phase UI */}
+              {currentGame.status === 'guessing_phase' && currentGame.guessingData && (
+                <View style={styles.gameFlowContainer}>
+                  <View style={styles.roundInfo}>
+                    <ThemedText type="subtitle" style={styles.roundTitle}>
+                      Final Round: Guess the Authors
+                    </ThemedText>
+                    <ThemedText style={styles.targetText}>
+                      Try to guess who wrote each comment about you
+                    </ThemedText>
+                  </View>
+                  
+                  {/* If player has already submitted their guesses */}
+                  {currentGame.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '') ? (
+                    (() => {
+                      const playerResult = currentGame.guessResults?.[user?.uid ?? ''];
+                      // Only show actual results after admin has finalized and we have guessResults
+                      if (playerResult) {
+                        return (
+                          <View style={styles.guessResultsContainer}>
+                            <ThemedText type="subtitle" style={styles.guessResultsTitle}>
+                              Your Guessing Results
+                            </ThemedText>
+                            <View style={styles.guessResultCard}>
+                              <ThemedText style={styles.guessResultText}>
+                                You correctly guessed {playerResult.correctGuesses || 0} out of {commentsForPlayer.length} comments!
+                              </ThemedText>
+                              <ThemedText style={styles.guessResultDetail}>
+                                You have earned {playerResult.correctGuesses || 0} points for your correct guesses.
+                              </ThemedText>
+                            </View>
+                          </View>
+                        );
+                      }
 
+                      // If not finalized yet, show waiting state (for both player and admin)
+                      return (
+                        <View style={styles.guessResultsContainer}>
+                          <ThemedText type="subtitle" style={styles.guessResultsTitle}>
+                            Thanks — guesses submitted
+                          </ThemedText>
+                          <ThemedText style={styles.waitingText}>
+                            Waiting for the admin to finalize the guessing phase. You will see your results after finalization.
+                          </ThemedText>
+                          {isAdmin && !currentGame.guessingData.allPlayersSubmitted && (
+                            <ThemedText style={styles.waitingText}>
+                              Waiting for all players to submit their guesses...
+                            </ThemedText>
+                          )}
+                        </View>
+                      );
+                    })()
+                  ) : (
+                    /* Player hasn't submitted guesses yet */
+                    <View style={styles.guessingContainer}>
+                      <ThemedText style={styles.guessingInstructions}>
+                        Below are all the comments written about you during the game.
+                        Try to guess who wrote each comment. After submitting, you will only see
+                        how many you guessed correctly, not which specific ones were right.
+                      </ThemedText>
+                      
+                      {commentsForPlayer.map((comment) => (
+                        <View key={comment.id} style={styles.guessCard}>
+                          <ThemedText style={styles.commentText}>“{comment.text}”</ThemedText>
+                          
+                          <ThemedText style={styles.guessPrompt}>
+                            Who do you think wrote this comment?
+                          </ThemedText>
+                          
+                          <View style={styles.authorOptionsContainer}>
+                            {(currentGame.guessingData?.possibleAuthors || []).map((author) => (
+                              <TouchableOpacity
+                                key={author.userId}
+                                style={[
+                                  styles.authorOption,
+                                  selectedGuesses[comment.id] === author.userId && styles.selectedAuthorOption
+                                ]}
+                                onPress={() => handleGuessSelect(comment.id, author.userId)}
+                              >
+                                <ThemedText style={[
+                                  styles.authorName,
+                                  selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName
+                                ]}>
+                                  {author.userName}
+                                </ThemedText>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      ))}
+                      
+                      {(commentsForPlayer.length > 0 && !allCommentsHaveGuesses) && (
+                        <ThemedText style={{ textAlign: 'center', color: '#999', marginBottom: 8 }}>
+                          Please select an author for each comment to enable Submit
+                        </ThemedText>
+                      )}
+                      <TouchableOpacity
+                        style={[
+                          styles.submitGuessButton,
+                          {
+                            backgroundColor: '#9C27B0',
+                            shadowColor: '#000',
+                          },
+                          (isSubmittingGuesses || !allCommentsHaveGuesses) && styles.buttonDisabled,
+                        ]}
+                        onPress={handleSubmitGuesses}
+                        disabled={isSubmittingGuesses || !allCommentsHaveGuesses}
+                        activeOpacity={0.8}
+                      >
+                        {isSubmittingGuesses ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <ThemedText style={styles.buttonText}>Submit My Guesses</ThemedText>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  
+                  {/* Admin controls for finalizing guessing phase */}
+                  {isAdmin && currentGame.guessingData.allPlayersSubmitted && (
+                    <View style={styles.adminControls}>
+                      <TouchableOpacity
+                        style={[
+                          styles.adminButton,
+                          {
+                            backgroundColor: '#4CAF50',
+                            shadowColor: '#000',
+                          },
+                          isFinalizingGuesses && styles.buttonDisabled,
+                        ]}
+                        onPress={handleFinalizeGuessingPhase}
+                        disabled={isFinalizingGuesses}
+                        activeOpacity={0.8}
+                      >
+                        {isFinalizingGuesses ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <ThemedText style={styles.buttonText}>Finalize Game</ThemedText>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              )}
               {currentGame.status === 'finished' && (
                 <View style={styles.gameFlowContainer}>
                   <ThemedText type="title" style={styles.finishedTitle}>
                     Game Finished! 🎉
                   </ThemedText>
                   <ThemedText style={styles.finishedText}>
-                    All rounds completed. Check the scores!
+                    All rounds completed. Check the final scores below!
                   </ThemedText>
                 </View>
               )}
-
               {/* Round History */}
               {(() => {
                 // Get all rounds from rounds array (these are completed rounds)
                 const allRounds = currentGame.rounds || [];
-                
                 // Sort by round number to show them in order
                 const sortedRounds = [...allRounds].sort((a, b) => a.roundNumber - b.roundNumber);
-                
                 // Only show rounds that are completed (have comments visible and points given)
                 const completedRounds = sortedRounds.filter(
                   (round) => round.commentsVisible && round.pointsGiven
                 );
-                
                 return completedRounds.length > 0 ? (
                   <View style={styles.roundHistoryContainer}>
                     <ThemedText type="subtitle" style={styles.roundHistoryTitle}>
@@ -638,8 +956,7 @@ export const GameScreen: React.FC = () => {
                           <ThemedText style={styles.roundHistoryTarget}>
                             Target: {round.targetUserName}
                           </ThemedText>
-
-                         {/* Show target's points (use explicit field or fall back to counting targetPointsGivenBy; show 0 if none) */}
+                          {/* Show target's points (use explicit field or fall back to counting targetPointsGivenBy; show 0 if none) */}
                           {(() => {
                             const targetPoints = (round as any).targetPoints ?? round.targetPointsGivenBy?.length ?? 0;
                             return (
@@ -657,7 +974,7 @@ export const GameScreen: React.FC = () => {
                             round.comments.map((comment: Comment) => (
                               <View key={comment.id} style={styles.roundHistoryComment}>
                                 <ThemedText style={styles.roundHistoryCommentText}>
-                                  "{comment.text}"
+                                  “{comment.text}”
                                 </ThemedText>
                                 {comment.points !== undefined && (
                                   <View style={styles.roundHistoryCommentPoints}>
@@ -677,7 +994,6 @@ export const GameScreen: React.FC = () => {
                   </View>
                 ) : null;
               })()}
-
               {/* Leave Game Button */}
               <TouchableOpacity
                 style={[
@@ -727,7 +1043,6 @@ export const GameScreen: React.FC = () => {
                 )}
               </TouchableOpacity>
             </View>
-
             {/* Join Game Section */}
             <View style={styles.section}>
               <ThemedText type="title" style={styles.sectionTitle}>
@@ -1200,6 +1515,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  pointsRow: {
+    marginTop: 4,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  pointsDetail: {
+    fontSize: 12,
+    opacity: 0.8,
+    marginRight: 8,
+  },
   leaderboardPoints: {
     alignItems: 'flex-end',
   },
@@ -1292,5 +1617,93 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     padding: 8,
   },
+  guessingContainer: {
+    marginTop: 16,
+  },
+  guessingInstructions: {
+    fontSize: 16,
+    marginBottom: 20,
+    lineHeight: 24,
+  },
+  guessCard: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    marginBottom: 20,
+  },
+  guessPrompt: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 8,
+    color: '#555',
+  },
+  authorOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  authorOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  selectedAuthorOption: {
+    backgroundColor: '#4285F4',
+    borderColor: '#4285F4',
+  },
+  authorName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  selectedAuthorName: {
+    color: '#fff',
+  },
+  submitGuessButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+    ...Platform.select({
+      ios: {
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  guessResultsContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  guessResultsTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  guessResultCard: {
+    padding: 20,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    alignItems: 'center',
+    width: '100%',
+  },
+  guessResultText: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#4CAF50',
+    marginBottom: 8,
+  },
+  guessResultDetail: {
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
 });
-

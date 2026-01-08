@@ -1,6 +1,6 @@
 import { db } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { addDoc, arrayUnion, collection, doc, getDoc, onSnapshot, serverTimestamp, Unsubscribe, updateDoc } from 'firebase/firestore';
+import { addDoc, arrayUnion, collection, doc, getDoc, onSnapshot, runTransaction, serverTimestamp, Unsubscribe, updateDoc } from 'firebase/firestore';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export interface Game {
@@ -10,10 +10,12 @@ export interface Game {
   adminEmail: string;
   participants: Participant[];
   createdAt: any;
-  status: 'waiting' | 'active' | 'finished';
-  currentRound?: Round;
+  status: 'waiting' | 'active' | 'guessing_phase' | 'finished';
+  currentRound?: Round | null;
   rounds?: Round[];
   scores?: { [userId: string]: number };
+  guessingData?: GuessingData;
+  guessResults?: { [userId: string]: { correctGuesses: number } };
 }
 
 export interface Participant {
@@ -22,6 +24,14 @@ export interface Participant {
   userEmail: string;
   joinedAt: any;
   totalPoints?: number;
+}
+
+export interface Guess {
+  commentId: string;
+  guesserId: string;
+  guessedAuthorId: string;
+  correct: boolean;
+  guessedAt: any;
 }
 
 export interface Round {
@@ -34,6 +44,10 @@ export interface Round {
   startedAt: any;
   targetPoints?: number;
   targetPointsGivenBy?: string[];
+  // New: guesses for this round (who guessed which comment and whether they were correct)
+  guesses?: Guess[];
+  // New: how many correct guesses the target received for this round
+  targetCorrectGuesses?: number;
 }
 
 export interface Comment {
@@ -43,6 +57,16 @@ export interface Comment {
   submittedAt: any;
   points?: number;
 }
+
+export interface GuessingData {
+  // Map of targetUserId => comments written about that target
+  commentsByTarget: { [userId: string]: Comment[] };
+  // List of potential authors to choose from when guessing
+  possibleAuthors: { userId: string; userName: string }[];
+  playersWhoSubmittedGuesses?: string[];
+  allPlayersSubmitted?: boolean;
+}
+
 
 interface GameContextType {
   currentGame: Game | null;
@@ -57,7 +81,12 @@ interface GameContextType {
   givePoints: (commentId: string, points: number) => Promise<void>;
   startNextRound: () => Promise<void>;
   givePointsToTarget: (targetUserId: string, points?: number) => Promise<void>;
-}
+  startGuessingPhase: () => Promise<void>;
+  finalizeGuessingPhase: () => Promise<void>;
+  submitGuess: (roundNumber: number, commentId: string, guessedAuthorId: string) => Promise<boolean>;
+  // Marks the current user (or given userId) as having submitted their guesses (useful when zero comments)
+  markPlayerGuessesSubmitted: (userId?: string) => Promise<void>;
+} 
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
@@ -281,6 +310,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         startedAt: new Date(),
       };
 
+      console.log('startGame: starting, target', { targetUserId: target.userId });
+
       await updateDoc(gameRef, {
         status: 'active',
         currentRound: round,
@@ -337,11 +368,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         submittedAt: new Date(),
       };
 
+      console.log('submitComment: newComment', newComment);
+
       const updatedComments = [...(currentRound.comments || []), newComment];
 
       await updateDoc(gameRef, {
         'currentRound.comments': updatedComments,
       });
+
+      console.log('submitComment: updateDoc complete');
     } catch (error: any) {
       console.error('Error submitting comment:', error);
       throw error;
@@ -358,6 +393,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (!currentGame.currentRound) {
       throw new Error('No active round');
     }
+
+    console.log('showComments called by admin', { gameId: currentGame.id, roundNumber: currentGame.currentRound.roundNumber });
 
     try {
       setLoading(true);
@@ -386,6 +423,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (currentGame.currentRound.pointsGiven) {
       throw new Error('Points have already been given for this round');
     }
+
+    console.log('givePoints called', { commentId, points, userId: user.uid, roundNumber: currentGame.currentRound.roundNumber });
 
     try {
       setLoading(true);
@@ -421,11 +460,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           [comment.authorId]: authorCurrentScore + points,
         };
 
+        console.log('givePoints: awarding points', { commentId, points, authorId: comment.authorId, newScores });
+
         await updateDoc(gameRef, {
           'currentRound.comments': updatedComments,
           'currentRound.pointsGiven': true,
           scores: newScores,
         });
+
+        console.log('givePoints: updateDoc complete');
       }
     } catch (error: any) {
       console.error('Error giving points:', error);
@@ -443,6 +486,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (currentGame.currentRound.targetPointsGivenBy?.includes(userId)) {
       throw new Error('You already gave points to this target this round');
     }
+
+    console.log('givePointsToTarget called', { targetUserId, points, userId, roundNumber: currentGame.currentRound.roundNumber });
 
     // Keep previous state to rollback on failure
     const prevGame = currentGame;
@@ -486,16 +531,157 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         [targetUserId]: ((gameData.scores?.[targetUserId] ?? 0) + points),
       };
 
+      console.log('givePointsToTarget: persisting scores', { newTargetPoints, newScores });
       await updateDoc(gameRef, {
         'currentRound.targetPoints': newTargetPoints,
         'currentRound.targetPointsGivenBy': arrayUnion(userId),
         scores: newScores,
       });
+      console.log('givePointsToTarget: updateDoc complete');
       // onSnapshot will replace local state with authoritative server state
     } catch (err) {
       // Rollback on error
       setCurrentGame(prevGame);
       console.error('Error giving points to target:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitGuess = async (roundNumber: number, commentId: string, guessedAuthorId: string): Promise<boolean> => {
+    if (!currentGame || !user) throw new Error('No active game or user');
+    const userId = user.uid;
+
+    // Find the round (either currentRound or from completed rounds)
+    let round: Round | undefined;
+    let isCurrent = false;
+    if (currentGame.currentRound && currentGame.currentRound.roundNumber === roundNumber) {
+      round = currentGame.currentRound;
+      isCurrent = true;
+    } else {
+      round = currentGame.rounds?.find(r => r.roundNumber === roundNumber);
+    }
+
+    if (!round) throw new Error('Round not found');
+    if (!round.commentsVisible) throw new Error('Comments are not visible');
+    // Only the round target should be submitting guesses for comments about them
+    if (userId !== round.targetUserId) throw new Error('Only the target can make guesses');
+
+    // Prevent duplicate guesses for the same comment by the same user
+    if (round.guesses?.some(g => g.commentId === commentId && g.guesserId === userId)) {
+      throw new Error('You already guessed for this comment');
+    }
+
+    const comment = round.comments.find(c => c.id === commentId);
+    if (!comment) throw new Error('Comment not found');
+
+    const correct = guessedAuthorId === comment.authorId;
+
+    const newGuess: Guess = {
+      commentId,
+      guesserId: userId,
+      guessedAuthorId,
+      correct,
+      guessedAt: new Date(),
+    };
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+
+      // Use a transaction to safely append guesses and avoid overwriting concurrent updates
+      await runTransaction(db, async (transaction) => {
+        const gameSnap = await transaction.get(gameRef);
+        if (!gameSnap.exists()) throw new Error('Game not found');
+        const gameData = gameSnap.data() as Game;
+
+        if (isCurrent) {
+          const current = gameData.currentRound;
+          if (!current) throw new Error('No active round on server');
+          const updatedGuesses = [...(current.guesses || []), newGuess];
+          const updates: any = {
+            'currentRound.guesses': updatedGuesses,
+          };
+          if (correct) {
+            updates['currentRound.targetCorrectGuesses'] = (current.targetCorrectGuesses ?? 0) + 1;
+          }
+          transaction.update(gameRef, updates);
+        } else {
+          const serverRounds = gameData.rounds || [];
+          const updatedRounds = serverRounds.map(r => {
+            if (r.roundNumber === roundNumber) {
+              return {
+                ...r,
+                guesses: [...(r.guesses ?? []), newGuess],
+                targetCorrectGuesses: (r.targetCorrectGuesses ?? 0) + (correct ? 1 : 0),
+              };
+            }
+            return r;
+          });
+          transaction.update(gameRef, { rounds: updatedRounds });
+        }
+      });
+
+      // Debug: log guess submission result
+      console.log('submitGuess: saved', { roundNumber, commentId, guessedAuthorId, correct });
+
+      // Force a refresh in case onSnapshot hasn't propagated yet
+      try {
+        await refreshGame(currentGame.id);
+      } catch (e) {
+        console.warn('submitGuess: refresh failed', e);
+      }
+
+      // After submitting a guess, check if the guesser has completed all guesses for their own target and mark them as submitted
+      try {
+        const gameDocAfter = await getDoc(gameRef);
+        if (gameDocAfter.exists()) {
+          const serverGame = gameDocAfter.data() as Game;
+          const playersComments = serverGame.guessingData?.commentsByTarget?.[userId] || [];
+          const numComments = playersComments.length;
+
+          // Count guesses by this user for comments about themselves across rounds and currentRound
+          let numGuessesByUser = 0;
+          const serverRounds = serverGame.rounds || [];
+          for (const r of serverRounds) {
+            if (r.targetUserId === userId && r.guesses) {
+              numGuessesByUser += r.guesses.filter(g => g.guesserId === userId).length;
+            }
+          }
+          // include currentRound guesses if applicable
+          if (serverGame.currentRound && serverGame.currentRound.targetUserId === userId && serverGame.currentRound.guesses) {
+            numGuessesByUser += serverGame.currentRound.guesses.filter(g => g.guesserId === userId).length;
+          }
+
+          const alreadySubmitted = serverGame.guessingData?.playersWhoSubmittedGuesses?.includes(userId);
+          if (!alreadySubmitted && numGuessesByUser >= numComments) {
+            const playersAlready = serverGame.guessingData?.playersWhoSubmittedGuesses || [];
+            const totalTargets = (serverGame.participants?.length ?? 0) - 1;
+            const allSubmitted = (playersAlready.length + 1) >= totalTargets;
+            await updateDoc(gameRef, {
+              'guessingData.playersWhoSubmittedGuesses': arrayUnion(userId),
+              'guessingData.allPlayersSubmitted': allSubmitted,
+            });
+          }
+          // Edge case: if player has zero comments, mark them submitted immediately
+          if (!alreadySubmitted && numComments === 0) {
+            const playersAlready = serverGame.guessingData?.playersWhoSubmittedGuesses || [];
+            const totalTargets = (serverGame.participants?.length ?? 0) - 1;
+            const allSubmitted = (playersAlready.length + 1) >= totalTargets;
+            await updateDoc(gameRef, {
+              'guessingData.playersWhoSubmittedGuesses': arrayUnion(userId),
+              'guessingData.allPlayersSubmitted': allSubmitted,
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Error updating guessing submission state', e);
+      }
+
+      return correct;
+    } catch (err) {
+      console.error('Error submitting guess:', err);
       throw err;
     } finally {
       setLoading(false);
@@ -553,6 +739,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       if (availableParticipants.length === 0) {
         // All participants have been targets, game finished
         // Make sure current round is saved as completed
+        console.log('startNextRound: finishing game, saving rounds', { roundsSaved: previousRounds.length });
         await updateDoc(gameRef, {
           status: 'finished',
           currentRound: null,
@@ -564,6 +751,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // Select random participant from available ones
       const randomIndex = Math.floor(Math.random() * availableParticipants.length);
       const target = availableParticipants[randomIndex];
+      console.log('startNextRound: selected next target', { targetUserId: target.userId, nextRoundNumber: previousRounds.length + 1 });
 
       const nextRound: Round = {
         roundNumber: previousRounds.length + 1,
@@ -587,6 +775,159 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const startGuessingPhase = async (): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can start the guessing phase');
+    }
+
+    // Include both completed rounds in `rounds` and the currentRound if it's completed (comments visible & points given)
+    const completedRounds: Round[] = [...(currentGame.rounds || [])];
+    if (currentGame.currentRound && currentGame.currentRound.commentsVisible && currentGame.currentRound.pointsGiven) {
+      // Avoid duplicating if currentRound already in rounds
+      if (!completedRounds.some(r => r.roundNumber === currentGame.currentRound!.roundNumber)) {
+        completedRounds.push(currentGame.currentRound);
+      }
+    }
+
+    if (completedRounds.length === 0) {
+      throw new Error('No completed rounds to start guessing');
+    }
+
+    try {
+      setLoading(true);
+      // Build comments by target from completed rounds
+      const commentsByTarget: { [key: string]: Comment[] } = {};
+      for (const round of completedRounds) {
+        commentsByTarget[round.targetUserId] = round.comments || [];
+      }
+
+      const possibleAuthors = currentGame.participants.map(p => ({ userId: p.userId, userName: p.userName }));
+
+      const guessingData: GuessingData = {
+        commentsByTarget,
+        possibleAuthors,
+        playersWhoSubmittedGuesses: [],
+        allPlayersSubmitted: false,
+      };
+
+      console.log('startGuessingPhase: starting', { completedRoundsCount: completedRounds.length, targets: Object.keys(commentsByTarget).length, possibleAuthors: possibleAuthors.length });
+
+      const gameRef = doc(db, 'games', currentGame.id);
+      // Persist completed rounds so round history includes them, and clear currentRound since we're moving to guessing phase
+      await updateDoc(gameRef, {
+        status: 'guessing_phase',
+        guessingData,
+        guessResults: {},
+        rounds: completedRounds,
+        currentRound: null,
+      });
+    } catch (err) {
+      console.error('Error starting guessing phase:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markPlayerGuessesSubmitted = async (userIdParam?: string): Promise<void> => {
+    if (!currentGame || !user) throw new Error('No active game or user');
+    const playerId = userIdParam ?? user.uid;
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      if (!gameDoc.exists()) throw new Error('Game not found');
+
+      const gameData = gameDoc.data() as Game;
+      const playersAlready = gameData.guessingData?.playersWhoSubmittedGuesses || [];
+      console.log('markPlayerGuessesSubmitted called', { playerId, playersAlready, totalTargets: (gameData.participants?.length ?? 0) - 1 });
+      if (playersAlready.includes(playerId)) {
+        console.log('markPlayerGuessesSubmitted: already marked, skipping', playerId);
+        return; // already marked
+      }
+
+      const newPlayersCount = playersAlready.length + 1;
+      const totalTargets = (gameData.participants?.length ?? 0) - 1; // exclude admin
+      const allSubmitted = newPlayersCount >= totalTargets;
+
+      await updateDoc(gameRef, {
+        'guessingData.playersWhoSubmittedGuesses': arrayUnion(playerId),
+        'guessingData.allPlayersSubmitted': allSubmitted,
+      });
+    } catch (err) {
+      console.error('Error marking player as submitted:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const finalizeGuessingPhase = async (): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can finalize the guessing phase');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      if (!gameDoc.exists()) throw new Error('Game not found');
+
+      const gameData = gameDoc.data() as Game;
+      const serverRounds = gameData.rounds || [];
+
+      // Ensure any completed currentRound is included in final rounds saved to the document
+      const finalRounds: Round[] = [...serverRounds];
+      if (gameData.currentRound && gameData.currentRound.commentsVisible && gameData.currentRound.pointsGiven) {
+        if (!finalRounds.some(r => r.roundNumber === gameData.currentRound!.roundNumber)) {
+          finalRounds.push(gameData.currentRound);
+        }
+      }
+
+      // Aggregate correct guesses per guesser
+      const guessCounts: { [userId: string]: number } = {};
+      for (const r of finalRounds) {
+        if (!r.guesses) continue;
+        for (const g of r.guesses) {
+          if (g.correct) {
+            guessCounts[g.guesserId] = (guessCounts[g.guesserId] ?? 0) + 1;
+          }
+        }
+      }
+
+      console.log('finalizeGuessingPhase: current scores before merging', gameData.scores);
+      console.log('finalizeGuessingPhase: guessingData', gameData.guessingData);
+
+      // Debug: log guessCounts and finalRounds with guesses
+      console.log('finalizeGuessingPhase: finalRounds count', finalRounds.length);
+      console.log('finalizeGuessingPhase: guessCounts', guessCounts);
+
+      // Build guessResults and update scores by awarding 1 point per correct guess
+      const guessResults: { [userId: string]: { correctGuesses: number } } = {};
+      const newScores = { ...(gameData.scores ?? {}) };
+      for (const [uid, count] of Object.entries(guessCounts)) {
+        guessResults[uid] = { correctGuesses: count };
+        newScores[uid] = (newScores[uid] ?? 0) + count;
+      }
+
+      await updateDoc(gameRef, {
+        status: 'finished',
+        guessResults,
+        scores: newScores,
+        rounds: finalRounds,
+        currentRound: null,
+      });
+
+      console.log('finalizeGuessingPhase: finalized', { guessResults, newScores });
+    } catch (err) {
+      console.error('Error finalizing guessing phase:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: GameContextType = {
     currentGame,
     loading,
@@ -599,7 +940,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     showComments,
     givePoints,
     startNextRound,
+    startGuessingPhase,
+    finalizeGuessingPhase,
     givePointsToTarget,
+    submitGuess,
+    markPlayerGuessesSubmitted,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
