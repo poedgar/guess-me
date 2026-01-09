@@ -451,9 +451,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw new Error('Only the target person can give points');
     }
 
-    if (currentGame.currentRound.pointsGiven) {
-      throw new Error('Points have already been given for this round');
-    }
+    // Allow awarding points to multiple commenters within the same round.
+    // We'll mark the round's `pointsGiven` flag only when all comments have been awarded.
 
     console.log('givePoints called', { commentId, points, userId: user.uid, roundNumber: currentGame.currentRound.roundNumber });
 
@@ -493,9 +492,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
         console.log('givePoints: awarding points', { commentId, points, authorId: comment.authorId, newScores });
 
+        // Determine whether all comments have been assigned points; only then mark round as pointsGiven
+        const allCommentsHavePoints = updatedComments.length > 0 && updatedComments.every(c => c.points !== undefined);
+
         await updateDoc(gameRef, {
           'currentRound.comments': updatedComments,
-          'currentRound.pointsGiven': true,
+          'currentRound.pointsGiven': allCommentsHavePoints,
           scores: newScores,
         });
 

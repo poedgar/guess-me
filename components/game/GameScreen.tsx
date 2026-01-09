@@ -554,7 +554,7 @@ export const GameScreen: React.FC = () => {
                           {currentGame.currentRound.comments?.map((comment: Comment) => (
                             <View key={comment.id} style={styles.commentCard}>
                               <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
-                              {!currentGame.currentRound?.pointsGiven && (
+                              {comment.points === undefined && (
                                 <TouchableOpacity
                                   style={styles.pointsButton}
                                   onPress={() => handleGivePoints(comment.id, 1)}
