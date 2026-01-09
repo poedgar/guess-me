@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Comment, Participant, Round, useGame } from '@/contexts/GameContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -45,6 +45,7 @@ export const GameScreen: React.FC = () => {
   const [selectedGuesses, setSelectedGuesses] = useState<Record<string, string>>({});
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
+  const autoStartedGuessingForRound = useRef<number | null>(null);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -315,12 +316,74 @@ export const GameScreen: React.FC = () => {
     }
   };
 
+  const handleFinalizeAndNextRound = async () => {
+    if (!isAdmin || !currentGame) return;
+    try {
+      setIsFinalizingGuesses(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await finalizeGuessingPhase();
+      // Try to start the next round (may finish the game if no participants left)
+      try {
+        await startNextRound();
+      } catch (e) {
+        // startNextRound may throw if game finished; that's fine
+        console.warn('startNextRound after finalize failed or game finished', e);
+      }
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error?.message || 'Failed to finalize and start next round.');
+    } finally {
+      setIsFinalizingGuesses(false);
+    }
+  };
+
   const handleGuessSelect = (commentId: string, authorId: string) => {
     setSelectedGuesses(prev => ({
       ...prev,
       [commentId]: authorId
     }));
   };
+
+  // Automatically start guessing phase after each round completes
+  useEffect(() => {
+    if (
+      !currentGame ||
+      !user ||
+      !isAdmin ||
+      currentGame.status !== 'active' ||
+      !currentGame.currentRound ||
+      loading
+    ) {
+      return;
+    }
+
+    const round = currentGame.currentRound;
+    const roundCompleted = round.commentsVisible && round.pointsGiven;
+    const alreadyStartedForThisRound = autoStartedGuessingForRound.current === round.roundNumber;
+
+    if (roundCompleted && !alreadyStartedForThisRound) {
+      // Automatically start guessing phase
+      autoStartedGuessingForRound.current = round.roundNumber;
+      startGuessingPhase().catch((error: any) => {
+        console.error('Failed to auto-start guessing phase:', error);
+        // Reset the ref so we can try again
+        autoStartedGuessingForRound.current = null;
+      });
+    }
+  }, [currentGame?.currentRound?.commentsVisible, currentGame?.currentRound?.pointsGiven, currentGame?.status, isAdmin, user, loading, startGuessingPhase]);
+
+  // Reset auto-start tracking when a new round begins
+  useEffect(() => {
+    if (currentGame?.currentRound && currentGame.status === 'active') {
+      const currentRoundNumber = currentGame.currentRound.roundNumber;
+      // If we're tracking a different round number, reset the ref
+      if (autoStartedGuessingForRound.current !== null && 
+          autoStartedGuessingForRound.current !== currentRoundNumber) {
+        autoStartedGuessingForRound.current = null;
+      }
+    }
+  }, [currentGame?.currentRound?.roundNumber, currentGame?.status]);
 
   return (
     <ThemedView style={styles.container}>
@@ -340,7 +403,7 @@ export const GameScreen: React.FC = () => {
             <View style={styles.gameInfoCard}>
               <View style={styles.gameHeader}>
                 <ThemedText type="title" style={styles.gameTitle}>
-                  Game Room
+                  Game Roomm
                 </ThemedText>
                 {isAdmin && (
                   <View style={styles.adminBadge}>
@@ -428,27 +491,25 @@ export const GameScreen: React.FC = () => {
                   </ThemedText>
                   {(() => {
                     // Calculate game points (from rounds) and guess points separately
+                    // scores contains only game points (from comments and target points)
+                    // guessResults contains guess points
+                    // total = game points + guess points
                     const participantsWithScores = currentGame.participants
                       .map(p => {
-                        // Total points from Firestore (includes both game and guess points after finalization)
-                        const totalPoints = currentGame.scores?.[p.userId] || 0;
+                        // Game points from Firestore (only from comments and target points)
+                        const gamePoints = currentGame.scores?.[p.userId] || 0;
                         
                         // Guess points (only available after finalization)
                         const guessPoints = currentGame.guessResults?.[p.userId]?.correctGuesses || 0;
                         
-                        // Game points = total - guess points (during active/guessing phase, total doesn't include guesses yet)
-                        // After finalization, we need to subtract to get original game points
-                        const gamePoints = currentGame.status === 'finished' && currentGame.guessResults
-                          ? totalPoints - guessPoints
-                          : totalPoints;
+                        // Total = game points + guess points
+                        const totalPoints = gamePoints + guessPoints;
                         
                         return {
                           ...p,
                           gamePoints,
                           guessPoints,
-                          totalPoints: currentGame.status === 'finished' && currentGame.guessResults
-                            ? totalPoints  // Use the final total from Firestore
-                            : gamePoints   // During game, only show game points
+                          totalPoints
                         };
                       })
                       .sort((a, b) => b.totalPoints - a.totalPoints);
@@ -482,7 +543,7 @@ export const GameScreen: React.FC = () => {
                                 <ThemedText style={styles.pointsDetail}>
                                   Game: {participant.gamePoints}
                                 </ThemedText>
-                                {currentGame.status === 'finished' && currentGame.guessResults && (
+                                {currentGame.guessResults && participant.guessPoints > 0 && (
                                   <ThemedText style={styles.pointsDetail}>
                                     • Guessing: {participant.guessPoints}
                                   </ThemedText>
@@ -717,35 +778,9 @@ export const GameScreen: React.FC = () => {
                       )}
                       {currentGame.currentRound.commentsVisible && 
                         currentGame.currentRound.pointsGiven && (
-                        <TouchableOpacity
-                          style={[
-                            styles.adminButton,
-                            {
-                              backgroundColor: '#4CAF50',
-                              shadowColor: '#000',
-                            },
-                          ]}
-                          onPress={handleStartNextRound}
-                          activeOpacity={0.8}
-                        >
-                          <ThemedText style={styles.buttonText}>Start Next Round</ThemedText>
-                        </TouchableOpacity>
-                      )}
-                      
-                      {isFinalRound && currentGame.currentRound.pointsGiven && (
-                        <TouchableOpacity
-                          style={[
-                            styles.adminButton,
-                            {
-                              backgroundColor: '#9C27B0',
-                              shadowColor: '#000',
-                            },
-                          ]}
-                          onPress={handleStartGuessingPhase}
-                          activeOpacity={0.8}
-                        >
-                          <ThemedText style={styles.buttonText}>Start Guessing Phase</ThemedText>
-                        </TouchableOpacity>
+                        <ThemedText style={styles.waitingText}>
+                          Round completed. Guessing phase will start automatically...
+                        </ThemedText>
                       )}
                     </View>
                   )}
@@ -756,7 +791,7 @@ export const GameScreen: React.FC = () => {
                 <View style={styles.gameFlowContainer}>
                   <View style={styles.roundInfo}>
                     <ThemedText type="subtitle" style={styles.roundTitle}>
-                      Final Round: Guess the Authors
+                      Guess the Authors
                     </ThemedText>
                     <ThemedText style={styles.targetText}>
                       Try to guess who wrote each comment about you
@@ -801,92 +836,138 @@ export const GameScreen: React.FC = () => {
                       );
                     })()
                   ) : (
-                    <View style={styles.guessingContainer}>
-                      <ThemedText style={styles.guessingInstructions}>
-                        Below are all the comments written about you during the game.
-                        Try to guess who wrote each comment. After submitting, you will see
-                        how many you guessed correctly.
-                      </ThemedText>
-                      
-                      {commentsForPlayer.map((comment) => (
-                        <View key={comment.id} style={styles.guessCard}>
-                          <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
-                          
-                          <ThemedText style={styles.guessPrompt}>
-                            Who do you think wrote this comment?
-                          </ThemedText>
-                          
-                          <View style={styles.authorOptionsContainer}>
-                            {(currentGame.guessingData?.possibleAuthors || []).map((author) => (
-                              <TouchableOpacity
-                                key={author.userId}
-                                style={[
-                                  styles.authorOption,
-                                  selectedGuesses[comment.id] === author.userId && styles.selectedAuthorOption
-                                ]}
-                                onPress={() => handleGuessSelect(comment.id, author.userId)}
-                              >
-                                <ThemedText style={[
-                                  styles.authorName,
-                                  selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName
-                                ]}>
-                                  {author.userName}
-                                </ThemedText>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </View>
-                      ))}
-                      
-                      {(commentsForPlayer.length > 0 && !allCommentsHaveGuesses) && (
-                        <ThemedText style={{ textAlign: 'center', color: '#999', marginBottom: 8 }}>
-                          Please select an author for each comment to enable Submit
+                    // Only show guessing UI if there are comments for this player (i.e., they are the target)
+                    commentsForPlayer.length > 0 ? (
+                      <View style={styles.guessingContainer}>
+                        <ThemedText style={styles.guessingInstructions}>
+                          Below are all the comments written about you during the game.
+                          Try to guess who wrote each comment. After submitting, you will see
+                          how many you guessed correctly.
                         </ThemedText>
-                      )}
-                      <TouchableOpacity
-                        style={[
-                          styles.submitGuessButton,
-                          {
-                            backgroundColor: '#9C27B0',
-                            shadowColor: '#000',
-                          },
-                          (isSubmittingGuesses || !allCommentsHaveGuesses) && styles.buttonDisabled,
-                        ]}
-                        onPress={handleSubmitGuesses}
-                        disabled={isSubmittingGuesses || !allCommentsHaveGuesses}
-                        activeOpacity={0.8}
-                      >
-                        {isSubmittingGuesses ? (
-                          <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                          <ThemedText style={styles.buttonText}>Submit My Guesses</ThemedText>
+
+                        {commentsForPlayer.map((comment) => (
+                          <View key={comment.id} style={styles.guessCard}>
+                            <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
+
+                            <ThemedText style={styles.guessPrompt}>
+                              Who do you think wrote this comment?
+                            </ThemedText>
+
+                            <View style={styles.authorOptionsContainer}>
+                              {(currentGame.guessingData?.possibleAuthors || []).map((author) => (
+                                <TouchableOpacity
+                                  key={author.userId}
+                                  style={[
+                                    styles.authorOption,
+                                    selectedGuesses[comment.id] === author.userId && styles.selectedAuthorOption
+                                  ]}
+                                  onPress={() => handleGuessSelect(comment.id, author.userId)}
+                                >
+                                  <ThemedText style={[
+                                    styles.authorName,
+                                    selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName
+                                  ]}>
+                                    {author.userName}
+                                  </ThemedText>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                          </View>
+                        ))}
+
+                        {(commentsForPlayer.length > 0 && !allCommentsHaveGuesses) && (
+                          <ThemedText style={{ textAlign: 'center', color: '#999', marginBottom: 8 }}>
+                            Please select an author for each comment to enable Submit
+                          </ThemedText>
                         )}
-                      </TouchableOpacity>
-                    </View>
+                        {commentsForPlayer.length > 0 && (
+                          <TouchableOpacity
+                            style={[
+                              styles.submitGuessButton,
+                              {
+                                backgroundColor: '#9C27B0',
+                                shadowColor: '#000',
+                              },
+                              (isSubmittingGuesses || !allCommentsHaveGuesses) && styles.buttonDisabled,
+                            ]}
+                            onPress={handleSubmitGuesses}
+                            disabled={isSubmittingGuesses || !allCommentsHaveGuesses}
+                            activeOpacity={0.8}
+                          >
+                            {isSubmittingGuesses ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <ThemedText style={styles.buttonText}>Submit My Guesses</ThemedText>
+                            )}
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ) : (
+                      <ThemedText style={styles.waitingText}>
+                        Waiting for the admin to start guessing for your round.
+                      </ThemedText>
+                    )
                   )}
                   
-                  {isAdmin && currentGame.guessingData.allPlayersSubmitted && (
-                    <View style={styles.adminControls}>
-                      <TouchableOpacity
-                        style={[
-                          styles.adminButton,
-                          {
-                            backgroundColor: '#4CAF50',
-                            shadowColor: '#000',
-                          },
-                          isFinalizingGuesses && styles.buttonDisabled,
-                        ]}
-                        onPress={handleFinalizeGuessingPhase}
-                        disabled={isFinalizingGuesses}
-                        activeOpacity={0.8}
-                      >
-                        {isFinalizingGuesses ? (
-                          <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                          <ThemedText style={styles.buttonText}>Finalize Game</ThemedText>
-                        )}
-                      </TouchableOpacity>
-                    </View>
+                  {isAdmin && (
+                    (() => {
+                      const singleTargetId = currentGame.guessingData?.singleRoundTargetId;
+                      const targetSubmitted = singleTargetId ? currentGame.guessingData?.playersWhoSubmittedGuesses?.includes(singleTargetId) : false;
+
+                      if (singleTargetId && targetSubmitted) {
+                        return (
+                          <View style={styles.adminControls}>
+                            <TouchableOpacity
+                              style={[
+                                styles.adminButton,
+                                {
+                                  backgroundColor: '#4CAF50',
+                                  shadowColor: '#000',
+                                },
+                                isFinalizingGuesses && styles.buttonDisabled,
+                              ]}
+                              onPress={handleFinalizeAndNextRound}
+                              disabled={isFinalizingGuesses}
+                              activeOpacity={0.8}
+                            >
+                              {isFinalizingGuesses ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <ThemedText style={styles.buttonText}>Finalize & Start Next Round</ThemedText>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      }
+
+                      if (currentGame.guessingData.allPlayersSubmitted) {
+                        return (
+                          <View style={styles.adminControls}>
+                            <TouchableOpacity
+                              style={[
+                                styles.adminButton,
+                                {
+                                  backgroundColor: '#4CAF50',
+                                  shadowColor: '#000',
+                                },
+                                isFinalizingGuesses && styles.buttonDisabled,
+                              ]}
+                              onPress={handleFinalizeGuessingPhase}
+                              disabled={isFinalizingGuesses}
+                              activeOpacity={0.8}
+                            >
+                              {isFinalizingGuesses ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <ThemedText style={styles.buttonText}>Finalize Game</ThemedText>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      }
+
+                      return null;
+                    })()
                   )}
                 </View>
               )}

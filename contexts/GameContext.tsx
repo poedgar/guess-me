@@ -65,8 +65,9 @@ export interface GuessingData {
   possibleAuthors: { userId: string; userName: string }[];
   playersWhoSubmittedGuesses?: string[];
   allPlayersSubmitted?: boolean;
+  // If set, indicates this guessing session is for a single completed round (per-round guessing)
+  singleRoundTargetId?: string;
 }
-
 
 interface GameContextType {
   currentGame: Game | null;
@@ -726,57 +727,49 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw new Error('Only the admin can start the next round');
     }
 
-    if (!currentGame.currentRound) {
-      throw new Error('No active round');
-    }
-
     try {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);
       const gameDoc = await getDoc(gameRef);
-      
+
       if (!gameDoc.exists()) {
         throw new Error('Game not found');
       }
 
       const gameData = gameDoc.data() as Game;
-      const currentRoundData = gameData.currentRound;
+      const currentRoundData = gameData.currentRound; // may be null after per-round guessing
       let previousRounds = gameData.rounds || [];
-      
-      // Save the current round as completed to the rounds array
+
+      // If there's an active currentRound that is completed, save it as completed
       if (currentRoundData && currentRoundData.commentsVisible && currentRoundData.pointsGiven) {
         const completedRound: Round = {
           ...currentRoundData,
           commentsVisible: true,
           pointsGiven: true,
         };
-        
-        // Check if this round already exists in the rounds array
+
         const roundIndex = previousRounds.findIndex(r => r.roundNumber === currentRoundData.roundNumber);
         if (roundIndex >= 0) {
-          // Update existing round with completed state (preserve all data)
           previousRounds[roundIndex] = completedRound;
         } else {
-          // Add new completed round to the array
           previousRounds = [...previousRounds, completedRound];
         }
       }
-      
+
       const usedTargets = previousRounds.map(r => r.targetUserId);
-      
+
       // Get participants who haven't been targets yet (excluding admin)
-      const availableParticipants = currentGame.participants.filter(
-        p => p.userId !== currentGame.adminId && !usedTargets.includes(p.userId)
+      const availableParticipants = (gameData.participants || []).filter(
+        p => p.userId !== gameData.adminId && !usedTargets.includes(p.userId)
       );
 
       if (availableParticipants.length === 0) {
         // All participants have been targets, game finished
-        // Make sure current round is saved as completed
         console.log('startNextRound: finishing game, saving rounds', { roundsSaved: previousRounds.length });
         await updateDoc(gameRef, {
           status: 'finished',
           currentRound: null,
-          rounds: previousRounds, // Save all completed rounds
+          rounds: previousRounds,
         });
         return;
       }
@@ -798,7 +791,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
       await updateDoc(gameRef, {
         currentRound: nextRound,
-        rounds: previousRounds, // Save all completed rounds (without the new round yet)
+        rounds: previousRounds,
       });
     } catch (error: any) {
       console.error('Error starting next round:', error);
@@ -812,44 +805,89 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
       throw new Error('Only the admin can start the guessing phase');
     }
-
-    // Include both completed rounds in `rounds` and the currentRound if it's completed (comments visible & points given)
-    const completedRounds: Round[] = [...(currentGame.rounds || [])];
-    if (currentGame.currentRound && currentGame.currentRound.commentsVisible && currentGame.currentRound.pointsGiven) {
-      // Avoid duplicating if currentRound already in rounds
-      if (!completedRounds.some(r => r.roundNumber === currentGame.currentRound!.roundNumber)) {
-        completedRounds.push(currentGame.currentRound);
-      }
-    }
-
-    if (completedRounds.length === 0) {
-      throw new Error('No completed rounds to start guessing');
-    }
-
+    // Two modes:
+    // 1) If the current round is completed (commentsVisible && pointsGiven) -> start guessing for *that* round only.
+    // 2) Otherwise (legacy or admin wants to start final guessing) -> use all completed rounds (from `rounds`).
     try {
       setLoading(true);
-      // Build comments by target from completed rounds
+
+      const gameRef = doc(db, 'games', currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      if (!gameDoc.exists()) throw new Error('Game not found');
+      const gameData = gameDoc.data() as Game;
+
+      const possibleAuthors = currentGame.participants.map(p => ({ userId: p.userId, userName: p.userName }));
+
+      // If there is a completed currentRound, start guessing for that round only
+      if (currentGame.currentRound && currentGame.currentRound.commentsVisible && currentGame.currentRound.pointsGiven) {
+        const completedRounds: Round[] = [...(gameData.rounds || [])];
+        // Use server's currentRound to ensure we have the latest data
+        const serverCurrentRound = gameData.currentRound;
+        if (!serverCurrentRound) {
+          throw new Error('Current round not found on server');
+        }
+        // ensure currentRound is saved in rounds (use server version for accuracy)
+        // Ensure guesses array is initialized
+        const roundToSave: Round = {
+          ...serverCurrentRound,
+          guesses: serverCurrentRound.guesses || [],
+        };
+        if (!completedRounds.some(r => r.roundNumber === serverCurrentRound.roundNumber)) {
+          completedRounds.push(roundToSave);
+        } else {
+          // Update existing round with server data
+          const index = completedRounds.findIndex(r => r.roundNumber === serverCurrentRound.roundNumber);
+          if (index >= 0) {
+            completedRounds[index] = roundToSave;
+          }
+        }
+
+        const commentsByTarget: { [key: string]: Comment[] } = {};
+        commentsByTarget[serverCurrentRound.targetUserId] = serverCurrentRound.comments || [];
+
+        const guessingData: GuessingData = {
+          commentsByTarget,
+          possibleAuthors,
+          playersWhoSubmittedGuesses: [],
+          allPlayersSubmitted: false,
+          singleRoundTargetId: serverCurrentRound.targetUserId,
+        };
+
+        console.log('startGuessingPhase: starting for single round', { roundNumber: serverCurrentRound.roundNumber, target: serverCurrentRound.targetUserId });
+
+        await updateDoc(gameRef, {
+          status: 'guessing_phase',
+          guessingData,
+          guessResults: {},
+          rounds: completedRounds,
+          currentRound: null,
+        });
+        return;
+      }
+
+      // Legacy/fallback: use completed rounds in `rounds` (e.g., final-phase guessing)
+      const completedRounds: Round[] = [...(gameData.rounds || [])];
+      if (completedRounds.length === 0) {
+        throw new Error('No completed rounds to start guessing');
+      }
+
       const commentsByTarget: { [key: string]: Comment[] } = {};
       for (const round of completedRounds) {
         commentsByTarget[round.targetUserId] = round.comments || [];
       }
 
-      const possibleAuthors = currentGame.participants.map(p => ({ userId: p.userId, userName: p.userName }));
-
-      const guessingData: GuessingData = {
+      const guessingDataAll: GuessingData = {
         commentsByTarget,
         possibleAuthors,
         playersWhoSubmittedGuesses: [],
         allPlayersSubmitted: false,
       };
 
-      console.log('startGuessingPhase: starting', { completedRoundsCount: completedRounds.length, targets: Object.keys(commentsByTarget).length, possibleAuthors: possibleAuthors.length });
+      console.log('startGuessingPhase: starting for all completed rounds', { completedRoundsCount: completedRounds.length });
 
-      const gameRef = doc(db, 'games', currentGame.id);
-      // Persist completed rounds so round history includes them, and clear currentRound since we're moving to guessing phase
       await updateDoc(gameRef, {
         status: 'guessing_phase',
-        guessingData,
+        guessingData: guessingDataAll,
         guessResults: {},
         rounds: completedRounds,
         currentRound: null,
@@ -911,48 +949,129 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       const serverRounds = gameData.rounds || [];
 
       // Ensure any completed currentRound is included in final rounds saved to the document
-      const finalRounds: Round[] = [...serverRounds];
+      // Use a fresh read to ensure we have the latest round data with guesses
+      const finalRounds: Round[] = serverRounds.map(r => ({ ...r })); // Deep copy to ensure we have latest data
       if (gameData.currentRound && gameData.currentRound.commentsVisible && gameData.currentRound.pointsGiven) {
-        if (!finalRounds.some(r => r.roundNumber === gameData.currentRound!.roundNumber)) {
-          finalRounds.push(gameData.currentRound);
+        const existingIndex = finalRounds.findIndex(r => r.roundNumber === gameData.currentRound!.roundNumber);
+        if (existingIndex >= 0) {
+          // Update existing round with latest server data
+          finalRounds[existingIndex] = { ...gameData.currentRound };
+        } else {
+          finalRounds.push({ ...gameData.currentRound });
         }
       }
 
+      // Determine whether this guessing phase was a per-round session (singleRoundTargetId set)
+      const isPerRoundGuessing = !!gameData.guessingData?.singleRoundTargetId;
+      
+      console.log('finalizeGuessingPhase: isPerRoundGuessing', isPerRoundGuessing);
+      console.log('finalizeGuessingPhase: singleRoundTargetId', gameData.guessingData?.singleRoundTargetId);
+      console.log('finalizeGuessingPhase: finalRounds', finalRounds.map(r => ({ 
+        roundNumber: r.roundNumber, 
+        targetUserId: r.targetUserId, 
+        guessesCount: r.guesses?.length || 0 
+      })));
+      
       // Aggregate correct guesses per guesser
       const guessCounts: { [userId: string]: number } = {};
-      for (const r of finalRounds) {
-        if (!r.guesses) continue;
-        for (const g of r.guesses) {
-          if (g.correct) {
-            guessCounts[g.guesserId] = (guessCounts[g.guesserId] ?? 0) + 1;
+      
+      if (isPerRoundGuessing) {
+        // Only count guesses from the specific round that was just guessed
+        const targetRound = finalRounds.find(r => r.targetUserId === gameData.guessingData?.singleRoundTargetId);
+        console.log('finalizeGuessingPhase: targetRound found', targetRound ? {
+          roundNumber: targetRound.roundNumber,
+          targetUserId: targetRound.targetUserId,
+          commentsCount: targetRound.comments?.length || 0,
+          guessesCount: targetRound.guesses?.length || 0,
+          guesses: targetRound.guesses?.map(g => ({ 
+            guesserId: g.guesserId, 
+            commentId: g.commentId,
+            guessedAuthorId: g.guessedAuthorId,
+            correct: g.correct 
+          }))
+        } : 'NOT FOUND');
+        
+        if (targetRound && targetRound.guesses) {
+          for (const g of targetRound.guesses) {
+            console.log('finalizeGuessingPhase: processing guess', { 
+              guesserId: g.guesserId, 
+              correct: g.correct,
+              commentId: g.commentId 
+            });
+            if (g.correct) {
+              guessCounts[g.guesserId] = (guessCounts[g.guesserId] ?? 0) + 1;
+            }
+          }
+        } else if (!targetRound) {
+          console.error('finalizeGuessingPhase: ERROR - targetRound not found!');
+        } else if (!targetRound.guesses) {
+          console.error('finalizeGuessingPhase: ERROR - targetRound has no guesses array!');
+        }
+      } else {
+        // Count guesses from all rounds (final guessing phase)
+        for (const r of finalRounds) {
+          if (!r.guesses) continue;
+          for (const g of r.guesses) {
+            if (g.correct) {
+              guessCounts[g.guesserId] = (guessCounts[g.guesserId] ?? 0) + 1;
+            }
           }
         }
       }
 
       console.log('finalizeGuessingPhase: current scores before merging', gameData.scores);
+      console.log('finalizeGuessingPhase: existing guessResults', gameData.guessResults);
       console.log('finalizeGuessingPhase: guessingData', gameData.guessingData);
-
-      // Debug: log guessCounts and finalRounds with guesses
       console.log('finalizeGuessingPhase: finalRounds count', finalRounds.length);
-      console.log('finalizeGuessingPhase: guessCounts', guessCounts);
+      console.log('finalizeGuessingPhase: guessCounts (new guesses only)', guessCounts);
 
-      // Build guessResults and update scores by awarding 1 point per correct guess
-      const guessResults: { [userId: string]: { correctGuesses: number } } = {};
+      // Build guessResults - do NOT add guess points to scores
+      // scores should only contain game points (from comments and target points)
+      // guessResults contains guess points separately
+      const existingGuessResults = gameData.guessResults || {};
+      const mergedGuessResults: { [userId: string]: { correctGuesses: number } } = { ...existingGuessResults };
+      // Keep scores as-is (only game points, no guess points)
       const newScores = { ...(gameData.scores ?? {}) };
-      for (const [uid, count] of Object.entries(guessCounts)) {
-        guessResults[uid] = { correctGuesses: count };
-        newScores[uid] = (newScores[uid] ?? 0) + count;
+
+      if (isPerRoundGuessing) {
+        // For per-round guessing, guessCounts already contains only the new guesses
+        // Add these to the existing totals in guessResults only (not scores)
+        for (const [uid, count] of Object.entries(guessCounts)) {
+          const prev = (existingGuessResults[uid]?.correctGuesses) ?? 0;
+          const newTotal = prev + count;
+          // Do NOT add to scores - scores should only have game points
+          mergedGuessResults[uid] = { correctGuesses: newTotal };
+        }
+      } else {
+        // For final guessing, update guessResults
+        for (const [uid, count] of Object.entries(guessCounts)) {
+          // Do NOT add to scores - scores should only have game points
+          mergedGuessResults[uid] = { correctGuesses: count };
+        }
       }
 
-      await updateDoc(gameRef, {
-        status: 'finished',
-        guessResults,
-        scores: newScores,
-        rounds: finalRounds,
-        currentRound: null,
-      });
-
-      console.log('finalizeGuessingPhase: finalized', { guessResults, newScores });
+      if (!isPerRoundGuessing) {
+        // Finalize and finish the game
+        await updateDoc(gameRef, {
+          status: 'finished',
+          guessResults: mergedGuessResults,
+          scores: newScores,
+          rounds: finalRounds,
+          currentRound: null,
+        });
+        console.log('finalizeGuessingPhase: finalized (game finished)', { guessResults: mergedGuessResults, newScores });
+      } else {
+        // This was a per-round guessing session; merge results and return to active state so admin can start next round
+        await updateDoc(gameRef, {
+          status: 'active',
+          guessingData: {},
+          guessResults: mergedGuessResults,
+          scores: newScores,
+          rounds: finalRounds,
+          currentRound: null,
+        });
+        console.log('finalizeGuessingPhase: finalized (per-round), returning to active', { guessResults: mergedGuessResults, newScores });
+      }
     } catch (err) {
       console.error('Error finalizing guessing phase:', err);
       throw err;
