@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Comment, Participant, Round, useGame } from '@/contexts/GameContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -45,7 +45,6 @@ export const GameScreen: React.FC = () => {
   const [selectedGuesses, setSelectedGuesses] = useState<Record<string, string>>({});
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
-  const autoStartedGuessingForRound = useRef<number | null>(null);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -345,45 +344,6 @@ export const GameScreen: React.FC = () => {
     }));
   };
 
-  // Automatically start guessing phase after each round completes
-  useEffect(() => {
-    if (
-      !currentGame ||
-      !user ||
-      !isAdmin ||
-      currentGame.status !== 'active' ||
-      !currentGame.currentRound ||
-      loading
-    ) {
-      return;
-    }
-
-    const round = currentGame.currentRound;
-    const roundCompleted = round.commentsVisible && round.pointsGiven;
-    const alreadyStartedForThisRound = autoStartedGuessingForRound.current === round.roundNumber;
-
-    if (roundCompleted && !alreadyStartedForThisRound) {
-      // Automatically start guessing phase
-      autoStartedGuessingForRound.current = round.roundNumber;
-      startGuessingPhase().catch((error: any) => {
-        console.error('Failed to auto-start guessing phase:', error);
-        // Reset the ref so we can try again
-        autoStartedGuessingForRound.current = null;
-      });
-    }
-  }, [currentGame?.currentRound?.commentsVisible, currentGame?.currentRound?.pointsGiven, currentGame?.status, isAdmin, user, loading, startGuessingPhase]);
-
-  // Reset auto-start tracking when a new round begins
-  useEffect(() => {
-    if (currentGame?.currentRound && currentGame.status === 'active') {
-      const currentRoundNumber = currentGame.currentRound.roundNumber;
-      // If we're tracking a different round number, reset the ref
-      if (autoStartedGuessingForRound.current !== null && 
-          autoStartedGuessingForRound.current !== currentRoundNumber) {
-        autoStartedGuessingForRound.current = null;
-      }
-    }
-  }, [currentGame?.currentRound?.roundNumber, currentGame?.status]);
 
   return (
     <ThemedView style={styles.container}>
@@ -778,9 +738,23 @@ export const GameScreen: React.FC = () => {
                       )}
                       {currentGame.currentRound.commentsVisible && 
                         currentGame.currentRound.pointsGiven && (
-                        <ThemedText style={styles.waitingText}>
-                          Round completed. Guessing phase will start automatically...
-                        </ThemedText>
+                        <TouchableOpacity
+                          style={[
+                            styles.adminButton,
+                            {
+                              backgroundColor: '#9C27B0',
+                              shadowColor: '#000',
+                            },
+                            loading && styles.buttonDisabled,
+                          ]}
+                          onPress={handleStartGuessingPhase}
+                          disabled={loading}
+                          activeOpacity={0.8}
+                        >
+                          <ThemedText style={styles.buttonText}>
+                            {loading ? 'Starting...' : 'Start Guessing Phase'}
+                          </ThemedText>
+                        </TouchableOpacity>
                       )}
                     </View>
                   )}
