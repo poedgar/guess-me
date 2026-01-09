@@ -31,9 +31,9 @@ export const AuthScreen: React.FC = () => {
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        'Sign In Error',
-        error.message || 'Failed to sign in. Please try again.',
-        [{ text: 'OK' }]
+        'Помилка входу',
+        error.message || 'Не вдалося увійти. Спробуйте ще раз.',
+        [{ text: 'ОК' }]
       );
     } finally {
       setIsSigningIn(false);
@@ -43,12 +43,12 @@ export const AuthScreen: React.FC = () => {
   const handleSignOut = async () => {
     try {
       Alert.alert(
-        'Sign Out',
-        'Are you sure you want to sign out?',
+        'Вихід',
+        'Ви впевнені, що хочете вийти?',
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: 'Скасувати', style: 'cancel' },
           {
-            text: 'Sign Out',
+            text: 'Вийти',
             style: 'destructive',
             onPress: async () => {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -59,7 +59,7 @@ export const AuthScreen: React.FC = () => {
         ]
       );
     } catch (error: any) {
-      Alert.alert('Sign Out Error', error.message || 'Failed to sign out. Please try again.');
+      Alert.alert('Помилка виходу', error.message || 'Не вдалося вийти. Спробуйте ще раз.');
     }
   };
 
@@ -69,7 +69,7 @@ export const AuthScreen: React.FC = () => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
           <ThemedText type="subtitle" style={styles.loadingText}>
-            Loading...
+            Завантаження...
           </ThemedText>
         </View>
       </ThemedView>
@@ -95,7 +95,7 @@ export const AuthScreen: React.FC = () => {
 
           {/* User Info */}
           <ThemedText type="title" style={styles.userName}>
-            {user.displayName || 'User'}
+            {user.displayName || 'Користувач'}
           </ThemedText>
           <ThemedText type="subtitle" style={styles.userEmail}>
             {user.email}
@@ -113,7 +113,7 @@ export const AuthScreen: React.FC = () => {
             onPress={handleSignOut}
             activeOpacity={0.8}
           >
-            <ThemedText style={styles.signOutButtonText}>Sign Out</ThemedText>
+            <ThemedText style={styles.signOutButtonText}>Вийти</ThemedText>
           </TouchableOpacity>
         </View>
       </ThemedView>
@@ -126,10 +126,10 @@ export const AuthScreen: React.FC = () => {
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
           <ThemedText type="title" style={styles.welcomeTitle}>
-            Welcome!
+            Ласкаво просимо!
           </ThemedText>
           <ThemedText type="subtitle" style={styles.welcomeSubtitle}>
-            Sign in to continue
+            Увійдіть, щоб продовжити
           </ThemedText>
         </View>
 
@@ -138,7 +138,7 @@ export const AuthScreen: React.FC = () => {
           {isSigningIn ? (
             <View style={styles.loadingButton}>
               <ActivityIndicator size="small" color="#fff" />
-              <ThemedText style={styles.loadingButtonText}>Signing in...</ThemedText>
+              <ThemedText style={styles.loadingButtonText}>Вхід...</ThemedText>
             </View>
           ) : Platform.OS === 'web' ? (
             <TouchableOpacity
@@ -158,7 +158,7 @@ export const AuthScreen: React.FC = () => {
                   <ThemedText style={styles.webGoogleIconText}>G</ThemedText>
                 </View>
                 <ThemedText style={styles.webGoogleButtonText}>
-                  Sign in with Google
+                  Увійти через Google
                 </ThemedText>
               </View>
             </TouchableOpacity>

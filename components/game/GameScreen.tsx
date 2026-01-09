@@ -51,13 +51,13 @@ export const GameScreen: React.FC = () => {
 
   const handleEnterGame = async () => {
     if (!isSignedIn) {
-      Alert.alert('Sign In Required', 'You must be signed in to create or join a game.');
+      Alert.alert('Потрібно ввійти', 'Ви повинні увійти, щоб створити або приєднатися до гри.');
       return;
     }
 
     const input = gameIdInput.trim();
     if (!input) {
-      Alert.alert('Invalid Input', 'Please enter a game ID or admin password.');
+      Alert.alert('Невірне введення', 'Введіть ідентифікатор гри або пароль адміністратора.');
       return;
     }
 
@@ -74,26 +74,26 @@ export const GameScreen: React.FC = () => {
         const gameId = result;
         setGameIdInput('');
         Alert.alert(
-          'Game Created!',
-          `Your game ID is: ${gameId}\nShare this ID with others to let them join your game.`,
+          'Гру створено!',
+          `Ідентифікатор вашої гри: ${gameId}\nПоділіться цим ID, щоб інші могли приєднатися.`,
           [
             {
-              text: 'Copy ID',
+              text: 'Скопіювати ID',
               onPress: () => {
                 Clipboard.setString(gameId);
-                Alert.alert('Copied!', 'Game ID copied to clipboard');
+                Alert.alert('Скопійовано!', 'ID гри скопійовано в буфер обміну');
               },
             },
-            { text: 'OK' },
+            { text: 'ОК' },
           ]
         );
       } else {
         setGameIdInput('');
-        Alert.alert('Success!', 'You have joined the game successfully!');
+        Alert.alert('Успішно!', 'Ви успішно приєдналися до гри!');
       }
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to create or join game. Please check the code and try again.');
+      Alert.alert('Помилка', error.message || 'Не вдалося створити або приєднатися до гри. Перевірте код і спробуйте ще раз.');
     } finally {
       setIsProcessingEnter(false);
     }
@@ -101,12 +101,12 @@ export const GameScreen: React.FC = () => {
 
   const handleLeaveGame = async () => {
     Alert.alert(
-      'Leave Game',
-      'Are you sure you want to leave this game?',
+      'Вийти з гри',
+      'Ви впевнені, що хочете вийти з цієї гри?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Скасувати', style: 'cancel' },
         {
-          text: 'Leave',
+          text: 'Вийти',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -114,7 +114,7 @@ export const GameScreen: React.FC = () => {
               await leaveGame();
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to leave game.');
+              Alert.alert('Помилка', error.message || 'Не вдалося вийти з гри.');
             }
           },
         },
@@ -129,13 +129,13 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to start game.');
+      Alert.alert('Помилка', error.message || 'Не вдалося почати гру.');
     }
   };
 
   const handleSubmitComment = async () => {
     if (!commentText.trim()) {
-      Alert.alert('Error', 'Please enter a comment.');
+      Alert.alert('Помилка', 'Введіть, будь ласка, коментар.');
       return;
     }
     try {
@@ -146,7 +146,7 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to submit comment.');
+      Alert.alert('Помилка', error.message || 'Не вдалося відправити коментар.');
     } finally {
       setIsSubmittingComment(false);
     }
@@ -159,13 +159,13 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to show comments.');
+      Alert.alert('Помилка', error.message || 'Не вдалося показати коментарі.');
     }
   };
 
   const handleGivePoints = async (commentId: string, points: number) => {
     if (!givePoints) {
-      Alert.alert('Not implemented', 'givePoints is not available on GameContext');
+      Alert.alert('Не реалізовано', 'givePoints недоступний у GameContext');
       return;
     }
     try {
@@ -173,10 +173,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePoints(commentId, points);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Point given.');
+      Alert.alert('Успішно', 'Бали нараховано.');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error?.message || 'Failed to give points.');
+      Alert.alert('Помилка', error?.message || 'Не вдалося нарахувати бали.');
     } finally {
       setGivingPoints(prev => ({ ...prev, [commentId]: false }));
     }
@@ -184,17 +184,17 @@ export const GameScreen: React.FC = () => {
 
   const handleFinishGivingPoints = async () => {
     if (!finishGivingPoints) {
-      Alert.alert('Not implemented', 'finishGivingPoints is not available on GameContext');
+      Alert.alert('Не реалізовано', 'finishGivingPoints недоступний у GameContext');
       return;
     }
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finishGivingPoints();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'You have finished giving points. The admin can now proceed.');
+      Alert.alert('Успішно', 'Ви завершили нарахування балів. Адміністратор може продовжити.');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error?.message || 'Failed to finish giving points.');
+      Alert.alert('Помилка', error?.message || 'Не вдалося завершити нарахування балів.');
     }
   };
 
@@ -205,14 +205,14 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to start next round.');
+      Alert.alert('Помилка', error.message || 'Не вдалося почати наступний раунд.');
     }
   };
 
   const handleCopyGameId = () => {
     if (currentGame) {
       Clipboard.setString(currentGame.id);
-      Alert.alert('Copied!', 'Game ID copied to clipboard');
+      Alert.alert('Скопійовано!', 'ID гри скопійовано в буфер обміну');
     }
   };
 
@@ -225,7 +225,7 @@ export const GameScreen: React.FC = () => {
   const handleGivePointsToTarget = async (points: number = 1) => {
     if (!currentGame?.currentRound) return;
     if (!givePointsToTarget) {
-      Alert.alert('Not implemented', 'givePointsToTarget is not available on GameContext');
+      Alert.alert('Не реалізовано', 'givePointsToTarget недоступний у GameContext');
       return;
     }
     try {
@@ -233,10 +233,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePointsToTarget(currentGame.currentRound.targetUserId, points);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Point given to target.');
+      Alert.alert('Успішно', 'Бали нараховано цільовому гравцю.');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error?.message || 'Failed to give points to target.');
+      Alert.alert('Помилка', error?.message || 'Не вдалося нарахувати бали цільовому гравцю.');
     } finally {
       setGivingPointsToTarget(false);
     }
@@ -251,7 +251,7 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error.message || 'Failed to start guessing phase.');
+      Alert.alert('Помилка', error.message || 'Не вдалося почати фазу вгадування.');
     }
   };
 
@@ -266,7 +266,7 @@ export const GameScreen: React.FC = () => {
       
       const missing = commentsForPlayerLocal.filter(c => !selectedGuesses[c.id]);
       if (missing.length > 0) {
-        Alert.alert('Incomplete', 'Please select an author for each comment before submitting.');
+        Alert.alert('Неповно', 'Будь ласка, оберіть автора для кожного коментаря перед відправкою.');
         setIsSubmittingGuesses(false);
         return;
       }
@@ -301,15 +301,15 @@ export const GameScreen: React.FC = () => {
 
       if (failures.length > 0) {
         const failedIds = failures.map(f => f.commentId).join(', ');
-        Alert.alert('Partial failure', `Failed to submit guesses for comments: ${failedIds}`);
+        Alert.alert('Часткова помилка', `Не вдалося відправити відповіді для коментарів: ${failedIds}`);
       } else {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Success', 'Your guesses have been submitted!');
+        Alert.alert('Успішно', 'Ваші відповіді відправлено!');
         setSelectedGuesses({});
       }
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error?.message || 'Failed to submit your guesses.');
+      Alert.alert('Помилка', error?.message || 'Не вдалося відправити ваші відповіді.');
     } finally {
       setIsSubmittingGuesses(false);
     }
@@ -323,10 +323,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finalizeGuessingPhase();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Guessing phase finalized. Game is now finished!');
+      Alert.alert('Успішно', 'Фазу вгадування завершено. Гра закінчена!');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error?.message || 'Failed to finalize guessing phase.');
+      Alert.alert('Помилка', error?.message || 'Не вдалося завершити фазу вгадування.');
     } finally {
       setIsFinalizingGuesses(false);
     }
@@ -371,7 +371,7 @@ export const GameScreen: React.FC = () => {
         {!isSignedIn ? (
           <View style={styles.notSignedInContainer}>
             <ThemedText type="title" style={styles.notSignedInText}>
-              Please sign in to create or join games
+              Будь ласка, увійдіть, щоб створювати або приєднуватися до ігор
             </ThemedText>
           </View>
         ) : currentGame ? (
@@ -380,28 +380,28 @@ export const GameScreen: React.FC = () => {
             <View style={styles.gameInfoCard}>
               <View style={styles.gameHeader}>
                 <ThemedText type="title" style={styles.gameTitle}>
-                  Game Roomm
+                  Ігрова кімната
                 </ThemedText>
                 {isAdmin && (
                   <View style={styles.adminBadge}>
-                    <ThemedText style={styles.adminBadgeText}>ADMIN</ThemedText>
+                    <ThemedText style={styles.adminBadgeText}>АДМІН</ThemedText>
                   </View>
                 )}
               </View>
               <View style={styles.gameIdContainer}>
                 <ThemedText type="subtitle" style={styles.gameIdLabel}>
-                  Game ID:
+                  ID гри:
                 </ThemedText>
                 <TouchableOpacity
                   onPress={handleCopyGameId}
                   style={styles.gameIdBox}
                 >
                   <ThemedText style={styles.gameIdText}>{currentGame.id}</ThemedText>
-                  <ThemedText style={styles.copyHint}>Tap to copy</ThemedText>
+                  <ThemedText style={styles.copyHint}>Натисніть, щоб скопіювати</ThemedText>
                 </TouchableOpacity>
               </View>
               <View style={styles.gameStatusContainer}>
-                <ThemedText style={styles.statusLabel}>Status:</ThemedText>
+                <ThemedText style={styles.statusLabel}>Статус:</ThemedText>
                 <View
                   style={[
                     styles.statusBadge,
@@ -418,7 +418,14 @@ export const GameScreen: React.FC = () => {
                   ]}
                 >
                   <ThemedText style={styles.statusText}>
-                    {currentGame.status.replace('_', ' ').toUpperCase()}
+                    {(
+                      {
+                        waiting: 'Очікування',
+                        active: 'Активна',
+                        guessing_phase: 'Фаза вгадування',
+                        finished: 'Завершено',
+                      } as Record<string, string>
+                    )[currentGame.status] || currentGame.status}
                   </ThemedText>
                 </View>
               </View>
@@ -426,11 +433,11 @@ export const GameScreen: React.FC = () => {
               <View style={styles.participantsContainer}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <ThemedText type="subtitle" style={styles.participantsTitle}>
-                    Participants ({currentGame.participants?.length || 0})
+                    Учасники ({currentGame.participants?.length || 0})
                   </ThemedText>
                   {currentGame.status === 'guessing_phase' && (
                     <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>
-                      Submitted: {currentGame.guessingData?.playersWhoSubmittedGuesses?.length || 0}/{totalTargets}
+                      Відправлено: {currentGame.guessingData?.playersWhoSubmittedGuesses?.length || 0}/{totalTargets}
                     </ThemedText>
                   )}
                 </View>
@@ -464,7 +471,7 @@ export const GameScreen: React.FC = () => {
                 currentGame.scores && (
                 <View style={styles.scoresContainer}>
                   <ThemedText type="subtitle" style={styles.scoresTitle}>
-                    🏆 Leaderboard
+                    🏆 Таблиця лідерів
                   </ThemedText>
                   {(() => {
                     // Calculate game points (from rounds) and guess points separately
@@ -514,15 +521,15 @@ export const GameScreen: React.FC = () => {
                               <ThemedText style={styles.leaderboardName}>
                                 {participant.userName}
                                 {participant.userId === currentGame.adminId && ' 👑'}
-                                {participant.userId === user?.uid && ' (You)'}
+                                {participant.userId === user?.uid && ' (Ви)'}
                               </ThemedText>
                               <View style={styles.pointsRow}>
                                 <ThemedText style={styles.pointsDetail}>
-                                  Game: {participant.gamePoints}
+                                  Гра: {participant.gamePoints}
                                 </ThemedText>
                                 {currentGame.guessResults && participant.guessPoints > 0 && (
                                   <ThemedText style={styles.pointsDetail}>
-                                    • Guessing: {participant.guessPoints}
+                                    • Вгадування: {participant.guessPoints}
                                   </ThemedText>
                                 )}
                               </View>
@@ -531,7 +538,7 @@ export const GameScreen: React.FC = () => {
                               <ThemedText style={styles.pointsValue}>
                                 {participant.totalPoints}
                               </ThemedText>
-                              <ThemedText style={styles.pointsLabel}>total</ThemedText>
+                              <ThemedText style={styles.pointsLabel}>всього</ThemedText>
                             </View>
                           </View>
                         ))}
@@ -582,12 +589,12 @@ export const GameScreen: React.FC = () => {
                     <View style={styles.targetView}>
                       {!currentGame.currentRound.commentsVisible ? (
                         <ThemedText style={styles.waitingText}>
-                          Waiting for others to write comments about you...
+                          Чекаємо, поки інші напишуть коментарі про вас...
                         </ThemedText>
                       ) : (
                         <View style={styles.commentsView}>
                           <ThemedText type="subtitle" style={styles.commentsTitle}>
-                            Comments About You:
+                            Коментарі про вас:
                           </ThemedText>
                           {currentGame.currentRound.comments?.map((comment: Comment) => (
                             <View key={comment.id} style={styles.commentCard}>
@@ -601,13 +608,13 @@ export const GameScreen: React.FC = () => {
                                   {givingPoints[comment.id] ? (
                                     <ActivityIndicator size="small" color="#fff" />
                                   ) : (
-                                    <ThemedText style={styles.pointsButtonText}>+1 Point</ThemedText>
+                                    <ThemedText style={styles.pointsButtonText}>+1 бал</ThemedText>
                                   )}
                                 </TouchableOpacity>
                               )}
                               {comment.points !== undefined && (
                                 <ThemedText style={styles.pointsGivenText}>
-                                  Points given: {comment.points}
+                                  Нараховано балів: {comment.points}
                                 </ThemedText>
                               )}
                             </View>
@@ -627,13 +634,13 @@ export const GameScreen: React.FC = () => {
                               activeOpacity={0.8}
                             >
                               <ThemedText style={styles.buttonText}>
-                                {loading ? 'Processing...' : 'Done Giving Points'}
+                                {loading ? 'Обробка...' : 'Завершити нарахування балів'}
                               </ThemedText>
                             </TouchableOpacity>
                           )}
                           {currentGame.currentRound.pointsGiven && (
                             <ThemedText style={styles.waitingText}>
-                              You have finished giving points. Waiting for admin to proceed...
+                              Ви завершили нарахування балів. Чекаємо рішення адміністратора...
                             </ThemedText>
                           )}
                         </View>
@@ -651,7 +658,7 @@ export const GameScreen: React.FC = () => {
                           return (
                             <View>
                               <ThemedText style={styles.commentPrompt}>
-                                Write an anonymous comment about {currentGame.currentRound.targetUserName}:
+                                Напишіть анонімний коментар про {currentGame.currentRound.targetUserName}:
                               </ThemedText>
                               <TextInput
                                 style={[
@@ -662,7 +669,7 @@ export const GameScreen: React.FC = () => {
                                     borderColor: isDark ? '#444' : '#ddd',
                                   },
                                 ]}
-                                placeholder="Your anonymous comment..."
+                                placeholder="Ваш анонімний коментар..."
                                 placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={commentText}
                                 onChangeText={setCommentText}
@@ -686,7 +693,7 @@ export const GameScreen: React.FC = () => {
                                 {isSubmittingComment ? (
                                   <ActivityIndicator size="small" color="#fff" />
                                 ) : (
-                                  <ThemedText style={styles.buttonText}>Submit Comment</ThemedText>
+                                  <ThemedText style={styles.buttonText}>Відправити коментар</ThemedText>
                                 )}
                               </TouchableOpacity>
                             </View>
@@ -694,21 +701,21 @@ export const GameScreen: React.FC = () => {
                         } else if (!currentGame.currentRound.commentsVisible) {
                           return (
                             <ThemedText style={styles.waitingText}>
-                              Comment submitted! Waiting for admin to show all comments...
+                              Коментар відправлено! Чекаємо, коли адміністратор покаже всі коментарі...
                             </ThemedText>
                           );
                         } else {
                           return (
                             <View style={styles.commentsView}>
                               <ThemedText type="subtitle" style={styles.commentsTitle}>
-                                All Comments:
+                                Усі коментарі:
                               </ThemedText>
                               {currentGame.currentRound.comments?.map((comment: Comment) => (
                                 <View key={comment.id} style={styles.commentCard}>
                                   <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
                                   {comment.points !== undefined && (
                                     <ThemedText style={styles.pointsGivenText}>
-                                      Points: {comment.points}
+                                      Бали: {comment.points}
                                     </ThemedText>
                                   )}
                                 </View>
@@ -806,10 +813,10 @@ export const GameScreen: React.FC = () => {
                 <View style={styles.gameFlowContainer}>
                   <View style={styles.roundInfo}>
                     <ThemedText type="subtitle" style={styles.roundTitle}>
-                      Guess the Authors
+                      Вгадай авторів
                     </ThemedText>
                     <ThemedText style={styles.targetText}>
-                      Try to guess who wrote each comment about you
+                      Спробуйте вгадати, хто написав кожен коментар про вас
                     </ThemedText>
                   </View>
                   
@@ -820,14 +827,14 @@ export const GameScreen: React.FC = () => {
                         return (
                           <View style={styles.guessResultsContainer}>
                             <ThemedText type="subtitle" style={styles.guessResultsTitle}>
-                              Your Guessing Results
+                              Результати вгадування
                             </ThemedText>
                             <View style={styles.guessResultCard}>
                               <ThemedText style={styles.guessResultText}>
-                                You correctly guessed {playerResult.correctGuesses || 0} out of {commentsForPlayer.length} comments!
+                                Ви правильно вгадали {playerResult.correctGuesses || 0} з {commentsForPlayer.length} коментарів!
                               </ThemedText>
                               <ThemedText style={styles.guessResultDetail}>
-                                You have earned {playerResult.correctGuesses || 0} points for your correct guesses.
+                                Ви отримали {playerResult.correctGuesses || 0} балів за правильні відповіді.
                               </ThemedText>
                             </View>
                           </View>
@@ -837,14 +844,14 @@ export const GameScreen: React.FC = () => {
                       return (
                         <View style={styles.guessResultsContainer}>
                           <ThemedText type="subtitle" style={styles.guessResultsTitle}>
-                            Thanks — guesses submitted
+                            Дякуємо — відповіді відправлено
                           </ThemedText>
                           <ThemedText style={styles.waitingText}>
-                            Waiting for the admin to finalize the guessing phase. You will see your results after finalization.
+                            Чекаємо, поки адміністратор завершить фазу вгадування. Ви побачите результати після завершення.
                           </ThemedText>
                           {isAdmin && !currentGame.guessingData.allPlayersSubmitted && (
                             <ThemedText style={styles.waitingText}>
-                              Waiting for all players to submit their guesses...
+                              Чекаємо, поки всі гравці надішлють відповіді...
                             </ThemedText>
                           )}
                         </View>
@@ -855,17 +862,16 @@ export const GameScreen: React.FC = () => {
                     commentsForPlayer.length > 0 ? (
                       <View style={styles.guessingContainer}>
                         <ThemedText style={styles.guessingInstructions}>
-                          Below are all the comments written about you during the game.
-                          Try to guess who wrote each comment. After submitting, you will see
-                          how many you guessed correctly.
-                        </ThemedText>
+                            Нижче — всі коментарі, написані про вас під час гри.
+                            Спробуйте вгадати, хто написав кожен коментар. Після відправки ви побачите, скільки вгадали правильно.
+                          </ThemedText>
 
                         {commentsForPlayer.map((comment) => (
                           <View key={comment.id} style={styles.guessCard}>
                             <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
 
                             <ThemedText style={styles.guessPrompt}>
-                              Who do you think wrote this comment?
+                              Хто, на вашу думку, написав цей коментар?
                             </ThemedText>
 
                             <View style={styles.authorOptionsContainer}>
@@ -890,9 +896,9 @@ export const GameScreen: React.FC = () => {
                           </View>
                         ))}
 
-                        {(commentsForPlayer.length > 0 && !allCommentsHaveGuesses) && (
+                          {(commentsForPlayer.length > 0 && !allCommentsHaveGuesses) && (
                           <ThemedText style={{ textAlign: 'center', color: '#999', marginBottom: 8 }}>
-                            Please select an author for each comment to enable Submit
+                            Будь ласка, оберіть автора для кожного коментаря, щоб активувати кнопку відправки
                           </ThemedText>
                         )}
                         {commentsForPlayer.length > 0 && (
@@ -912,7 +918,7 @@ export const GameScreen: React.FC = () => {
                             {isSubmittingGuesses ? (
                               <ActivityIndicator size="small" color="#fff" />
                             ) : (
-                              <ThemedText style={styles.buttonText}>Submit My Guesses</ThemedText>
+                              <ThemedText style={styles.buttonText}>Відправити мої відповіді</ThemedText>
                             )}
                           </TouchableOpacity>
                         )}
@@ -948,7 +954,7 @@ export const GameScreen: React.FC = () => {
                               {isFinalizingGuesses ? (
                                 <ActivityIndicator size="small" color="#fff" />
                               ) : (
-                                <ThemedText style={styles.buttonText}>Finalize & Start Next Round</ThemedText>
+                                <ThemedText style={styles.buttonText}>Завершити та почати наступний раунд</ThemedText>
                               )}
                             </TouchableOpacity>
                           </View>
@@ -974,7 +980,7 @@ export const GameScreen: React.FC = () => {
                               {isFinalizingGuesses ? (
                                 <ActivityIndicator size="small" color="#fff" />
                               ) : (
-                                <ThemedText style={styles.buttonText}>Finalize Game</ThemedText>
+                                <ThemedText style={styles.buttonText}>Завершити гру</ThemedText>
                               )}
                             </TouchableOpacity>
                           </View>
@@ -989,10 +995,10 @@ export const GameScreen: React.FC = () => {
               {currentGame.status === 'finished' && (
                 <View style={styles.gameFlowContainer}>
                   <ThemedText type="title" style={styles.finishedTitle}>
-                    Game Finished! 🎉
+                    Гра завершена! 🎉
                   </ThemedText>
                   <ThemedText style={styles.finishedText}>
-                    All rounds completed. Check the final scores above!
+                    Усі раунди завершені. Перегляньте фінальні результати вище!
                   </ThemedText>
                 </View>
               )}
@@ -1006,7 +1012,7 @@ export const GameScreen: React.FC = () => {
                 return completedRounds.length > 0 ? (
                   <View style={styles.roundHistoryContainer}>
                     <ThemedText type="subtitle" style={styles.roundHistoryTitle}>
-                      📜 Round History ({completedRounds.length} {completedRounds.length === 1 ? 'round' : 'rounds'})
+                      📜 Історія раундів ({completedRounds.length} {completedRounds.length === 1 ? 'раунд' : 'раунди'})
                     </ThemedText>
                     {completedRounds.map((round: Round) => (
                       <View key={round.roundNumber} style={styles.roundHistoryItem}>
@@ -1046,7 +1052,7 @@ export const GameScreen: React.FC = () => {
                               </View>
                             ))
                           ) : (
-                            <ThemedText style={styles.noCommentsText}>No comments</ThemedText>
+                            <ThemedText style={styles.noCommentsText}>Коментарів немає</ThemedText>
                           )}
                         </View>
                       </View>
@@ -1073,10 +1079,10 @@ export const GameScreen: React.FC = () => {
           <View style={styles.actionContainer}>
             <View style={styles.section}>
               <ThemedText type="title" style={styles.sectionTitle}>
-                Create or Join Game
+                Створити або приєднатися до гри
               </ThemedText>
               <ThemedText style={styles.sectionDescription}>
-                Enter the admin password to create a new game, or enter an existing game ID to join one.
+                Введіть пароль адміністратора, щоб створити нову гру, або існуючий ID гри, щоб приєднатися.
               </ThemedText>
 
               <TextInput
@@ -1088,7 +1094,7 @@ export const GameScreen: React.FC = () => {
                     borderColor: isDark ? '#444' : '#ddd',
                   },
                 ]}
-                placeholder="Enter admin password or game ID"
+                placeholder="Введіть пароль адміністратора або ID гри"
                 placeholderTextColor={isDark ? '#888' : '#999'}
                 value={gameIdInput}
                 onChangeText={setGameIdInput}
@@ -1112,10 +1118,10 @@ export const GameScreen: React.FC = () => {
                 {isProcessingEnter ? (
                   <View style={styles.buttonLoading}>
                     <ActivityIndicator size="small" color="#fff" />
-                    <ThemedText style={styles.buttonText}>Processing...</ThemedText>
+                    <ThemedText style={styles.buttonText}>Обробка...</ThemedText>
                   </View>
                 ) : (
-                  <ThemedText style={styles.buttonText}>Proceed</ThemedText>
+                  <ThemedText style={styles.buttonText}>Продовжити</ThemedText>
                 )}
               </TouchableOpacity>
             </View>
