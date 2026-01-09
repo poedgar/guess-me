@@ -29,6 +29,7 @@ export const GameScreen: React.FC = () => {
     submitComment, 
     showComments, 
     givePoints, 
+    finishGivingPoints,
     givePointsToTarget, 
     startNextRound,
     startGuessingPhase,
@@ -178,6 +179,22 @@ export const GameScreen: React.FC = () => {
       Alert.alert('Error', error?.message || 'Failed to give points.');
     } finally {
       setGivingPoints(prev => ({ ...prev, [commentId]: false }));
+    }
+  };
+
+  const handleFinishGivingPoints = async () => {
+    if (!finishGivingPoints) {
+      Alert.alert('Not implemented', 'finishGivingPoints is not available on GameContext');
+      return;
+    }
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await finishGivingPoints();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Success', 'You have finished giving points. The admin can now proceed.');
+    } catch (error: any) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', error?.message || 'Failed to finish giving points.');
     }
   };
 
@@ -595,6 +612,30 @@ export const GameScreen: React.FC = () => {
                               )}
                             </View>
                           ))}
+                          {!currentGame.currentRound.pointsGiven && (
+                            <TouchableOpacity
+                              style={[
+                                styles.submitCommentButton,
+                                {
+                                  backgroundColor: '#9C27B0',
+                                  shadowColor: '#000',
+                                },
+                                loading && styles.buttonDisabled,
+                              ]}
+                              onPress={handleFinishGivingPoints}
+                              disabled={loading}
+                              activeOpacity={0.8}
+                            >
+                              <ThemedText style={styles.buttonText}>
+                                {loading ? 'Processing...' : 'Done Giving Points'}
+                              </ThemedText>
+                            </TouchableOpacity>
+                          )}
+                          {currentGame.currentRound.pointsGiven && (
+                            <ThemedText style={styles.waitingText}>
+                              You have finished giving points. Waiting for admin to proceed...
+                            </ThemedText>
+                          )}
                         </View>
                       )}
                     </View>

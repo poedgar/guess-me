@@ -87,6 +87,7 @@ interface GameContextType {
   submitComment: (commentText: string) => Promise<void>;
   showComments: () => Promise<void>;
   givePoints: (commentId: string, points: number) => Promise<void>;
+  finishGivingPoints: () => Promise<void>;
   startNextRound: () => Promise<void>;
   givePointsToTarget: (targetUserId: string, points?: number) => Promise<void>;
   startGuessingPhase: () => Promise<void>;
@@ -493,12 +494,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
         console.log('givePoints: awarding points', { commentId, points, authorId: comment.authorId, newScores });
 
-        // Determine whether all comments have been assigned points; only then mark round as pointsGiven
-        const allCommentsHavePoints = updatedComments.length > 0 && updatedComments.every(c => c.points !== undefined);
-
+        // Update comments and scores, but don't automatically set pointsGiven
+        // The target will explicitly mark when they're done giving points
         await updateDoc(gameRef, {
           'currentRound.comments': updatedComments,
-          'currentRound.pointsGiven': allCommentsHavePoints,
           scores: newScores,
         });
 
@@ -506,6 +505,51 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
     } catch (error: any) {
       console.error('Error giving points:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const finishGivingPoints = async (): Promise<void> => {
+    if (!currentGame || !user || !currentGame.currentRound) {
+      throw new Error('No active round');
+    }
+
+    if (user.uid !== currentGame.currentRound.targetUserId) {
+      throw new Error('Only the target can finish giving points');
+    }
+
+    console.log('finishGivingPoints called', { userId: user.uid, roundNumber: currentGame.currentRound.roundNumber });
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      
+      if (!gameDoc.exists()) {
+        throw new Error('Game not found');
+      }
+
+      const gameData = gameDoc.data() as Game;
+      const currentRound = gameData.currentRound;
+      
+      if (!currentRound) {
+        throw new Error('No active round');
+      }
+
+      if (currentRound.targetUserId !== user.uid) {
+        throw new Error('Only the target can finish giving points');
+      }
+
+      // Mark that the target has finished giving points
+      await updateDoc(gameRef, {
+        'currentRound.pointsGiven': true,
+      });
+
+      console.log('finishGivingPoints: updateDoc complete');
+    } catch (error: any) {
+      console.error('Error finishing giving points:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -1092,6 +1136,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     submitComment,
     showComments,
     givePoints,
+    finishGivingPoints,
     startNextRound,
     startGuessingPhase,
     finalizeGuessingPhase,
@@ -1102,4 +1147,3 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 };
-
