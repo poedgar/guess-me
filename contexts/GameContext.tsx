@@ -11,6 +11,8 @@ export interface Game {
   participants: Participant[];
   createdAt: any;
   status: 'waiting' | 'active' | 'guessing_phase' | 'finished';
+  // If set, indicates the admin left the game and it cannot continue
+  adminLeft?: boolean;
   currentRound?: Round | null;
   rounds?: Round[];
   scores?: { [userId: string]: number };
@@ -279,8 +281,35 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
     try {
       setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+
+      // Remove participant in a transaction to avoid races
+      await runTransaction(db, async (transaction) => {
+        const gameSnap = await transaction.get(gameRef);
+        if (!gameSnap.exists()) {
+          return;
+        }
+
+        const gameData = gameSnap.data() as Game;
+        const updatedParticipants = (gameData.participants || []).filter(p => p.userId !== user.uid);
+
+          // If the leaving user was the admin, mark the game as finished and flag adminLeft
+          if (gameData.adminId === user.uid) {
+            transaction.update(gameRef, {
+              participants: updatedParticipants,
+              status: 'finished',
+              currentRound: null,
+              adminLeft: true,
+            });
+          } else {
+            transaction.update(gameRef, {
+              participants: updatedParticipants,
+            });
+          }
+      });
+
+      // Locally clear currentGame so UI returns to join/create screen
       setCurrentGame(null);
-      // You can add logic here to remove user from participants if needed
     } catch (error: any) {
       console.error('Error leaving game:', error);
       throw error;

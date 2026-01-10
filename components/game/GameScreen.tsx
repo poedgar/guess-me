@@ -113,13 +113,28 @@ export const GameScreen: React.FC = () => {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               await leaveGame();
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Ви вийшли з гри');
             } catch (error: any) {
+              console.error('handleLeaveGame error', error);
               Alert.alert('Помилка', error.message || 'Не вдалося вийти з гри.');
             }
           },
         },
       ]
     );
+  };
+
+  // Direct leave action (used for debugging/fallback) — removes user and shows result
+  const handleLeaveNow = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await leaveGame();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Ви вийшли з гри');
+    } catch (error: any) {
+      console.error('handleLeaveNow error', error);
+      Alert.alert('Помилка', error.message || 'Не вдалося вийти з гри.');
+    }
   };
 
   const handleStartGame = async () => {
@@ -1006,12 +1021,25 @@ export const GameScreen: React.FC = () => {
               )}
               {currentGame.status === 'finished' && (
                 <View style={styles.gameFlowContainer}>
-                  <ThemedText type="title" style={styles.finishedTitle}>
-                    Гра завершена! 🎉
-                  </ThemedText>
-                  <ThemedText style={styles.finishedText}>
-                    Усі раунди завершені. Перегляньте фінальні результати вище!
-                  </ThemedText>
+                  {currentGame.adminLeft ? (
+                    <>
+                      <ThemedText type="title" style={styles.finishedTitle}>
+                        Адміністратор покинув гру
+                      </ThemedText>
+                      <ThemedText style={styles.finishedText}>
+                        Гру неможливо продовжувати без адміністратора. Будь ласка, вийдіть з кімнати або створіть нову гру.
+                      </ThemedText>
+                    </>
+                  ) : (
+                    <>
+                      <ThemedText type="title" style={styles.finishedTitle}>
+                        Гра завершена! 🎉
+                      </ThemedText>
+                      <ThemedText style={styles.finishedText}>
+                        Усі раунди завершені. Перегляньте фінальні результати вище!
+                      </ThemedText>
+                    </>
+                  )}
                 </View>
               )}
               {/* Round History */}
@@ -1080,7 +1108,7 @@ export const GameScreen: React.FC = () => {
                     shadowColor: '#000',
                   },
                 ]}
-                onPress={handleLeaveGame}
+                onPress={handleLeaveNow}
                 activeOpacity={0.8}
               >
                 <ThemedText style={styles.leaveButtonText}>Вийти з гри</ThemedText>

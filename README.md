@@ -14,17 +14,18 @@
 
 1. Myapp -> new name
 
-2. Українстка мова
+2. Інтерфейс простіший
 
-3. Інтерфейс простіший
+3. Додати правила гри
 
-4. Додати правила гри
+4.  Штрихкод
 
-5.  Штрихкод
+5.  Add Leave game functionality
 
-7.  Add Leave game functionality
+6.  Add test
 
-8.  Add test
+7. Custom alerts 
+
 
 # Rules
 Психологічна гра (комунікативний тренінг)
