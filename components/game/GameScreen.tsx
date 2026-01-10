@@ -576,12 +576,12 @@ export const GameScreen: React.FC = () => {
                       disabled={loading || currentGame.participants.length < 2}
                       activeOpacity={0.8}
                     >
-                      <ThemedText style={styles.buttonText}>Start Game</ThemedText>
+                      <ThemedText style={styles.buttonText}>Почати гру</ThemedText>
                     </TouchableOpacity>
                   )}
                   {!isAdmin && (
                     <ThemedText style={styles.waitingText}>
-                      Waiting for admin to start the game...
+                      Чекаємо, поки адміністратор почне гру...
                     </ThemedText>
                   )}
                 </View>
@@ -739,7 +739,7 @@ export const GameScreen: React.FC = () => {
                                   return (
                                     <View style={{ marginTop: 16 }}>
                                         <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
-                                        You can now give points to {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
+                                        Тепер ви можете нарахувати бали для {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
                                       </ThemedText>
                                       <TouchableOpacity
                                         style={[
@@ -757,10 +757,10 @@ export const GameScreen: React.FC = () => {
                                         {givingPointsToTarget ? (
                                           <ActivityIndicator size="small" color="#fff" />
                                         ) : (
-                                          <ThemedText style={styles.buttonText}>
+                                            <ThemedText style={styles.buttonText}>
                                             {alreadyGaveTargetPoints 
-                                              ? 'Points Given' 
-                                              : 'Give 1 Point to Target'}
+                                              ? 'Бали нараховано' 
+                                              : 'Дати 1 бал цільовому гравцю'}
                                           </ThemedText>
                                         )}
                                       </TouchableOpacity>
@@ -793,7 +793,7 @@ export const GameScreen: React.FC = () => {
                             (currentGame.participants.length - 1)}
                           activeOpacity={0.8}
                         >
-                          <ThemedText style={styles.buttonText}>Show Comments</ThemedText>
+                          <ThemedText style={styles.buttonText}>Показати коментарі</ThemedText>
                         </TouchableOpacity>
                       )}
                       {currentGame.currentRound.commentsVisible && 
@@ -1039,8 +1039,8 @@ export const GameScreen: React.FC = () => {
                             const targetPoints = round.targetPointsGivenBy?.length ?? 0;
                             return (
                               <ThemedText style={styles.roundHistoryTargetPoints}>
-                                Target points: +{targetPoints} pts
-                              </ThemedText>
+                                    Бали цілі: +{targetPoints} балів
+                                  </ThemedText>
                             );
                           })()}
                         </View>
