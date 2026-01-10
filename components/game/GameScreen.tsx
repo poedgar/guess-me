@@ -8,9 +8,10 @@ import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Clipboard,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -49,15 +50,32 @@ export const GameScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  // Fancy alert state
+  const [fancyVisible, setFancyVisible] = useState(false);
+  const [fancyTitle, setFancyTitle] = useState<string | null>(null);
+  const [fancyMessage, setFancyMessage] = useState<string | null>(null);
+  const [fancyButtons, setFancyButtons] = useState<{ text: string; onPress?: () => void; style?: any }[]>([]);
+
+  const showFancyAlert = (title: string, message?: string | null, buttons?: { text: string; onPress?: () => void; style?: any }[]) => {
+    setFancyTitle(title);
+    setFancyMessage(message ?? null);
+    setFancyButtons(buttons && buttons.length > 0 ? buttons : [{ text: 'OK' }]);
+    setFancyVisible(true);
+  };
+
+  const closeFancyAlert = () => {
+    setFancyVisible(false);
+  };
+
   const handleEnterGame = async () => {
     if (!isSignedIn) {
-      Alert.alert('Потрібно ввійти', 'Ви повинні увійти, щоб створити або приєднатися до гри.');
+      showFancyAlert('Потрібно ввійти', 'Ви повинні увійти, щоб створити або приєднатися до гри.');
       return;
     }
 
     const input = gameIdInput.trim();
     if (!input) {
-      Alert.alert('Невірне введення', 'Введіть ідентифікатор гри або пароль адміністратора.');
+      showFancyAlert('Невірне введення', 'Введіть ідентифікатор гри або пароль адміністратора.');
       return;
     }
 
@@ -73,7 +91,7 @@ export const GameScreen: React.FC = () => {
       if (typeof result === 'string') {
         const gameId = result;
         setGameIdInput('');
-        Alert.alert(
+        showFancyAlert(
           'Гру створено!',
           `Ідентифікатор вашої гри: ${gameId}\nПоділіться цим ID, щоб інші могли приєднатися.`,
           [
@@ -81,7 +99,7 @@ export const GameScreen: React.FC = () => {
               text: 'Скопіювати ID',
               onPress: () => {
                 Clipboard.setString(gameId);
-                Alert.alert('Скопійовано!', 'ID гри скопійовано в буфер обміну');
+                showFancyAlert('Скопійовано!', 'ID гри скопійовано в буфер обміну');
               },
             },
             { text: 'ОК' },
@@ -89,18 +107,18 @@ export const GameScreen: React.FC = () => {
         );
       } else {
         setGameIdInput('');
-        Alert.alert('Успішно!', 'Ви успішно приєдналися до гри!');
+        showFancyAlert('Успішно!', 'Ви успішно приєдналися до гри!');
       }
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error.message || 'Не вдалося створити або приєднатися до гри. Перевірте код і спробуйте ще раз.');
+      showFancyAlert('Помилка', error.message || 'Не вдалося створити або приєднатися до гри. Перевірте код і спробуйте ще раз.');
     } finally {
       setIsProcessingEnter(false);
     }
   }; 
 
   const handleLeaveGame = async () => {
-    Alert.alert(
+    showFancyAlert(
       'Вийти з гри',
       'Ви впевнені, що хочете вийти з цієї гри?',
       [
@@ -113,10 +131,10 @@ export const GameScreen: React.FC = () => {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               await leaveGame();
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert('Ви вийшли з гри');
+              showFancyAlert('Ви вийшли з гри');
             } catch (error: any) {
               console.error('handleLeaveGame error', error);
-              Alert.alert('Помилка', error.message || 'Не вдалося вийти з гри.');
+              showFancyAlert('Помилка', error.message || 'Не вдалося вийти з гри.');
             }
           },
         },
@@ -130,10 +148,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await leaveGame();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Ви вийшли з гри');
+      showFancyAlert('Ви вийшли з гри');
     } catch (error: any) {
       console.error('handleLeaveNow error', error);
-      Alert.alert('Помилка', error.message || 'Не вдалося вийти з гри.');
+      showFancyAlert('Помилка', error.message || 'Не вдалося вийти з гри.');
     }
   };
 
@@ -144,13 +162,13 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error.message || 'Не вдалося почати гру.');
+      showFancyAlert('Помилка', error.message || 'Не вдалося почати гру.');
     }
   };
 
   const handleSubmitComment = async () => {
     if (!commentText.trim()) {
-      Alert.alert('Помилка', 'Введіть, будь ласка, коментар.');
+      showFancyAlert('Помилка', 'Введіть, будь ласка, коментар.');
       return;
     }
     try {
@@ -161,7 +179,7 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error.message || 'Не вдалося відправити коментар.');
+      showFancyAlert('Помилка', error.message || 'Не вдалося відправити коментар.');
     } finally {
       setIsSubmittingComment(false);
     }
@@ -174,13 +192,13 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error.message || 'Не вдалося показати коментарі.');
+      showFancyAlert('Помилка', error.message || 'Не вдалося показати коментарі.');
     }
   };
 
   const handleGivePoints = async (commentId: string, points: number) => {
     if (!givePoints) {
-      Alert.alert('Не реалізовано', 'givePoints недоступний у GameContext');
+      showFancyAlert('Не реалізовано', 'givePoints недоступний у GameContext');
       return;
     }
     try {
@@ -188,10 +206,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePoints(commentId, points);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Успішно', 'Бали нараховано.');
+      showFancyAlert('Успішно', 'Бали нараховано.');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error?.message || 'Не вдалося нарахувати бали.');
+      showFancyAlert('Помилка', error?.message || 'Не вдалося нарахувати бали.');
     } finally {
       setGivingPoints(prev => ({ ...prev, [commentId]: false }));
     }
@@ -199,17 +217,17 @@ export const GameScreen: React.FC = () => {
 
   const handleFinishGivingPoints = async () => {
     if (!finishGivingPoints) {
-      Alert.alert('Не реалізовано', 'finishGivingPoints недоступний у GameContext');
+      showFancyAlert('Не реалізовано', 'finishGivingPoints недоступний у GameContext');
       return;
     }
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finishGivingPoints();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Успішно', 'Ви завершили нарахування балів. Адміністратор може продовжити.');
+      showFancyAlert('Успішно', 'Ви завершили нарахування балів. Адміністратор може продовжити.');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error?.message || 'Не вдалося завершити нарахування балів.');
+      showFancyAlert('Помилка', error?.message || 'Не вдалося завершити нарахування балів.');
     }
   };
 
@@ -220,14 +238,14 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error.message || 'Не вдалося почати наступний раунд.');
+      showFancyAlert('Помилка', error.message || 'Не вдалося почати наступний раунд.');
     }
   };
 
   const handleCopyGameId = () => {
     if (currentGame) {
       Clipboard.setString(currentGame.id);
-      Alert.alert('Скопійовано!', 'ID гри скопійовано в буфер обміну');
+      showFancyAlert('Скопійовано!', 'ID гри скопійовано в буфер обміну');
     }
   };
 
@@ -251,7 +269,7 @@ export const GameScreen: React.FC = () => {
   const handleGivePointsToTarget = async (points: number = 1) => {
     if (!currentGame?.currentRound) return;
     if (!givePointsToTarget) {
-      Alert.alert('Не реалізовано', 'givePointsToTarget недоступний у GameContext');
+      showFancyAlert('Не реалізовано', 'givePointsToTarget недоступний у GameContext');
       return;
     }
     try {
@@ -259,10 +277,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePointsToTarget(currentGame.currentRound.targetUserId, points);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Успішно', 'Бали нараховано цільовому гравцю.');
+      showFancyAlert('Успішно', 'Бали нараховано цільовому гравцю.');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error?.message || 'Не вдалося нарахувати бали цільовому гравцю.');
+      showFancyAlert('Помилка', error?.message || 'Не вдалося нарахувати бали цільовому гравцю.');
     } finally {
       setGivingPointsToTarget(false);
     }
@@ -277,7 +295,7 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error.message || 'Не вдалося почати фазу вгадування.');
+      showFancyAlert('Помилка', error.message || 'Не вдалося почати фазу вгадування.');
     }
   };
 
@@ -292,7 +310,7 @@ export const GameScreen: React.FC = () => {
       
       const missing = commentsForPlayerLocal.filter(c => !selectedGuesses[c.id]);
       if (missing.length > 0) {
-        Alert.alert('Неповно', 'Будь ласка, оберіть автора для кожного коментаря перед відправкою.');
+        showFancyAlert('Неповно', 'Будь ласка, оберіть автора для кожного коментаря перед відправкою.');
         setIsSubmittingGuesses(false);
         return;
       }
@@ -327,15 +345,15 @@ export const GameScreen: React.FC = () => {
 
       if (failures.length > 0) {
         const failedIds = failures.map(f => f.commentId).join(', ');
-        Alert.alert('Часткова помилка', `Не вдалося відправити відповіді для коментарів: ${failedIds}`);
+        showFancyAlert('Часткова помилка', `Не вдалося відправити відповіді для коментарів: ${failedIds}`);
       } else {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Успішно', 'Ваші відповіді відправлено!');
+        showFancyAlert('Успішно', 'Ваші відповіді відправлено!');
         setSelectedGuesses({});
       }
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error?.message || 'Не вдалося відправити ваші відповіді.');
+      showFancyAlert('Помилка', error?.message || 'Не вдалося відправити ваші відповіді.');
     } finally {
       setIsSubmittingGuesses(false);
     }
@@ -349,10 +367,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finalizeGuessingPhase();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Успішно', 'Фазу вгадування завершено. Гра закінчена!');
+      showFancyAlert('Успішно', 'Фазу вгадування завершено. Гра закінчена!');
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Помилка', error?.message || 'Не вдалося завершити фазу вгадування.');
+      showFancyAlert('Помилка', error?.message || 'Не вдалося завершити фазу вгадування.');
     } finally {
       setIsFinalizingGuesses(false);
     }
@@ -374,7 +392,7 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', error?.message || 'Failed to finalize and start next round.');
+      showFancyAlert('Помилка', error?.message || 'Не вдалося завершити та почати наступний раунд.');
     } finally {
       setIsFinalizingGuesses(false);
     }
@@ -390,6 +408,35 @@ export const GameScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
+      {/* Fancy alert modal */}
+      {fancyVisible && (
+        <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
+          <View style={styles.fancyModalOverlay}>
+            <View style={styles.fancyModal}>
+              {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
+              {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
+              <View style={styles.fancyButtonsRow}>
+                {fancyButtons.map((b, i) => (
+                  <Pressable
+                    key={i}
+                    style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
+                    onPress={async () => {
+                      try {
+                        if (b.onPress) await b.onPress();
+                      } catch (e) {
+                        console.error('fancy button onPress error', e);
+                      }
+                      closeFancyAlert();
+                    }}
+                  >
+                    <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -1108,7 +1155,7 @@ export const GameScreen: React.FC = () => {
                     shadowColor: '#000',
                   },
                 ]}
-                onPress={handleLeaveNow}
+                onPress={handleLeaveGame}
                 activeOpacity={0.8}
               >
                 <ThemedText style={styles.leaveButtonText}>Вийти з гри</ThemedText>
@@ -1278,4 +1325,14 @@ const styles = StyleSheet.create({
   guessResultCard: { padding: 20, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', alignItems: 'center', width: '100%' },
   guessResultText: { fontSize: 18, fontWeight: '600', textAlign: 'center', color: '#4CAF50', marginBottom: 8 },
   guessResultDetail: { fontSize: 14, textAlign: 'center', opacity: 0.8 },
+  // Fancy alert styles
+  fancyModalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  fancyModal: { width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
+  fancyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
+  fancyMessage: { fontSize: 15, opacity: 0.9, marginBottom: 16, textAlign: 'center' },
+  fancyButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  fancyButton: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, marginLeft: 8 },
+  fancyButtonText: { fontSize: 15, color: '#007AFF', fontWeight: '700' },
+  fancyDestructiveButton: {},
+  fancyDestructiveButtonText: { color: '#D9534F' },
 });

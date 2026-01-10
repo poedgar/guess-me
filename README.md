@@ -20,11 +20,9 @@
 
 4.  Штрихкод
 
-5.  Add Leave game functionality
+5.  Add test
 
-6.  Add test
-
-7. Custom alerts 
+6. Custom alerts 
 
 
 # Rules

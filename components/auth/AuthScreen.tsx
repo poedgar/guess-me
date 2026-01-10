@@ -8,9 +8,10 @@ import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Image,
+    Modal,
     Platform,
+    Pressable,
     StyleSheet,
     TouchableOpacity,
     View,
@@ -22,6 +23,23 @@ export const AuthScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  // Fancy alert state
+  const [fancyVisible, setFancyVisible] = useState(false);
+  const [fancyTitle, setFancyTitle] = useState<string | null>(null);
+  const [fancyMessage, setFancyMessage] = useState<string | null>(null);
+  const [fancyButtons, setFancyButtons] = useState<Array<{ text: string; onPress?: () => void; style?: any }>>([]);
+
+  const showFancyAlert = (title: string, message?: string | null, buttons?: Array<{ text: string; onPress?: () => void; style?: any }>) => {
+    setFancyTitle(title);
+    setFancyMessage(message ?? null);
+    setFancyButtons(buttons && buttons.length > 0 ? buttons : [{ text: 'ОК' }]);
+    setFancyVisible(true);
+  };
+
+  const closeFancyAlert = () => {
+    setFancyVisible(false);
+  };
+
   const handleSignIn = async () => {
     try {
       setIsSigningIn(true);
@@ -30,11 +48,7 @@ export const AuthScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        'Помилка входу',
-        error.message || 'Не вдалося увійти. Спробуйте ще раз.',
-        [{ text: 'ОК' }]
-      );
+      showFancyAlert('Помилка входу', error.message || 'Не вдалося увійти. Спробуйте ще раз.');
     } finally {
       setIsSigningIn(false);
     }
@@ -42,30 +56,55 @@ export const AuthScreen: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      Alert.alert(
-        'Вихід',
-        'Ви впевнені, що хочете вийти?',
-        [
-          { text: 'Скасувати', style: 'cancel' },
-          {
-            text: 'Вийти',
-            style: 'destructive',
-            onPress: async () => {
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              await signOut();
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            },
+      showFancyAlert('Вихід', 'Ви впевнені, що хочете вийти?', [
+        { text: 'Скасувати', style: 'cancel' },
+        {
+          text: 'Вийти',
+          style: 'destructive',
+          onPress: async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            await signOut();
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           },
-        ]
-      );
+        },
+      ]);
     } catch (error: any) {
-      Alert.alert('Помилка виходу', error.message || 'Не вдалося вийти. Спробуйте ще раз.');
+      showFancyAlert('Помилка виходу', error.message || 'Не вдалося вийти. Спробуйте ще раз.');
     }
   };
 
   if (loading) {
     return (
       <ThemedView style={styles.container}>
+        {/* Fancy alert modal */}
+        {fancyVisible && (
+          <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
+            <View style={styles.fancyModalOverlay}>
+              <View style={styles.fancyModal}>
+                {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
+                {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
+                <View style={styles.fancyButtonsRow}>
+                  {fancyButtons.map((b, i) => (
+                    <Pressable
+                      key={i}
+                      style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
+                      onPress={async () => {
+                        try {
+                          if (b.onPress) await b.onPress();
+                        } catch (e) {
+                          console.error('fancy button onPress error', e);
+                        }
+                        closeFancyAlert();
+                      }}
+                    >
+                      <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
           <ThemedText type="subtitle" style={styles.loadingText}>
@@ -79,6 +118,35 @@ export const AuthScreen: React.FC = () => {
   if (isSignedIn && user) {
     return (
       <ThemedView style={styles.container}>
+        {/* Fancy alert modal */}
+        {fancyVisible && (
+          <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
+            <View style={styles.fancyModalOverlay}>
+              <View style={styles.fancyModal}>
+                {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
+                {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
+                <View style={styles.fancyButtonsRow}>
+                  {fancyButtons.map((b, i) => (
+                    <Pressable
+                      key={i}
+                      style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
+                      onPress={async () => {
+                        try {
+                          if (b.onPress) await b.onPress();
+                        } catch (e) {
+                          console.error('fancy button onPress error', e);
+                        }
+                        closeFancyAlert();
+                      }}
+                    >
+                      <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
         <View style={styles.profileContainer}>
           {/* Profile Picture */}
           <View style={[styles.avatarContainer, { shadowColor: isDark ? '#000' : '#000' }]}>
@@ -122,6 +190,35 @@ export const AuthScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
+      {/* Fancy alert modal */}
+      {fancyVisible && (
+        <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
+          <View style={styles.fancyModalOverlay}>
+            <View style={styles.fancyModal}>
+              {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
+              {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
+              <View style={styles.fancyButtonsRow}>
+                {fancyButtons.map((b, i) => (
+                  <Pressable
+                    key={i}
+                    style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
+                    onPress={async () => {
+                      try {
+                        if (b.onPress) await b.onPress();
+                      } catch (e) {
+                        console.error('fancy button onPress error', e);
+                      }
+                      closeFancyAlert();
+                    }}
+                  >
+                    <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
       <View style={styles.signInContainer}>
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
@@ -347,5 +444,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Fancy alert styles
+  fancyModalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  fancyModal: { width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
+  fancyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
+  fancyMessage: { fontSize: 15, opacity: 0.9, marginBottom: 16, textAlign: 'center' },
+  fancyButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  fancyButton: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, marginLeft: 8 },
+  fancyButtonText: { fontSize: 15, color: '#007AFF', fontWeight: '700' },
+  fancyDestructiveButton: {},
+  fancyDestructiveButtonText: { color: '#D9534F' },
 });
 
