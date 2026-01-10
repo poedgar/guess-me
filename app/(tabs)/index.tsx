@@ -9,6 +9,5 @@ export default function Index() {
   if (!isSignedIn) {
     return <AuthScreen />;
   }
-
   return <GameScreen />;
 }

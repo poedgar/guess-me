@@ -461,18 +461,20 @@ export const GameScreen: React.FC = () => {
                   </View>
                 )}
               </View>
-              <View style={styles.gameIdContainer}>
-                <ThemedText type="subtitle" style={styles.gameIdLabel}>
-                  ID гри:
-                </ThemedText>
-                <TouchableOpacity
-                  onPress={handleCopyGameId}
-                  style={styles.gameIdBox}
-                >
-                  <ThemedText style={styles.gameIdText}>{currentGame.id}</ThemedText>
-                  <ThemedText style={styles.copyHint}>Натисніть, щоб скопіювати</ThemedText>
-                </TouchableOpacity>
-              </View>
+              {currentGame.status === 'waiting' && (
+                <View style={styles.gameIdContainer}>
+                  <ThemedText type="subtitle" style={styles.gameIdLabel}>
+                    ID гри:
+                  </ThemedText>
+                  <TouchableOpacity
+                    onPress={handleCopyGameId}
+                    style={styles.gameIdBox}
+                  >
+                    <ThemedText style={styles.gameIdText}>{currentGame.id}</ThemedText>
+                    <ThemedText style={styles.copyHint}>Натисніть, щоб скопіювати</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              )}
               <View style={styles.gameStatusContainer}>
                 <ThemedText style={styles.statusLabel}>Статус:</ThemedText>
                 <View
@@ -502,46 +504,47 @@ export const GameScreen: React.FC = () => {
                   </ThemedText>
                 </View>
               </View>
-              {/* Participants */}
-              <View style={styles.participantsContainer}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <ThemedText type="subtitle" style={styles.participantsTitle}>
-                    Учасники ({currentGame.participants?.length || 0})
-                  </ThemedText>
-                  {currentGame.status === 'guessing_phase' && (
-                    <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>
-                      Відправлено: {currentGame.guessingData?.playersWhoSubmittedGuesses?.length || 0}/{totalTargets}
+              {/* Participants (show only before game starts) */}
+              {currentGame.status === 'waiting' && (
+                <View style={styles.participantsContainer}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <ThemedText type="subtitle" style={styles.participantsTitle}>
+                      Учасники ({currentGame.participants?.length || 0})
                     </ThemedText>
-                  )}
-                </View>
-                {participantsByJoin.map((participant: Participant, idx: number) => (
-                  <View
-                    key={participant.userId}
-                    style={[
-                      styles.participantItem,
-                      participant.userId === currentGame.adminId && styles.adminParticipant,
-                    ]}
-                  >
-                    <View style={styles.participantInfo}>
-                      <ThemedText style={styles.participantName}>
-                        {`${idx + 1}. `}{participant.userName}
-                        {participant.userId === currentGame.adminId && ' 👑'}
-                        {currentGame.status === 'guessing_phase' && participant.userId !== currentGame.adminId && (
-                          (currentGame.guessingData?.playersWhoSubmittedGuesses?.includes(participant.userId)) ? ' ✅' : ' ⏳'
-                        )}
+                    {currentGame.status === 'guessing_phase' && (
+                      <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>
+                        Відправлено: {currentGame.guessingData?.playersWhoSubmittedGuesses?.length || 0}/{totalTargets}
                       </ThemedText>
-                      <ThemedText style={styles.participantEmail}>
-                        {participant.userEmail}
-                      </ThemedText>
-                    </View>
+                    )}
                   </View>
-                ))}
-              </View>
+                  <ScrollView style={styles.participantsScroll} nestedScrollEnabled>
+                    {participantsByJoin.map((participant: Participant, idx: number) => (
+                      <View
+                        key={participant.userId}
+                        style={[
+                          styles.participantItem,
+                          participant.userId === currentGame.adminId && styles.adminParticipant,
+                        ]}
+                      >
+                        <View style={styles.participantInfo}>
+                          <ThemedText style={styles.participantName}>
+                            {`${idx + 1}. `}{participant.userName}
+                            {participant.userId === currentGame.adminId && ' 👑'}
+                            {currentGame.status === 'guessing_phase' && participant.userId !== currentGame.adminId && (
+                              (currentGame.guessingData?.playersWhoSubmittedGuesses?.includes(participant.userId)) ? ' ✅' : ' ⏳'
+                            )}
+                          </ThemedText>
+                          <ThemedText style={styles.participantEmail}>
+                            {participant.userEmail}
+                          </ThemedText>
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
               {/* Scores/Leaderboard - FIXED */}
-              {(currentGame.status === 'active' || 
-                currentGame.status === 'guessing_phase' || 
-                currentGame.status === 'finished') && 
-                currentGame.scores && (
+              {currentGame.status === 'waiting' && currentGame.scores && (
                 <View style={styles.scoresContainer}>
                   <ThemedText type="subtitle" style={styles.scoresTitle}>
                     🏆 Таблиця лідерів
@@ -572,8 +575,9 @@ export const GameScreen: React.FC = () => {
                       .sort((a, b) => b.totalPoints - a.totalPoints);
                     
                     return (
-                      <View style={styles.leaderboard}>
-                        {participantsWithScores.map((participant, index) => (
+                      <ScrollView style={styles.leaderboardScroll} nestedScrollEnabled>
+                        <View style={styles.leaderboard}>
+                          {participantsWithScores.map((participant, index) => (
                           <View
                             key={participant.userId}
                             style={[
@@ -617,6 +621,7 @@ export const GameScreen: React.FC = () => {
                           </View>
                         ))}
                       </View>
+                      </ScrollView>
                     );
                   })()}
                 </View>
@@ -652,10 +657,10 @@ export const GameScreen: React.FC = () => {
                 <View style={styles.gameFlowContainer}>
                   <View style={styles.roundInfo}>
                     <ThemedText type="subtitle" style={styles.roundTitle}>
-                      Round {currentGame.currentRound.roundNumber}
+                      Раунд {currentGame.currentRound.roundNumber}
                     </ThemedText>
                     <ThemedText style={styles.targetText}>
-                      Target: {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
+                      Ціль: {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
                     </ThemedText>
                   </View>
                   {/* User is the target */}
@@ -874,7 +879,7 @@ export const GameScreen: React.FC = () => {
                           activeOpacity={0.8}
                         >
                           <ThemedText style={styles.buttonText}>
-                            {loading ? 'Starting...' : 'Start Guessing Phase'}
+                            {loading ? 'Завантаження...' : 'Розпочати фазу вгадування'}
                           </ThemedText>
                         </TouchableOpacity>
                       )}
@@ -999,7 +1004,7 @@ export const GameScreen: React.FC = () => {
                       </View>
                     ) : (
                       <ThemedText style={styles.waitingText}>
-                        Waiting for the admin to start guessing for your round.
+                        Очікування, поки адміністратор розпочне фазу вгадування для вашого раунду.
                       </ThemedText>
                     )
                   )}
@@ -1105,10 +1110,10 @@ export const GameScreen: React.FC = () => {
                       <View key={round.roundNumber} style={styles.roundHistoryItem}>
                         <View style={styles.roundHistoryHeader}>
                           <ThemedText style={styles.roundHistoryRoundNumber}>
-                            Round {round.roundNumber}
+                            Раунд {round.roundNumber}
                           </ThemedText>
                           <ThemedText style={styles.roundHistoryTarget}>
-                            Target: {round && joinIndexById[round.targetUserId] ? `${joinIndexById[round.targetUserId]}. ` : ''}{round.targetUserName}
+                            Ціль: {round && joinIndexById[round.targetUserId] ? `${joinIndexById[round.targetUserId]}. ` : ''}{round.targetUserName}
                           </ThemedText>
                           {(() => {
                             const targetPoints = round.targetPointsGivenBy?.length ?? 0;
@@ -1325,6 +1330,8 @@ const styles = StyleSheet.create({
   guessResultCard: { padding: 20, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', alignItems: 'center', width: '100%' },
   guessResultText: { fontSize: 18, fontWeight: '600', textAlign: 'center', color: '#4CAF50', marginBottom: 8 },
   guessResultDetail: { fontSize: 14, textAlign: 'center', opacity: 0.8 },
+  participantsScroll: { maxHeight: 160, marginTop: 8 },
+  leaderboardScroll: { maxHeight: 200, marginTop: 8 },
   // Fancy alert styles
   fancyModalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   fancyModal: { width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
