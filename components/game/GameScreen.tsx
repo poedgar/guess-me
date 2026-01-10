@@ -1046,7 +1046,7 @@ export const GameScreen: React.FC = () => {
                         </View>
                         <View style={styles.roundHistoryComments}>
                           <ThemedText style={styles.roundHistoryCommentsTitle}>
-                            Comments ({round.comments?.length || 0}):
+                            Коментарі ({round.comments?.length || 0}):
                           </ThemedText>
                           {round.comments && round.comments.length > 0 ? (
                             round.comments.map((comment: Comment) => (
@@ -1083,7 +1083,7 @@ export const GameScreen: React.FC = () => {
                 onPress={handleLeaveGame}
                 activeOpacity={0.8}
               >
-                <ThemedText style={styles.leaveButtonText}>Leave Game</ThemedText>
+                <ThemedText style={styles.leaveButtonText}>Вийти з гри</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
