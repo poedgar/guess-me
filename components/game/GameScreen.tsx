@@ -221,7 +221,18 @@ export const GameScreen: React.FC = () => {
   const allCommentsHaveGuesses = commentsForPlayer.length === 0 || commentsForPlayer.every(c => !!selectedGuesses[c.id]);
   const totalTargets = currentGame?.participants?.filter(p => p.userId !== currentGame?.adminId).length ?? 0;
   const isFinalRound = !!currentGame?.currentRound && currentGame.currentRound.roundNumber === totalTargets;
+  
+  // Participants sorted by join time (ascending). Show a 1-based index next to each name.
+  const participantsByJoin = (currentGame?.participants || []).slice().sort((a, b) => {
+    const aMillis = a.joinedAt && typeof (a.joinedAt as any)?.toDate === 'function' ? (a.joinedAt as any).toDate().getTime() : new Date(a.joinedAt).getTime();
+    const bMillis = b.joinedAt && typeof (b.joinedAt as any)?.toDate === 'function' ? (b.joinedAt as any).toDate().getTime() : new Date(b.joinedAt).getTime();
+    return aMillis - bMillis;
+  });
 
+  // Map of userId -> 1-based join index for quick lookup when rendering names elsewhere
+  const joinIndexById: Record<string, number> = Object.fromEntries(
+    participantsByJoin.map((p, i) => [p.userId, i + 1])
+  );
   const handleGivePointsToTarget = async (points: number = 1) => {
     if (!currentGame?.currentRound) return;
     if (!givePointsToTarget) {
@@ -441,7 +452,7 @@ export const GameScreen: React.FC = () => {
                     </ThemedText>
                   )}
                 </View>
-                {currentGame.participants?.map((participant: Participant) => (
+                {participantsByJoin.map((participant: Participant, idx: number) => (
                   <View
                     key={participant.userId}
                     style={[
@@ -451,7 +462,7 @@ export const GameScreen: React.FC = () => {
                   >
                     <View style={styles.participantInfo}>
                       <ThemedText style={styles.participantName}>
-                        {participant.userName}
+                        {`${idx + 1}. `}{participant.userName}
                         {participant.userId === currentGame.adminId && ' 👑'}
                         {currentGame.status === 'guessing_phase' && participant.userId !== currentGame.adminId && (
                           (currentGame.guessingData?.playersWhoSubmittedGuesses?.includes(participant.userId)) ? ' ✅' : ' ⏳'
@@ -519,6 +530,7 @@ export const GameScreen: React.FC = () => {
                             </View>
                             <View style={styles.leaderboardInfo}>
                               <ThemedText style={styles.leaderboardName}>
+                                {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : ''}
                                 {participant.userName}
                                 {participant.userId === currentGame.adminId && ' 👑'}
                                 {participant.userId === user?.uid && ' (Ви)'}
@@ -581,7 +593,7 @@ export const GameScreen: React.FC = () => {
                       Round {currentGame.currentRound.roundNumber}
                     </ThemedText>
                     <ThemedText style={styles.targetText}>
-                      Target: {currentGame.currentRound.targetUserName}
+                      Target: {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
                     </ThemedText>
                   </View>
                   {/* User is the target */}
@@ -658,7 +670,7 @@ export const GameScreen: React.FC = () => {
                           return (
                             <View>
                               <ThemedText style={styles.commentPrompt}>
-                                Напишіть анонімний коментар про {currentGame.currentRound.targetUserName}:
+                                Напишіть анонімний коментар про {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}:
                               </ThemedText>
                               <TextInput
                                 style={[
@@ -726,8 +738,8 @@ export const GameScreen: React.FC = () => {
                                     currentGame.currentRound.targetPointsGivenBy?.includes(user?.uid ?? '') ?? false;
                                   return (
                                     <View style={{ marginTop: 16 }}>
-                                      <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
-                                        You can now give points to {currentGame.currentRound.targetUserName}
+                                        <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
+                                        You can now give points to {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
                                       </ThemedText>
                                       <TouchableOpacity
                                         style={[
@@ -884,12 +896,12 @@ export const GameScreen: React.FC = () => {
                                   ]}
                                   onPress={() => handleGuessSelect(comment.id, author.userId)}
                                 >
-                                  <ThemedText style={[
-                                    styles.authorName,
-                                    selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName
-                                  ]}>
-                                    {author.userName}
-                                  </ThemedText>
+                                      <ThemedText style={[
+                                        styles.authorName,
+                                        selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName
+                                      ]}>
+                                        {joinIndexById[author.userId] ? `${joinIndexById[author.userId]}. ` : ''}{author.userName}
+                                      </ThemedText>
                                 </TouchableOpacity>
                               ))}
                             </View>
@@ -1021,7 +1033,7 @@ export const GameScreen: React.FC = () => {
                             Round {round.roundNumber}
                           </ThemedText>
                           <ThemedText style={styles.roundHistoryTarget}>
-                            Target: {round.targetUserName}
+                            Target: {round && joinIndexById[round.targetUserId] ? `${joinIndexById[round.targetUserId]}. ` : ''}{round.targetUserName}
                           </ThemedText>
                           {(() => {
                             const targetPoints = round.targetPointsGivenBy?.length ?? 0;
