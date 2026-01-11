@@ -9,9 +9,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
+import { Image as ExpoImage } from 'expo-image';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Clipboard,
   Platform,
   ScrollView,
@@ -20,6 +22,26 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
+
+const HEADER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs><linearGradient id="mysteryGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#6a11cb;stop-opacity:1" /><stop offset="100%" style="stop-color:#2575fc;stop-opacity:1" /></linearGradient></defs><g transform="translate(512 512) scale(5) translate(0 -70)"><path d="M-25,-20 C-45,-20 -60,-5 -60,20 C-60,45 -40,55 -25,70 C-15,80 -5,95 0,110" fill="none" stroke="url(#mysteryGradient)" stroke-width="16" stroke-linecap="round"/><path d="M-25,-20 C-5,-20 25,-15 40,5 C55,25 50,50 30,70 C15,85 -10,95 -15,120" fill="none" stroke="url(#mysteryGradient)" stroke-width="16" stroke-linecap="round"/><circle cx="0" cy="155" r="12" fill="url(#mysteryGradient)"/></g></svg>`;
+
+function HeaderLogo() {
+  const source =
+    Platform.OS === 'web'
+      ? { uri: `data:image/svg+xml;utf8,${encodeURIComponent(HEADER_LOGO_SVG)}` }
+      : require('../../assets/images/icon.png');
+
+  return (
+    <View style={styles.headerLogoContainer as any}>
+      <ExpoImage 
+        source={source} 
+        style={styles.headerLogo as any} 
+        contentFit="contain" 
+      />
+    </View>
+  );
+}
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
@@ -53,6 +75,18 @@ export const GameScreen: React.FC = () => {
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // Animation for admin toggle
+  const toggleAnimation = useRef(new Animated.Value(0)).current;
+
+  // Update toggle animation when adminWritesComments changes
+  useEffect(() => {
+    Animated.timing(toggleAnimation, {
+      toValue: currentGame?.adminWritesComments ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [currentGame?.adminWritesComments]);
 
   // Fancy alert state
   const [fancyVisible, setFancyVisible] = useState(false);
@@ -446,6 +480,7 @@ export const GameScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <HeaderLogo />
         {!isSignedIn ? (
           <View style={styles.notSignedInContainer}>
             <View style={styles.inlineLanguageToggle}>
@@ -475,6 +510,7 @@ export const GameScreen: React.FC = () => {
                 </View>
               </View>
               {currentGame.status === 'waiting' && (
+                <View style={{display: 'flex', flexDirection: 'row'}}>
                 <View style={styles.gameIdContainer}>
                   <ThemedText type="subtitle" style={styles.gameIdLabel}>
                     {t('game.ui.gameIdLabel', { locale })}
@@ -487,6 +523,23 @@ export const GameScreen: React.FC = () => {
                     <ThemedText style={styles.copyHint}>{t('game.ui.tapToCopy', { locale })}</ThemedText>
                   </TouchableOpacity>
                 </View>
+                {/* Show QR Code for Admin */}
+                {currentGame.status === 'waiting' && isAdmin && (
+                  <View style={styles.qrCodeContainer}>
+                    <View style={[
+                      styles.qrCodeBox,
+                      isDark && styles.qrCodeBoxDark
+                    ]}>
+                      <QRCode
+                        value={currentGame.id}
+                        size={75}
+                        color={isDark ? '#fff' : '#000'}
+                        backgroundColor={isDark ? '#2a2a2a' : '#fff'}
+                      />
+                    </View>
+                  </View>
+                )}
+              </View>
               )}
               <View style={styles.gameStatusContainer}>
                 <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
@@ -536,10 +589,18 @@ export const GameScreen: React.FC = () => {
                     onPress={handleToggleAdminComments}
                     activeOpacity={0.8}
                   >
-                    <View style={[
+                    <Animated.View style={[
                       styles.toggleThumb,
-                      currentGame.adminWritesComments && styles.toggleThumbActive
-                    ]} />
+                      currentGame.adminWritesComments ? styles.toggleThumbActive : {},
+                      {
+                        transform: [{
+                          translateX: toggleAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 20] // Move thumb 20px to the right when active
+                          })
+                        }]
+                      }
+                    ] as any} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -1281,6 +1342,7 @@ export const GameScreen: React.FC = () => {
                 autoCorrect={false}
               />
 
+
               <TouchableOpacity
                 style={[
                   styles.joinButton,
@@ -1305,6 +1367,7 @@ export const GameScreen: React.FC = () => {
             </View>
           </View>
         )}
+
       </ScrollView>
     </ThemedView>
   );
@@ -1328,15 +1391,78 @@ const styles = StyleSheet.create({
   toggleInfo: { flex: 1, marginRight: 16 },
   toggleLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
   toggleDescription: { fontSize: 14, opacity: 0.7, lineHeight: 20, fontFamily: Fonts.sans },
-  toggleButton: { width: 51, height: 31, borderRadius: 15.5, backgroundColor: '#767577', justifyContent: 'center', padding: 2 },
+  toggleButton: { width: 51, height: 31, borderRadius: 15.5, backgroundColor: '#767577', padding: 2, position: 'relative' },
   toggleButtonActive: { backgroundColor: '#4CAF50' },
-  toggleThumb: { width: 27, height: 27, borderRadius: 13.5, backgroundColor: '#f4f3f4' },
+  toggleThumb: { width: 27, height: 27, borderRadius: 13.5, backgroundColor: '#f4f3f4', position: 'absolute', top: 2, left: 2 },
   toggleThumbActive: { backgroundColor: '#fff' },
   createButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   joinButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   buttonDisabled: { opacity: 0.6 },
   buttonLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+  qrButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 12,
+  },
+  qrButton: {
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    flex: 1,
+    backgroundColor: '#2196F3',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  scanButton: {
+    backgroundColor: '#FF9800',
+  },
+  generateButton: {
+    backgroundColor: '#4CAF50',
+  },
+  qrButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  qrCodeContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 12,
+  },
+  qrCodeLabel: {
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  qrCodeBox: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  qrCodeBoxDark: {
+    backgroundColor: '#333',
+  },
+  qrCodeGameId: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    fontFamily: 'monospace',
+  },
   iconButton: { borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   gameContainer: { flex: 1 },
   gameInfoCard: { backgroundColor: 'transparent' },
@@ -1443,4 +1569,16 @@ const styles = StyleSheet.create({
   fancyButtonText: { fontSize: 15, color: '#007AFF', fontWeight: '700' },
   fancyDestructiveButton: {},
   fancyDestructiveButtonText: { color: '#D9534F' },
+  // Header logo styles
+  headerLogoContainer: { 
+    height: 60, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 20,
+    backgroundColor: 'transparent',
+  },
+  headerLogo: {
+    width: 40,
+    height: 40,
+  },
 });

@@ -3,6 +3,7 @@
     "ok": "Гаразд",
     "cancel": "Скасувати",
     "yes": "Так",
+    "done": "Готово",
     "no": "Ні",
     "back": "Назад",
     "next": "Далі",
@@ -205,8 +206,17 @@
     "comments": "Коментарі",
     "noComments": "Коментарів немає"
   },
-  "modal": {
-    "title": "Це модальне вікно",
-    "goHome": "На головний екран"
+  "qr": {
+    "scanTitle": "Сканувати QR-код",
+    "instruction": "Відцентруйте QR-код у рамці для сканування",
+    "invalidTitle": "Невірний QR-код",
+    "invalidMessage": "Цей QR-код не містить дійсного ID гри",
+    "shareTitle": "Поділитися грою",
+    "shareMessage": "Приєднуйтесь до моєї гри! ID гри: {{gameId}}",
+    "shareButton": "Поділитися",
+    "gameIdLabel": "ID гри",
+    "scanButton": "Сканувати",
+    "generateButton": "Згенерувати",
+    "webNotSupported": "Сканування QR-кодів не підтримується на вебі"
   }
 }

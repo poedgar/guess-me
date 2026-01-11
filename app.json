@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "myapp",
+    "name": "Guess Me",
     "slug": "myapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "guess-me",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -14,6 +14,7 @@
     },
     "android": {
       "package": "com.psycho.play",
+      "scheme": "guess-me",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

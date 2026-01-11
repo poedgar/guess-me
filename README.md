@@ -10,15 +10,9 @@
 
 # TODO
 
-1. Guess Me, Відгадай мене
+1. Refresh logo
 
-2. Myapp -> guess-me
-
-4.  Штрихкод
-
-5.  Add test
-
-7. internalization
+2.  Add test
 
 
 # Rules

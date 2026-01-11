@@ -3,6 +3,7 @@
     "ok": "OK",
     "cancel": "Cancel",
     "yes": "Yes",
+    "done": "Done",
     "no": "No",
     "back": "Back",
     "next": "Next",
@@ -201,11 +202,5 @@
     "round": "Round",
     "target": "Target",
     "targetPoints": "Target points",
-    "comments": "Comments",
-    "noComments": "No comments"
-  },
-  "modal": {
-    "title": "This is a modal",
-    "goHome": "Go to home screen"
-  }
+}
 }

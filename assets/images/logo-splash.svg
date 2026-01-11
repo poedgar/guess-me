@@ -1,0 +1,37 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8ef163ff"/>
+      <stop offset="100%" stop-color="#38ca5aff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+
+  <!-- Mask -->
+  <path
+    d="M312 512C312 412 412 352 512 352C612 352 712 412 712 512
+       C712 612 612 672 512 672C412 672 312 612 312 512Z"
+    fill="white"/>
+
+  <!-- Eyes -->
+  <circle cx="450" cy="520" r="32" fill="#38ca53ff"/>
+  <circle cx="574" cy="520" r="32" fill="#38ca53ff"/>
+
+  <!-- Question mark -->
+  <path
+    d="M512 220C452 220 412 252 412 296H468
+       C468 276 488 264 512 264
+       C536 264 556 278 556 300
+       C556 324 532 336 508 350
+       C472 372 456 392 456 428V460H512V438
+       C512 410 540 398 576 374
+       C612 350 640 320 640 280
+       C640 242 586 220 512 220Z"
+    fill="white"/>
+
+  <circle cx="512" cy="488" r="16" fill="white"/>
+</svg>

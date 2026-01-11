@@ -1,10 +1,29 @@
-import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+
+const HEADER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs><linearGradient id="mysteryGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#6a11cb;stop-opacity:1" /><stop offset="100%" style="stop-color:#2575fc;stop-opacity:1" /></linearGradient></defs><g transform="translate(512 512) scale(5) translate(0 -70)"><path d="M-25,-20 C-45,-20 -60,-5 -60,20 C-60,45 -40,55 -25,70 C-15,80 -5,95 0,110" fill="none" stroke="url(#mysteryGradient)" stroke-width="16" stroke-linecap="round"/><path d="M-25,-20 C-5,-20 25,-15 40,5 C55,25 50,50 30,70 C15,85 -10,95 -15,120" fill="none" stroke="url(#mysteryGradient)" stroke-width="16" stroke-linecap="round"/><circle cx="0" cy="155" r="12" fill="url(#mysteryGradient)"/></g></svg>`;
+
+function HeaderLogo() {
+  const source =
+    Platform.OS === 'web'
+      ? { uri: `data:image/svg+xml;utf8,${encodeURIComponent(HEADER_LOGO_SVG)}` }
+      : require('../../assets/images/icon.png');
+
+  return (
+    <View style={styles.headerLogoContainer}>
+      <ExpoImage 
+        source={source} 
+        style={styles.headerLogo} 
+        contentFit="contain" 
+      />
+    </View>
+  );
+}
 
 export default function RulesScreen() {
   const colorScheme = useColorScheme();
@@ -16,26 +35,8 @@ export default function RulesScreen() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <IconSymbol 
-          name="book.fill" 
-          size={60} 
-          color="#4CAF50" 
-          style={styles.headerIcon}
-        />
-        <ThemedText type="title" style={styles.title}>
-          {t('rules.title', { locale })} 🎮
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          {t('rules.subtitle', { locale })}
-        </ThemedText>
-
-        <View style={styles.languageSelector}>
-          <LanguageSelector />
-        </View>
-      </View>
-
+      <HeaderLogo />
+      
       {/* Game Overview */}
       <View style={[styles.section, { backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa' }]}>
         <View style={styles.sectionHeader}>
@@ -231,6 +232,17 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 20,
     paddingBottom: 40,
+  },
+  headerLogoContainer: { 
+    height: 60, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 20,
+    backgroundColor: 'transparent',
+  },
+  headerLogo: {
+    width: 40,
+    height: 40,
   },
   header: {
     alignItems: 'center',
