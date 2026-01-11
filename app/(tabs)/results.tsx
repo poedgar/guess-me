@@ -5,9 +5,12 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import type { Comment, Round } from '@/contexts/GameContext';
 import { Participant, useGame } from '@/contexts/GameContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { t } from '@/i18n';
 
 export default function TabTwoScreen() {
   const { currentGame } = useGame();
+  const { locale } = useLanguage();
 
   const participantsByJoin = (currentGame?.participants || [])
     .slice()
@@ -38,7 +41,7 @@ export default function TabTwoScreen() {
       {currentGame && currentGame.status !== 'waiting' && (
         <View style={{ paddingHorizontal: 16, paddingBottom: 40 }}>
           <ThemedText type="subtitle" style={{ marginTop: 16, marginBottom: 8 }}>
-            🏆 Таблиця лідерів
+            🏆 {t('results.leaderboardTitle', { locale })}
           </ThemedText>
           <ScrollView style={styles.leaderboardScroll}>
             {participantsWithScores.map((p, idx) => (
@@ -59,29 +62,29 @@ export default function TabTwoScreen() {
             return completedRounds.length > 0 ? (
               <View style={styles.roundHistoryContainer}>
                 <ThemedText type="subtitle" style={styles.roundHistoryTitle}>
-                  📜 Історія раундів ({completedRounds.length} {completedRounds.length === 1 ? 'раунд' : 'раунди'})
+                  📜 {t('results.roundHistoryTitle', { locale })} ({completedRounds.length})
                 </ThemedText>
                 {completedRounds.map((round: Round) => (
                   <View key={round.roundNumber} style={styles.roundHistoryItem}>
                     <View style={styles.roundHistoryHeader}>
                       <ThemedText style={styles.roundHistoryRoundNumber}>
-                        Раунд {round.roundNumber}
+                        {t('results.round', { locale })} {round.roundNumber}
                       </ThemedText>
                       <ThemedText style={styles.roundHistoryTarget}>
-                        Ціль: {round && joinIndexById[round.targetUserId] ? `${joinIndexById[round.targetUserId]}. ` : ''}{round.targetUserName}
+                        {t('results.target', { locale })}: {round && joinIndexById[round.targetUserId] ? `${joinIndexById[round.targetUserId]}. ` : ''}{round.targetUserName}
                       </ThemedText>
                       {(() => {
                         const targetPoints = round.targetPointsGivenBy?.length ?? 0;
                         return (
                           <ThemedText style={styles.roundHistoryTargetPoints}>
-                                Бали цілі: +{targetPoints} балів
+                                {t('results.targetPoints', { locale })}: +{targetPoints}
                               </ThemedText>
                         );
                       })()}
                     </View>
                     <View style={styles.roundHistoryComments}>
                       <ThemedText style={styles.roundHistoryCommentsTitle}>
-                        Коментарі ({round.comments?.length || 0}):
+                        {t('results.comments', { locale })} ({round.comments?.length || 0}):
                       </ThemedText>
                       {round.comments && round.comments.length > 0 ? (
                         round.comments.map((comment: Comment) => (
@@ -99,7 +102,7 @@ export default function TabTwoScreen() {
                           </View>
                         ))
                       ) : (
-                        <ThemedText style={styles.noCommentsText}>Коментарів немає</ThemedText>
+                        <ThemedText style={styles.noCommentsText}>{t('results.noComments', { locale })}</ThemedText>
                       )}
                     </View>
                   </View>

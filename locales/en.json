@@ -1,0 +1,211 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "yes": "Yes",
+    "no": "No",
+    "back": "Back",
+    "next": "Next",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "navigation": {
+    "home": "Home",
+    "rules": "Rules",
+    "results": "Results",
+    "profile": "Profile"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "welcome": "Welcome",
+    "loginRequired": "Login required",
+    "continue": "Sign in to continue",
+    "signInWithGoogle": "Sign in with Google",
+    "userFallback": "User",
+    "signOutConfirmTitle": "Sign out",
+    "signOutConfirmMessage": "Are you sure you want to sign out?"
+  },
+  "game": {
+    "start": "Start game",
+    "pause": "Pause",
+    "resume": "Resume",
+    "restart": "Restart",
+    "score": "Score",
+    "time": "Time",
+    "level": "Level",
+    "gameOver": "Game over",
+    "youWin": "You win!",
+    "tryAgain": "Try again",
+    "alerts": {
+      "updateSettingsFailed": "Failed to update settings.",
+      "loginRequiredTitle": "Sign in required",
+      "loginRequiredMessage": "You must sign in to create or join a game.",
+      "invalidInputTitle": "Invalid input",
+      "invalidInputMessage": "Enter the game ID or the admin password.",
+      "gameCreatedTitle": "Game created!",
+      "gameCreatedMessage": "Your game ID: %{gameId}\nShare it so others can join.",
+      "copyId": "Copy ID",
+      "copiedTitle": "Copied!",
+      "copiedMessage": "Game ID copied to clipboard.",
+      "joinedGameMessage": "You joined the game successfully!",
+      "enterGameFailed": "Could not create or join the game. Check the code and try again.",
+      "leaveGameTitle": "Leave game",
+      "leaveGameMessage": "Are you sure you want to leave this game?",
+      "leftGameTitle": "You left the game",
+      "leaveGameFailed": "Could not leave the game.",
+      "startGameFailed": "Could not start the game.",
+      "commentEmpty": "Please enter a comment.",
+      "submitCommentFailed": "Could not submit the comment.",
+      "showCommentsFailed": "Could not show comments.",
+      "notImplemented": "Not implemented.",
+      "pointsAwarded": "Points awarded.",
+      "pointsAwardFailed": "Could not award points.",
+      "finishPointsSuccess": "You finished awarding points. The admin can continue.",
+      "finishPointsFailed": "Could not finish awarding points.",
+      "startNextRoundFailed": "Could not start the next round.",
+      "targetPointsAwarded": "Points awarded to the target player.",
+      "targetPointsAwardFailed": "Could not award points to the target player."
+    },
+    "ui": {
+      "pleaseSignIn": "Please sign in to create or join games",
+      "gameRoom": "Game room",
+      "adminBadge": "ADMIN",
+      "gameIdLabel": "Game ID:",
+      "tapToCopy": "Tap to copy",
+      "statusLabel": "Status:",
+      "statusWaiting": "Waiting",
+      "statusActive": "Active",
+      "statusGuessing": "Guessing phase",
+      "statusFinished": "Finished",
+      "adminWritesCommentsTitle": "Admin also writes comments",
+      "adminWritesCommentsDescription": "If enabled, the admin will participate by writing comments about other players.",
+      "participants": "Participants",
+      "submitted": "Submitted",
+      "leaderboard": "Leaderboard",
+      "youLabel": "(You)",
+      "pointsGame": "Game",
+      "pointsGuessing": "Guessing",
+      "pointsTotal": "total",
+      "waitingForAdminStart": "Waiting for the admin to start the game...",
+      "round": "Round",
+      "target": "Target",
+      "waitingForCommentsAboutYou": "Waiting for others to write comments about you...",
+      "commentsAboutYou": "Comments about you:",
+      "pointsAwarded": "Points awarded:",
+      "finishedAwardingPointsWaitAdmin": "You finished awarding points. Waiting for the admin's decision...",
+      "writeAnonymousCommentAbout": "Write an anonymous comment about %{name}:",
+      "commentPlaceholder": "Your anonymous comment...",
+      "adminNotParticipating": "You are the admin and do not participate in writing comments in this game.",
+      "commentSentWaitingShow": "Comment sent! Waiting for the admin to show all comments...",
+      "allComments": "All comments:",
+      "points": "Points:",
+      "adminControls": "Admin controls",
+      "showComments": "Show comments",
+      "startGuessingPhase": "Start guessing phase",
+      "finalizeGuessingPhase": "Finalize guessing phase",
+      "finishAndStartNextRound": "Finish and start next round",
+      "guessingPhase": "Guessing phase",
+      "selectAuthor": "Select author",
+      "submitGuesses": "Submit guesses",
+      "guessingPhaseTitle": "Guessing phase",
+      "guessingPhaseSubtitle": "Guess who wrote each comment about the target player.",
+      "submitGuessesFailed": "Could not submit your guesses.",
+      "finalizeGuessingFailed": "Could not finalize guessing phase.",
+      "finishAndStartNextRoundFailed": "Could not finish and start next round.",
+      "createOrJoin": {
+        "title": "Create or join a game",
+        "description": "Enter admin password to create a new game, or an existing game ID to join.",
+        "inputPlaceholder": "Enter admin password or game ID"
+      }
+    }
+  },
+  "settings": {
+    "language": "Language",
+    "theme": "Theme",
+    "sound": "Sound",
+    "notifications": "Notifications"
+  },
+  "rules": {
+    "title": "Game rules",
+    "subtitle": "How to play and win",
+    "overview": {
+      "title": "About the game",
+      "description": "This is a social game where participants write anonymous comments about each other, guess authors, and earn points. The admin manages the game and decides whether to participate in writing comments."
+    },
+    "howToPlay": {
+      "title": "How to play",
+      "step1": {
+        "title": "Create or join a game",
+        "description": "Admin creates a game with a password, others join by ID."
+      },
+      "step2": {
+        "title": "Write a comment",
+        "description": "When you are chosen as the target, other participants write anonymous comments about you."
+      },
+      "step3": {
+        "title": "Rate comments",
+        "description": "Admin shows comments and awards points (0-10) for each."
+      },
+      "step4": {
+        "title": "Guess the author",
+        "description": "Try to guess who wrote each comment about the target."
+      },
+      "step5": {
+        "title": "Next round",
+        "description": "The game continues with a new target until everyone has been a target."
+      }
+    },
+    "scoring": {
+      "title": "Scoring system",
+      "comments": {
+        "badge": "Comments",
+        "title": "Points for comments",
+        "description": "Admin awards 0-10 points for each comment about you."
+      },
+      "target": {
+        "badge": "Target",
+        "title": "Points for target",
+        "description": "Each participant can give points to the target player (0-10)."
+      },
+      "guessing": {
+        "badge": "Guessing",
+        "title": "Points for guessing",
+        "description": "+1 point for each correctly guessed comment author."
+      }
+    },
+    "admin": {
+      "title": "Admin features",
+      "feature1": "Create game and manage participants",
+      "feature2": "Rate comments (0-10 points)",
+      "feature3": "Control rounds and game phases",
+      "feature4": "Option to participate in comments (configurable)"
+    },
+    "tips": {
+      "title": "Tips for winning",
+      "tip1": "Write interesting and original comments",
+      "tip2": "Analyze other players' writing styles",
+      "tip3": "Be objective when rating comments",
+      "tip4": "Read comments carefully before guessing",
+      "tip5": "Remember that comments are anonymous"
+    },
+    "footer": "Good game and happy guessing! 🎯"
+  },
+  "results": {
+    "leaderboardTitle": "Leaderboard",
+    "roundHistoryTitle": "Round history",
+    "round": "Round",
+    "target": "Target",
+    "targetPoints": "Target points",
+    "comments": "Comments",
+    "noComments": "No comments"
+  },
+  "modal": {
+    "title": "This is a modal",
+    "goHome": "Go to home screen"
+  }
+}

@@ -4,10 +4,13 @@ import React from 'react';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { t } from '@/i18n';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { locale } = useLanguage();
 
   return (
     <Tabs
@@ -19,21 +22,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Гра',
+          title: t('navigation.home', { locale }),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="results"
         options={{
-          title: 'Результати',
+          title: t('navigation.results', { locale }),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="rules"
         options={{
-          title: 'Правила',
+          title: t('navigation.rules', { locale }),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
         }}
       />

@@ -1,27 +1,29 @@
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Comment, Participant, useGame } from '@/contexts/GameContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Clipboard,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
+  const { locale } = useLanguage();
   const { 
     currentGame, 
     loading, 
@@ -61,7 +63,11 @@ export const GameScreen: React.FC = () => {
   const showFancyAlert = (title: string, message?: string | null, buttons?: { text: string; onPress?: () => void; style?: any }[]) => {
     setFancyTitle(title);
     setFancyMessage(message ?? null);
-    setFancyButtons(buttons && buttons.length > 0 ? buttons : [{ text: 'OK' }]);
+    setFancyButtons(
+      buttons && buttons.length > 0
+        ? buttons
+        : [{ text: t('common.ok', { locale }) }]
+    );
     setFancyVisible(true);
   };
 
@@ -76,19 +82,19 @@ export const GameScreen: React.FC = () => {
       const newValue = !currentGame.adminWritesComments;
       await updateAdminWritesComments(newValue);
     } catch (error: any) {
-      showFancyAlert('Помилка', error.message || 'Не вдалося оновити налаштування.');
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
     }
   };
 
   const handleEnterGame = async () => {
     if (!isSignedIn) {
-      showFancyAlert('Потрібно ввійти', 'Ви повинні увійти, щоб створити або приєднатися до гри.');
+      showFancyAlert(t('game.alerts.loginRequiredTitle', { locale }), t('game.alerts.loginRequiredMessage', { locale }));
       return;
     }
 
     const input = gameIdInput.trim();
     if (!input) {
-      showFancyAlert('Невірне введення', 'Введіть ідентифікатор гри або пароль адміністратора.');
+      showFancyAlert(t('game.alerts.invalidInputTitle', { locale }), t('game.alerts.invalidInputMessage', { locale }));
       return;
     }
 
@@ -105,26 +111,26 @@ export const GameScreen: React.FC = () => {
         const gameId = result;
         setGameIdInput('');
         showFancyAlert(
-          'Гру створено!',
-          `Ідентифікатор вашої гри: ${gameId}\nПоділіться цим ID, щоб інші могли приєднатися.`,
+          t('game.alerts.gameCreatedTitle', { locale }),
+          t('game.alerts.gameCreatedMessage', { locale, gameId }),
           [
             {
-              text: 'Скопіювати ID',
+              text: t('game.alerts.copyId', { locale }),
               onPress: () => {
                 Clipboard.setString(gameId);
-                showFancyAlert('Скопійовано!', 'ID гри скопійовано в буфер обміну');
+                showFancyAlert(t('game.alerts.copiedTitle', { locale }), t('game.alerts.copiedMessage', { locale }));
               },
             },
-            { text: 'ОК' },
+            { text: t('common.ok', { locale }) },
           ]
         );
       } else {
         setGameIdInput('');
-        showFancyAlert('Успішно!', 'Ви успішно приєдналися до гри!');
+        showFancyAlert(t('common.success', { locale }), t('game.alerts.joinedGameMessage', { locale }));
       }
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося створити або приєднатися до гри. Перевірте код і спробуйте ще раз.');
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.enterGameFailed', { locale }));
     } finally {
       setIsProcessingEnter(false);
     }
@@ -132,22 +138,22 @@ export const GameScreen: React.FC = () => {
 
   const handleLeaveGame = async () => {
     showFancyAlert(
-      'Вийти з гри',
-      'Ви впевнені, що хочете вийти з цієї гри?',
+      t('game.alerts.leaveGameTitle', { locale }),
+      t('game.alerts.leaveGameMessage', { locale }),
       [
-        { text: 'Скасувати', style: 'cancel' },
+        { text: t('common.cancel', { locale }), style: 'cancel' },
         {
-          text: 'Вийти',
+          text: t('auth.signOut', { locale }),
           style: 'destructive',
           onPress: async () => {
             try {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               await leaveGame();
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              showFancyAlert('Ви вийшли з гри');
+              showFancyAlert(t('game.alerts.leftGameTitle', { locale }));
             } catch (error: any) {
               console.error('handleLeaveGame error', error);
-              showFancyAlert('Помилка', error.message || 'Не вдалося вийти з гри.');
+              showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.leaveGameFailed', { locale }));
             }
           },
         },
@@ -161,10 +167,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await leaveGame();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert('Ви вийшли з гри');
+      showFancyAlert(t('game.alerts.leftGameTitle', { locale }));
     } catch (error: any) {
       console.error('handleLeaveNow error', error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося вийти з гри.');
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.leaveGameFailed', { locale }));
     }
   };
 
@@ -175,13 +181,13 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося почати гру.');
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.startGameFailed', { locale }));
     }
   };
 
   const handleSubmitComment = async () => {
     if (!commentText.trim()) {
-      showFancyAlert('Помилка', 'Введіть, будь ласка, коментар.');
+      showFancyAlert(t('common.error', { locale }), t('game.alerts.commentEmpty', { locale }));
       return;
     }
     try {
@@ -192,7 +198,7 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося відправити коментар.');
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.submitCommentFailed', { locale }));
     } finally {
       setIsSubmittingComment(false);
     }
@@ -205,13 +211,13 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося показати коментарі.');
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.showCommentsFailed', { locale }));
     }
   };
 
   const handleGivePoints = async (commentId: string, points: number) => {
     if (!givePoints) {
-      showFancyAlert('Не реалізовано', 'givePoints недоступний у GameContext');
+      showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
       return;
     }
     try {
@@ -219,10 +225,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePoints(commentId, points);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert('Успішно', 'Бали нараховано.');
+      showFancyAlert(t('common.success', { locale }), t('game.alerts.pointsAwarded', { locale }));
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error?.message || 'Не вдалося нарахувати бали.');
+      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.pointsAwardFailed', { locale }));
     } finally {
       setGivingPoints(prev => ({ ...prev, [commentId]: false }));
     }
@@ -230,17 +236,17 @@ export const GameScreen: React.FC = () => {
 
   const handleFinishGivingPoints = async () => {
     if (!finishGivingPoints) {
-      showFancyAlert('Не реалізовано', 'finishGivingPoints недоступний у GameContext');
+      showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
       return;
     }
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finishGivingPoints();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert('Успішно', 'Ви завершили нарахування балів. Адміністратор може продовжити.');
+      showFancyAlert(t('common.success', { locale }), t('game.alerts.finishPointsSuccess', { locale }));
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error?.message || 'Не вдалося завершити нарахування балів.');
+      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.finishPointsFailed', { locale }));
     }
   };
 
@@ -251,14 +257,14 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося почати наступний раунд.');
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.startNextRoundFailed', { locale }));
     }
   };
 
   const handleCopyGameId = () => {
     if (currentGame) {
       Clipboard.setString(currentGame.id);
-      showFancyAlert('Скопійовано!', 'ID гри скопійовано в буфер обміну');
+      showFancyAlert(t('game.alerts.copiedTitle', { locale }), t('game.alerts.copiedMessage', { locale }));
     }
   };
 
@@ -297,7 +303,7 @@ export const GameScreen: React.FC = () => {
   const handleGivePointsToTarget = async (points: number = 1) => {
     if (!currentGame?.currentRound) return;
     if (!givePointsToTarget) {
-      showFancyAlert('Не реалізовано', 'givePointsToTarget недоступний у GameContext');
+      showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
       return;
     }
     try {
@@ -305,10 +311,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePointsToTarget(currentGame.currentRound.targetUserId, points);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert('Успішно', 'Бали нараховано цільовому гравцю.');
+      showFancyAlert(t('common.success', { locale }), t('game.alerts.targetPointsAwarded', { locale }));
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error?.message || 'Не вдалося нарахувати бали цільовому гравцю.');
+      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.targetPointsAwardFailed', { locale }));
     } finally {
       setGivingPointsToTarget(false);
     }
@@ -323,7 +329,7 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося почати фазу вгадування.');
+      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.startGuessingPhaseFailed', { locale }));
     }
   };
 
@@ -338,7 +344,7 @@ export const GameScreen: React.FC = () => {
       
       const missing = commentsForPlayerLocal.filter(c => !selectedGuesses[c.id]);
       if (missing.length > 0) {
-        showFancyAlert('Неповно', 'Будь ласка, оберіть автора для кожного коментаря перед відправкою.');
+        showFancyAlert(t('game.alerts.incomplete', { locale }), t('game.alerts.selectAuthorForEachComment', { locale }));
         setIsSubmittingGuesses(false);
         return;
       }
@@ -373,15 +379,15 @@ export const GameScreen: React.FC = () => {
 
       if (failures.length > 0) {
         const failedIds = failures.map(f => f.commentId).join(', ');
-        showFancyAlert('Часткова помилка', `Не вдалося відправити відповіді для коментарів: ${failedIds}`);
+        showFancyAlert(t('game.alerts.partialError', { locale }), `${t('game.alerts.failedToSubmitGuessesForComments', { locale })}: ${failedIds}`);
       } else {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        showFancyAlert('Успішно', 'Ваші відповіді відправлено!');
+        showFancyAlert(t('common.success', { locale }), t('game.alerts.guessesSubmitted', { locale }));
         setSelectedGuesses({});
       }
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error?.message || 'Не вдалося відправити ваші відповіді.');
+      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.submitGuessesFailed', { locale }));
     } finally {
       setIsSubmittingGuesses(false);
     }
@@ -395,10 +401,10 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finalizeGuessingPhase();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert('Успішно', 'Фазу вгадування завершено. Гра закінчена!');
+      showFancyAlert(t('common.success', { locale }), t('game.alerts.guessingPhaseCompleteGameFinished', { locale }));
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error?.message || 'Не вдалося завершити фазу вгадування.');
+      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.finalizeGuessingFailed', { locale }));
     } finally {
       setIsFinalizingGuesses(false);
     }
@@ -420,7 +426,7 @@ export const GameScreen: React.FC = () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error?.message || 'Не вдалося завершити та почати наступний раунд.');
+      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.finishAndStartNextRoundFailed', { locale }));
     } finally {
       setIsFinalizingGuesses(false);
     }
@@ -436,43 +442,17 @@ export const GameScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Fancy alert modal */}
-      {fancyVisible && (
-        <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
-          <View style={styles.fancyModalOverlay}>
-            <View style={styles.fancyModal}>
-              {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
-              {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
-              <View style={styles.fancyButtonsRow}>
-                {fancyButtons.map((b, i) => (
-                  <Pressable
-                    key={i}
-                    style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
-                    onPress={async () => {
-                      try {
-                        if (b.onPress) await b.onPress();
-                      } catch (e) {
-                        console.error('fancy button onPress error', e);
-                      }
-                      closeFancyAlert();
-                    }}
-                  >
-                    <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {!isSignedIn ? (
           <View style={styles.notSignedInContainer}>
+            <View style={styles.inlineLanguageToggle}>
+              <LanguageSelector />
+            </View>
             <ThemedText type="title" style={styles.notSignedInText}>
-              Будь ласка, увійдіть, щоб створювати або приєднуватися до ігор
+              {t('game.ui.pleaseSignIn', { locale })}
             </ThemedText>
           </View>
         ) : currentGame ? (
@@ -481,30 +461,35 @@ export const GameScreen: React.FC = () => {
             <View style={styles.gameInfoCard}>
               <View style={styles.gameHeader}>
                 <ThemedText type="title" style={styles.gameTitle}>
-                  Ігрова кімната
+                  {t('game.ui.gameRoom', { locale })}
                 </ThemedText>
-                {isAdmin && (
-                  <View style={styles.adminBadge}>
-                    <ThemedText style={styles.adminBadgeText}>АДМІН</ThemedText>
+                <View style={styles.gameHeaderRight}>
+                  <View style={styles.languageSelectorHeader}>
+                    <LanguageSelector />
                   </View>
-                )}
+                  {isAdmin && (
+                    <View style={styles.adminBadge}>
+                      <ThemedText style={styles.adminBadgeText}>{t('game.ui.adminBadge', { locale })}</ThemedText>
+                    </View>
+                  )}
+                </View>
               </View>
               {currentGame.status === 'waiting' && (
                 <View style={styles.gameIdContainer}>
                   <ThemedText type="subtitle" style={styles.gameIdLabel}>
-                    ID гри:
+                    {t('game.ui.gameIdLabel', { locale })}
                   </ThemedText>
                   <TouchableOpacity
                     onPress={handleCopyGameId}
                     style={styles.gameIdBox}
                   >
                     <ThemedText style={styles.gameIdText}>{currentGame.id}</ThemedText>
-                    <ThemedText style={styles.copyHint}>Натисніть, щоб скопіювати</ThemedText>
+                    <ThemedText style={styles.copyHint}>{t('game.ui.tapToCopy', { locale })}</ThemedText>
                   </TouchableOpacity>
                 </View>
               )}
               <View style={styles.gameStatusContainer}>
-                <ThemedText style={styles.statusLabel}>Статус:</ThemedText>
+                <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
                 <View
                   style={[
                     styles.statusBadge,
@@ -523,10 +508,10 @@ export const GameScreen: React.FC = () => {
                   <ThemedText style={styles.statusText}>
                     {(
                       {
-                        waiting: 'Очікування',
-                        active: 'Активна',
-                        guessing_phase: 'Фаза вгадування',
-                        finished: 'Завершено',
+                        waiting: t('game.ui.statusWaiting', { locale }),
+                        active: t('game.ui.statusActive', { locale }),
+                        guessing_phase: t('game.ui.statusGuessing', { locale }),
+                        finished: t('game.ui.statusFinished', { locale }),
                       } as Record<string, string>
                     )[currentGame.status] || currentGame.status}
                   </ThemedText>
@@ -537,10 +522,10 @@ export const GameScreen: React.FC = () => {
                 <View style={styles.toggleContainer}>
                   <View style={styles.toggleInfo}>
                     <ThemedText style={styles.toggleLabel}>
-                      Адміністратор також пише коментарі
+                      {t('game.ui.adminWritesCommentsTitle', { locale })}
                     </ThemedText>
                     <ThemedText style={styles.toggleDescription}>
-                      Якщо увімкнено, адміністратор буде брати участь у написанні коментарів про інших гравців
+                      {t('game.ui.adminWritesCommentsDescription', { locale })}
                     </ThemedText>
                   </View>
                   <TouchableOpacity
@@ -563,11 +548,11 @@ export const GameScreen: React.FC = () => {
                 <View style={styles.participantsContainer}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <ThemedText type="subtitle" style={styles.participantsTitle}>
-                      Учасники ({currentGame.participants?.length || 0})
+                      {t('game.ui.participants', { locale })} ({currentGame.participants?.length || 0})
                     </ThemedText>
                     {currentGame.status === 'guessing_phase' && (
                       <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>
-                        Відправлено: {currentGame.guessingData?.playersWhoSubmittedGuesses?.length || 0}/{totalTargets}
+                        {t('game.ui.submitted', { locale })}: {currentGame.guessingData?.playersWhoSubmittedGuesses?.length || 0}/{totalTargets}
                       </ThemedText>
                     )}
                   </View>
@@ -601,7 +586,7 @@ export const GameScreen: React.FC = () => {
               {currentGame.status === 'waiting' && currentGame.scores && (
                 <View style={styles.scoresContainer}>
                   <ThemedText type="subtitle" style={styles.scoresTitle}>
-                    🏆 Таблиця лідерів
+                    {t('game.ui.leaderboardTitle', { locale })}
                   </ThemedText>
                   {(() => {
                     // Calculate game points (from rounds) and guess points separately
@@ -653,15 +638,15 @@ export const GameScreen: React.FC = () => {
                                 {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : ''}
                                 {participant.userName}
                                 {participant.userId === currentGame.adminId && ' 👑'}
-                                {participant.userId === user?.uid && ' (Ви)'}
+                                {participant.userId === user?.uid && ` ${t('game.ui.youLabel', { locale })}`}
                               </ThemedText>
                               <View style={styles.pointsRow}>
                                 <ThemedText style={styles.pointsDetail}>
-                                  Гра: {participant.gamePoints}
+                                  {t('game.ui.pointsGame', { locale })}: {participant.gamePoints}
                                 </ThemedText>
                                 {currentGame.guessResults && participant.guessPoints > 0 && (
                                   <ThemedText style={styles.pointsDetail}>
-                                    • Вгадування: {participant.guessPoints}
+                                    • {t('game.ui.pointsGuessing', { locale })}: {participant.guessPoints}
                                   </ThemedText>
                                 )}
                               </View>
@@ -670,7 +655,7 @@ export const GameScreen: React.FC = () => {
                               <ThemedText style={styles.pointsValue}>
                                 {participant.totalPoints}
                               </ThemedText>
-                              <ThemedText style={styles.pointsLabel}>всього</ThemedText>
+                              <ThemedText style={styles.pointsLabel}>{t('game.ui.pointsTotal', { locale })}</ThemedText>
                             </View>
                           </View>
                         ))}
@@ -697,12 +682,12 @@ export const GameScreen: React.FC = () => {
                       disabled={loading || currentGame.participants.length < 2}
                       activeOpacity={0.8}
                     >
-                      <IconSymbol name="play.fill" size={16} color="#fff" />
+                      <IconSymbol name="arrow.right.circle.fill" size={16} color="#fff" />
                     </TouchableOpacity>
                   )}
                   {!isAdmin && (
                     <ThemedText style={styles.waitingText}>
-                      Чекаємо, поки адміністратор почне гру...
+                      {t('game.ui.waitingForAdminStart', { locale })}
                     </ThemedText>
                   )}
                 </View>
@@ -711,10 +696,10 @@ export const GameScreen: React.FC = () => {
                 <View style={styles.gameFlowContainer}>
                   <View style={styles.roundInfo}>
                     <ThemedText type="subtitle" style={styles.roundTitle}>
-                      Раунд {currentGame.currentRound.roundNumber}
+                      {t('game.ui.round', { locale })} {currentGame.currentRound.roundNumber}
                     </ThemedText>
                     <ThemedText style={styles.targetText}>
-                      Ціль: {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
+                      {t('game.ui.target', { locale })}: {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
                     </ThemedText>
                   </View>
                   {/* User is the target */}
@@ -722,12 +707,12 @@ export const GameScreen: React.FC = () => {
                     <View style={styles.targetView}>
                       {!currentGame.currentRound.commentsVisible ? (
                         <ThemedText style={styles.waitingText}>
-                          Чекаємо, поки інші напишуть коментарі про вас...
+                          {t('game.ui.waitingForCommentsAboutYou', { locale })}
                         </ThemedText>
                       ) : (
                         <View style={styles.commentsView}>
                           <ThemedText type="subtitle" style={styles.commentsTitle}>
-                            Коментарі про вас:
+                            {t('game.ui.commentsAboutYou', { locale })}
                           </ThemedText>
                           {currentGame.currentRound.comments?.map((comment: Comment) => (
                             <View key={comment.id} style={styles.commentCard}>
@@ -747,7 +732,7 @@ export const GameScreen: React.FC = () => {
                               )}
                               {comment.points !== undefined && (
                                 <ThemedText style={styles.pointsGivenText}>
-                                  Нараховано балів: {comment.points}
+                                  {t('game.ui.pointsAwarded', { locale })} {comment.points}
                                 </ThemedText>
                               )}
                             </View>
@@ -775,7 +760,7 @@ export const GameScreen: React.FC = () => {
                           )}
                           {currentGame.currentRound.pointsGiven && (
                             <ThemedText style={styles.waitingText}>
-                              Ви завершили нарахування балів. Чекаємо рішення адміністратора...
+                              {t('game.ui.finishedAwardingPointsWaitAdmin', { locale })}
                             </ThemedText>
                           )}
                         </View>
@@ -801,7 +786,7 @@ export const GameScreen: React.FC = () => {
                           return (
                             <View>
                               <ThemedText style={styles.commentPrompt}>
-                                Напишіть анонімний коментар про {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}:
+                                {t('game.ui.writeAnonymousCommentAbout', { locale, name: `${currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}${currentGame.currentRound.targetUserName}` })}
                               </ThemedText>
                               <TextInput
                                 style={[
@@ -812,7 +797,7 @@ export const GameScreen: React.FC = () => {
                                     borderColor: isDark ? '#444' : '#ddd',
                                   },
                                 ]}
-                                placeholder="Ваш анонімний коментар..."
+                                placeholder={t('game.ui.commentPlaceholder', { locale })}
                                 placeholderTextColor={isDark ? '#888' : '#999'}
                                 value={commentText}
                                 onChangeText={setCommentText}
@@ -844,27 +829,27 @@ export const GameScreen: React.FC = () => {
                         } else if (!shouldUserWriteComments) {
                           return (
                             <ThemedText style={styles.waitingText}>
-                              Ви адміністратор і не берете участь у написанні коментарів у цій грі.
+                              {t('game.ui.adminNotParticipating', { locale })}
                             </ThemedText>
                           );
                         } else if (!currentGame.currentRound.commentsVisible) {
                           return (
                             <ThemedText style={styles.waitingText}>
-                              Коментар відправлено! Чекаємо, коли адміністратор покаже всі коментарі...
+                              {t('game.ui.commentSentWaitingShow', { locale })}
                             </ThemedText>
                           );
                         } else {
                           return (
                             <View style={styles.commentsView}>
                               <ThemedText type="subtitle" style={styles.commentsTitle}>
-                                Усі коментарі:
+                                {t('game.ui.allComments', { locale })}
                               </ThemedText>
                               {currentGame.currentRound.comments?.map((comment: Comment) => (
                                 <View key={comment.id} style={styles.commentCard}>
                                   <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
                                   {comment.points !== undefined && (
                                     <ThemedText style={styles.pointsGivenText}>
-                                      Бали: {comment.points}
+                                      {t('game.ui.points', { locale })} {comment.points}
                                     </ThemedText>
                                   )}
                                 </View>
@@ -951,7 +936,7 @@ export const GameScreen: React.FC = () => {
                           <>
                             <IconSymbol name="brain.head.profile" size={16} color="#fff" />
                             <ThemedText style={styles.buttonText}>
-                              {loading ? 'Завантаження...' : 'Розпочати фазу вгадування'}
+                              {loading ? 'Завантаження...' : ''}
                             </ThemedText>
                           </>
                         </TouchableOpacity>
@@ -1050,7 +1035,7 @@ export const GameScreen: React.FC = () => {
 
                           {(commentsForPlayer.length > 0 && !allCommentsHaveGuesses) && (
                           <ThemedText style={{ textAlign: 'center', color: '#999', marginBottom: 8 }}>
-                            Будь ласка, оберіть автора для кожного коментаря, щоб активувати кнопку відправки
+                            {t('game.alerts.selectAuthorForEachCommentToEnableSubmit', { locale })}
                           </ThemedText>
                         )}
                         {commentsForPlayer.length > 0 && (
@@ -1268,12 +1253,15 @@ export const GameScreen: React.FC = () => {
           </View>
         ) : (
           <View style={styles.actionContainer}>
+            <View style={styles.inlineLanguageToggle}>
+              <LanguageSelector />
+            </View>
             <View style={styles.section}>
               <ThemedText type="title" style={styles.sectionTitle}>
-                Створити або приєднатися до гри
+                {t('game.ui.createOrJoin.title', { locale })}
               </ThemedText>
               <ThemedText style={styles.sectionDescription}>
-                Введіть пароль адміністратора, щоб створити нову гру, або існуючий ID гри, щоб приєднатися.
+                {t('game.ui.createOrJoin.description', { locale })}
               </ThemedText>
 
               <TextInput
@@ -1285,7 +1273,7 @@ export const GameScreen: React.FC = () => {
                     borderColor: isDark ? '#444' : '#ddd',
                   },
                 ]}
-                placeholder="Введіть пароль адміністратора або ID гри"
+                placeholder={t('game.ui.createOrJoin.inputPlaceholder', { locale })}
                 placeholderTextColor={isDark ? '#888' : '#999'}
                 value={gameIdInput}
                 onChangeText={setGameIdInput}
@@ -1324,7 +1312,11 @@ export const GameScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { flexGrow: 1, padding: 20 },
+  inlineLanguageToggle: {
+    alignSelf: 'flex-end',
+    marginBottom: 12,
+  },
+  scrollContent: { padding: 20, paddingBottom: 40 },
   notSignedInContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   notSignedInText: { textAlign: 'center', opacity: 0.7 },
   actionContainer: { flex: 1, justifyContent: 'center' },
@@ -1340,21 +1332,23 @@ const styles = StyleSheet.create({
   toggleButtonActive: { backgroundColor: '#4CAF50' },
   toggleThumb: { width: 27, height: 27, borderRadius: 13.5, backgroundColor: '#f4f3f4' },
   toggleThumbActive: { backgroundColor: '#fff' },
-  createButton: { width: 24, height: 24, borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  createButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   joinButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   buttonDisabled: { opacity: 0.6 },
   buttonLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 8 },
-  iconButton: { width: 24, height: 24, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  iconButton: { borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   gameContainer: { flex: 1 },
   gameInfoCard: { backgroundColor: 'transparent' },
   gameHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   gameTitle: { flex: 1 },
+  gameHeaderRight: { flexDirection: 'row', alignItems: 'center' },
+  languageSelectorHeader: { marginRight: 10 },
   adminBadge: { backgroundColor: '#FFA500', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginLeft: 12 },
   adminBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   gameIdContainer: { marginBottom: 20 },
-  gameIdLabel: { marginBottom: 8 },
-  gameIdBox: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.1)', borderStyle: 'dashed' },
+  gameIdLabel: { marginBottom: 8, opacity: 0.7 },
+  gameIdBox: { backgroundColor: 'rgba(76, 175, 80, 0.1)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(76, 175, 80, 0.3)' },
   gameIdText: { fontSize: 18, fontWeight: '700', fontFamily: 'monospace', marginBottom: 4 },
   copyHint: { fontSize: 12, opacity: 0.6 },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
@@ -1368,10 +1362,10 @@ const styles = StyleSheet.create({
   participantInfo: { flex: 1 },
   participantName: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
   participantEmail: { fontSize: 14, opacity: 0.7, fontFamily: Fonts.sans },
-  leaveButton: { width: 24, height: 24, borderRadius: 999, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  leaveButton: { borderRadius: 999, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   leaveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600', fontFamily: Fonts.sans },
   gameFlowContainer: { marginTop: 24, marginBottom: 24 },
-  startGameButton: { width: 24, height: 24, borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  startGameButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
   roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
   roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
@@ -1380,16 +1374,16 @@ const styles = StyleSheet.create({
   commentView: { marginBottom: 20 },
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },
   commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
-  submitCommentButton: { width: 24, height: 24, borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  submitCommentButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   commentsView: { marginTop: 16 },
   commentsTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
   commentCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 12 },
   commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22, fontFamily: Fonts.sans },
-  pointsButton: { width: 24, height: 24, borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: '#4CAF50' },
+  pointsButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: '#4CAF50', paddingVertical: 8, paddingHorizontal: 12 },
   pointsButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', fontFamily: Fonts.sans },
   pointsGivenText: { fontSize: 14, fontWeight: '600', color: '#4CAF50', marginTop: 8, fontFamily: Fonts.sans },
   adminControls: { marginTop: 24 },
-  adminButton: { width: 24, height: 24, borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  adminButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12, paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   finishedTitle: { textAlign: 'center', marginBottom: 12, fontFamily: Fonts.sans },
   finishedText: { textAlign: 'center', opacity: 0.7, fontSize: 16, fontFamily: Fonts.sans },
   scoresContainer: { marginBottom: 24, marginTop: 8 },
@@ -1431,7 +1425,7 @@ const styles = StyleSheet.create({
   selectedAuthorOption: { backgroundColor: '#4285F4', borderColor: '#4285F4' },
   authorName: { fontSize: 14, fontWeight: '500' },
   selectedAuthorName: { color: '#fff' },
-  submitGuessButton: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', marginTop: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  submitGuessButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   guessResultsContainer: { marginTop: 16, alignItems: 'center' },
   guessResultsTitle: { marginBottom: 16, textAlign: 'center' },
   guessResultCard: { padding: 20, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', alignItems: 'center', width: '100%' },
@@ -1440,9 +1434,9 @@ const styles = StyleSheet.create({
   participantsScroll: { maxHeight: 160, marginTop: 8 },
   leaderboardScroll: { maxHeight: 200, marginTop: 8 },
   // Fancy alert styles
-  fancyModalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  fancyModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   fancyModal: { width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
-  fancyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
+  fancyTitle: { marginBottom: 8, textAlign: 'center' },
   fancyMessage: { fontSize: 15, opacity: 0.9, marginBottom: 16, textAlign: 'center' },
   fancyButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
   fancyButton: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, marginLeft: 8 },

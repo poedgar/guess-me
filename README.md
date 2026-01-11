@@ -10,17 +10,15 @@
 
 # TODO
 
-1. Come up with the name
+1. Guess Me, Відгадай мене
 
-1. Myapp -> new name
-
-2. Інтерфейс простіший
-
-3. Додати правила гри
+2. Myapp -> guess-me
 
 4.  Штрихкод
 
 5.  Add test
+
+7. internalization
 
 
 # Rules

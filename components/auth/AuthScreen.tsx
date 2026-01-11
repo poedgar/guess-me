@@ -1,9 +1,12 @@
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { t } from '@/i18n';
 import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
@@ -17,12 +20,15 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const AuthScreen: React.FC = () => {
   const { signIn, signOut, user, loading, isSignedIn } = useAuth();
+  const { locale } = useLanguage();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   // Fancy alert state
   const [fancyVisible, setFancyVisible] = useState(false);
@@ -57,10 +63,10 @@ export const AuthScreen: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      showFancyAlert('Вихід', 'Ви впевнені, що хочете вийти?', [
-        { text: 'Скасувати', style: 'cancel' },
+      showFancyAlert(t('auth.signOutConfirmTitle', { locale }), t('auth.signOutConfirmMessage', { locale }), [
+        { text: t('common.cancel', { locale }), style: 'cancel' },
         {
-          text: 'Вийти',
+          text: t('auth.signOut', { locale }),
           style: 'destructive',
           onPress: async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -109,11 +115,14 @@ export const AuthScreen: React.FC = () => {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
+        <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
+          <LanguageSelector />
+        </View>
         {renderFancyAlert()}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
           <ThemedText type="subtitle" style={styles.loadingText}>
-            Завантаження...
+            {t('common.loading', { locale })}
           </ThemedText>
         </View>
       </ThemedView>
@@ -123,6 +132,9 @@ export const AuthScreen: React.FC = () => {
   if (isSignedIn && user) {
     return (
       <ThemedView style={styles.container}>
+        <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
+          <LanguageSelector />
+        </View>
         {renderFancyAlert()}
         <View style={styles.profileContainer}>
           {/* Profile Picture */}
@@ -140,7 +152,7 @@ export const AuthScreen: React.FC = () => {
 
           {/* User Info */}
           <ThemedText type="title" style={styles.userName}>
-            {user.displayName || 'Користувач'}
+            {user.displayName || t('auth.userFallback', { locale })}
           </ThemedText>
           <ThemedText type="subtitle" style={styles.userEmail}>
             {user.email}
@@ -159,7 +171,7 @@ export const AuthScreen: React.FC = () => {
             activeOpacity={0.8}
           >
             <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
-            <ThemedText style={styles.signOutButtonText}>Вийти</ThemedText>
+            <ThemedText style={styles.signOutButtonText}>{t('auth.signOut', { locale })}</ThemedText>
           </TouchableOpacity>
         </View>
       </ThemedView>
@@ -168,15 +180,18 @@ export const AuthScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
+      <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
+        <LanguageSelector />
+      </View>
       {renderFancyAlert()}
       <View style={styles.signInContainer}>
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
           <ThemedText type="title" style={styles.welcomeTitle}>
-            Ласкаво просимо!
+            {t('auth.welcome', { locale })}!
           </ThemedText>
           <ThemedText type="subtitle" style={styles.welcomeSubtitle}>
-            Увійдіть, щоб продовжити
+            {t('auth.continue', { locale })}
           </ThemedText>
         </View>
 
@@ -205,7 +220,7 @@ export const AuthScreen: React.FC = () => {
                   <IconSymbol name="lock.shield" size={20} color="#4285F4" />
                 </View>
                 <ThemedText style={styles.webGoogleButtonText}>
-                  Увійти через Google
+                  {t('auth.signInWithGoogle', { locale })}
                 </ThemedText>
               </View>
             </TouchableOpacity>
@@ -230,6 +245,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  languageToggle: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 50,
   },
   loadingContainer: {
     alignItems: 'center',

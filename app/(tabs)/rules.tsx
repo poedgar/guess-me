@@ -1,12 +1,15 @@
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import React from 'react';
+import { t } from '@/i18n';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 export default function RulesScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { locale } = useLanguage();
 
   return (
     <ScrollView 
@@ -22,11 +25,15 @@ export default function RulesScreen() {
           style={styles.headerIcon}
         />
         <ThemedText type="title" style={styles.title}>
-          Правила гри 🎮
+          {t('rules.title', { locale })} 🎮
         </ThemedText>
         <ThemedText style={styles.subtitle}>
-          Все, що потрібно знати для перемоги
+          {t('rules.subtitle', { locale })}
         </ThemedText>
+
+        <View style={styles.languageSelector}>
+          <LanguageSelector />
+        </View>
       </View>
 
       {/* Game Overview */}
@@ -34,13 +41,11 @@ export default function RulesScreen() {
         <View style={styles.sectionHeader}>
           <IconSymbol name="star.fill" size={24} color="#FFA500" />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Про гру
+            {t('rules.overview.title', { locale })}
           </ThemedText>
         </View>
         <ThemedText style={styles.sectionText}>
-          Це соціальна гра, де учасники пишуть анонімні коментарі один про одного, 
-          вгадують авторів та заробляють бали. Адміністратор керує гроєю та визначає, 
-          чи бере участь у написанні коментарів.
+          {t('rules.overview.description', { locale })}
         </ThemedText>
       </View>
 
@@ -49,7 +54,7 @@ export default function RulesScreen() {
         <View style={styles.sectionHeader}>
           <IconSymbol name="play.fill" size={24} color="#4285F4" />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Як грати
+            {t('rules.howToPlay.title', { locale })}
           </ThemedText>
         </View>
         <View style={styles.stepList}>
@@ -58,8 +63,8 @@ export default function RulesScreen() {
               <ThemedText style={styles.stepNumberText}>1</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
-              <ThemedText style={styles.stepTitle}>Створіть або приєднайтеся до гри</ThemedText>
-              {'\n'}Адміністратор створює гру паролем, інші приєднуються за ID.
+              <ThemedText style={styles.stepTitle}>{t('rules.howToPlay.step1.title', { locale })}</ThemedText>
+              {'\n'}{t('rules.howToPlay.step1.description', { locale })}
             </ThemedText>
           </View>
           
@@ -68,8 +73,8 @@ export default function RulesScreen() {
               <ThemedText style={styles.stepNumberText}>2</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
-              <ThemedText style={styles.stepTitle}>Напишіть коментар</ThemedText>
-              {'\n'}Коли ви обрані ціллю, інші учасники пишуть анонімні коментарі про вас.
+              <ThemedText style={styles.stepTitle}>{t('rules.howToPlay.step2.title', { locale })}</ThemedText>
+              {'\n'}{t('rules.howToPlay.step2.description', { locale })}
             </ThemedText>
           </View>
           
@@ -78,8 +83,8 @@ export default function RulesScreen() {
               <ThemedText style={styles.stepNumberText}>3</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
-              <ThemedText style={styles.stepTitle}>Оцініть коментарі</ThemedText>
-              {'\n'}Адміністратор показує коментарі та нараховує бали (0-10) за кожен.
+              <ThemedText style={styles.stepTitle}>{t('rules.howToPlay.step3.title', { locale })}</ThemedText>
+              {'\n'}{t('rules.howToPlay.step3.description', { locale })}
             </ThemedText>
           </View>
           
@@ -88,8 +93,8 @@ export default function RulesScreen() {
               <ThemedText style={styles.stepNumberText}>4</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
-              <ThemedText style={styles.stepTitle}>Вгадайте автора</ThemedText>
-              {'\n'}Спробуйте вгадати, хто написав кожен коментар про ціль.
+              <ThemedText style={styles.stepTitle}>{t('rules.howToPlay.step4.title', { locale })}</ThemedText>
+              {'\n'}{t('rules.howToPlay.step4.description', { locale })}
             </ThemedText>
           </View>
           
@@ -98,8 +103,8 @@ export default function RulesScreen() {
               <ThemedText style={styles.stepNumberText}>5</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
-              <ThemedText style={styles.stepTitle}>Наступний раунд</ThemedText>
-              {'\n'}Гра продовжується з новою ціллю, поки всі не побувають ціллю.
+              <ThemedText style={styles.stepTitle}>{t('rules.howToPlay.step5.title', { locale })}</ThemedText>
+              {'\n'}{t('rules.howToPlay.step5.description', { locale })}
             </ThemedText>
           </View>
         </View>
@@ -110,37 +115,37 @@ export default function RulesScreen() {
         <View style={styles.sectionHeader}>
           <IconSymbol name="trophy.fill" size={24} color="#FFD700" />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Система очок
+            {t('rules.scoring.title', { locale })}
           </ThemedText>
         </View>
         <View style={styles.scoringList}>
           <View style={styles.scoringItem}>
             <View style={[styles.scoringBadge, { backgroundColor: '#4CAF50' }]}>
-              <ThemedText style={styles.scoringBadgeText}>Коментарі</ThemedText>
+              <ThemedText style={styles.scoringBadgeText}>{t('rules.scoring.comments.badge', { locale })}</ThemedText>
             </View>
             <ThemedText style={styles.scoringText}>
-              <ThemedText style={styles.scoringTitle}>Бали за коментарі</ThemedText>
-              {'\n'}Адміністратор нараховує 0-10 балів за кожен коментар про вас.
+              <ThemedText style={styles.scoringTitle}>{t('rules.scoring.comments.title', { locale })}</ThemedText>
+              {'\n'}{t('rules.scoring.comments.description', { locale })}
             </ThemedText>
           </View>
           
           <View style={styles.scoringItem}>
             <View style={[styles.scoringBadge, { backgroundColor: '#2196F3' }]}>
-              <ThemedText style={styles.scoringBadgeText}>Ціль</ThemedText>
+              <ThemedText style={styles.scoringBadgeText}>{t('rules.scoring.target.badge', { locale })}</ThemedText>
             </View>
             <ThemedText style={styles.scoringText}>
-              <ThemedText style={styles.scoringTitle}>Бали за ціль</ThemedText>
-              {'\n'}Кожен учасник може дати бали цільовому гравцю (0-10).
+              <ThemedText style={styles.scoringTitle}>{t('rules.scoring.target.title', { locale })}</ThemedText>
+              {'\n'}{t('rules.scoring.target.description', { locale })}
             </ThemedText>
           </View>
           
           <View style={styles.scoringItem}>
             <View style={[styles.scoringBadge, { backgroundColor: '#FF9800' }]}>
-              <ThemedText style={styles.scoringBadgeText}>Вгадування</ThemedText>
+              <ThemedText style={styles.scoringBadgeText}>{t('rules.scoring.guessing.badge', { locale })}</ThemedText>
             </View>
             <ThemedText style={styles.scoringText}>
-              <ThemedText style={styles.scoringTitle}>Бали за вгадування</ThemedText>
-              {'\n'}+1 бал за кожен правильно вгаданий автора коментаря.
+              <ThemedText style={styles.scoringTitle}>{t('rules.scoring.guessing.title', { locale })}</ThemedText>
+              {'\n'}{t('rules.scoring.guessing.description', { locale })}
             </ThemedText>
           </View>
         </View>
@@ -151,32 +156,32 @@ export default function RulesScreen() {
         <View style={styles.sectionHeader}>
           <IconSymbol name="crown.fill" size={24} color="#FFA500" />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Функції адміністратора
+            {t('rules.admin.title', { locale })}
           </ThemedText>
         </View>
         <View style={styles.featureList}>
           <View style={styles.feature}>
             <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
             <ThemedText style={styles.featureText}>
-              Створення гри та управління учасниками
+              {t('rules.admin.feature1', { locale })}
             </ThemedText>
           </View>
           <View style={styles.feature}>
             <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
             <ThemedText style={styles.featureText}>
-              Оцінка коментарів (0-10 балів)
+              {t('rules.admin.feature2', { locale })}
             </ThemedText>
           </View>
           <View style={styles.feature}>
             <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
             <ThemedText style={styles.featureText}>
-              Контроль раундів та фаз гри
+              {t('rules.admin.feature3', { locale })}
             </ThemedText>
           </View>
           <View style={styles.feature}>
             <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
             <ThemedText style={styles.featureText}>
-              Можливість брати участь у коментарях (налаштовується)
+              {t('rules.admin.feature4', { locale })}
             </ThemedText>
           </View>
         </View>
@@ -187,24 +192,24 @@ export default function RulesScreen() {
         <View style={styles.sectionHeader}>
           <IconSymbol name="lightbulb.fill" size={24} color="#FFD700" />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Поради для перемоги
+            {t('rules.tips.title', { locale })}
           </ThemedText>
         </View>
         <View style={styles.tipsList}>
           <ThemedText style={styles.tip}>
-            💡 <ThemedText style={styles.tipText}>Пишіть цікаві та оригінальні коментарі</ThemedText>
+            💡 <ThemedText style={styles.tipText}>{t('rules.tips.tip1', { locale })}</ThemedText>
           </ThemedText>
           <ThemedText style={styles.tip}>
-            💡 <ThemedText style={styles.tipText}>Аналізуйте стиль написання інших гравців</ThemedText>
+            💡 <ThemedText style={styles.tipText}>{t('rules.tips.tip2', { locale })}</ThemedText>
           </ThemedText>
           <ThemedText style={styles.tip}>
-            💡 <ThemedText style={styles.tipText}>Будьте об'єктивними при оцінці коментарів</ThemedText>
+            💡 <ThemedText style={styles.tipText}>{t('rules.tips.tip3', { locale })}</ThemedText>
           </ThemedText>
           <ThemedText style={styles.tip}>
-            💡 <ThemedText style={styles.tipText}>Уважно читайте коментарі перед вгадуванням</ThemedText>
+            💡 <ThemedText style={styles.tipText}>{t('rules.tips.tip4', { locale })}</ThemedText>
           </ThemedText>
           <ThemedText style={styles.tip}>
-            💡 <ThemedText style={styles.tipText}>Пам'ятайте, що коментарі анонімні</ThemedText>
+            💡 <ThemedText style={styles.tipText}>{t('rules.tips.tip5', { locale })}</ThemedText>
           </ThemedText>
         </View>
       </View>
@@ -212,7 +217,7 @@ export default function RulesScreen() {
       {/* Footer */}
       <View style={styles.footer}>
         <ThemedText style={styles.footerText}>
-          Гарної гри та вдалих вгадувань! 🎯
+          {t('rules.footer', { locale })}
         </ThemedText>
       </View>
     </ScrollView>
@@ -245,6 +250,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.7,
     fontSize: 16,
+  },
+  languageSelector: {
+    marginTop: 12,
   },
   section: {
     borderRadius: 16,
