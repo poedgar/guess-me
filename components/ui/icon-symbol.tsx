@@ -1,7 +1,7 @@
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
+import { SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
@@ -18,7 +18,24 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-} as IconMapping;
+  'play.fill': 'play-arrow',
+  'plus.circle.fill': 'add-circle',
+  'checkmark.circle.fill': 'check-circle',
+  'eye.fill': 'visibility',
+  'brain.head.profile': 'psychology',
+  'arrow.up.circle.fill': 'arrow-circle-up',
+  'arrow.right.circle.fill': 'arrow-forward',
+  'forward.end.fill': 'skip-next',
+  'flag.checkered': 'flag',
+  'door.left.hand.open': 'logout',
+  'book.fill': 'menu-book',
+  'star.fill': 'star',
+  'trophy.fill': 'emoji-events',
+  'lightbulb.fill': 'lightbulb',
+  'crown.fill': 'workspace-premium',
+  'hourglass': 'hourglass-empty',
+  'lock.shield': 'security',
+} as const;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.

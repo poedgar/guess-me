@@ -1,20 +1,21 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export const AuthScreen: React.FC = () => {
@@ -73,38 +74,42 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
+  // Render fancy alert modal (shared across all states)
+  const renderFancyAlert = () => (
+    fancyVisible && (
+      <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
+        <View style={styles.fancyModalOverlay}>
+          <View style={styles.fancyModal}>
+            {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
+            {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
+            <View style={styles.fancyButtonsRow}>
+              {fancyButtons.map((b, i) => (
+                <Pressable
+                  key={i}
+                  style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
+                  onPress={async () => {
+                    try {
+                      if (b.onPress) await b.onPress();
+                    } catch (e) {
+                      console.error('fancy button onPress error', e);
+                    }
+                    closeFancyAlert();
+                  }}
+                >
+                  <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+    )
+  );
+
   if (loading) {
     return (
       <ThemedView style={styles.container}>
-        {/* Fancy alert modal */}
-        {fancyVisible && (
-          <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
-            <View style={styles.fancyModalOverlay}>
-              <View style={styles.fancyModal}>
-                {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
-                {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
-                <View style={styles.fancyButtonsRow}>
-                  {fancyButtons.map((b, i) => (
-                    <Pressable
-                      key={i}
-                      style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
-                      onPress={async () => {
-                        try {
-                          if (b.onPress) await b.onPress();
-                        } catch (e) {
-                          console.error('fancy button onPress error', e);
-                        }
-                        closeFancyAlert();
-                      }}
-                    >
-                      <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </View>
-          </Modal>
-        )}
+        {renderFancyAlert()}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
           <ThemedText type="subtitle" style={styles.loadingText}>
@@ -118,35 +123,7 @@ export const AuthScreen: React.FC = () => {
   if (isSignedIn && user) {
     return (
       <ThemedView style={styles.container}>
-        {/* Fancy alert modal */}
-        {fancyVisible && (
-          <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
-            <View style={styles.fancyModalOverlay}>
-              <View style={styles.fancyModal}>
-                {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
-                {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
-                <View style={styles.fancyButtonsRow}>
-                  {fancyButtons.map((b, i) => (
-                    <Pressable
-                      key={i}
-                      style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
-                      onPress={async () => {
-                        try {
-                          if (b.onPress) await b.onPress();
-                        } catch (e) {
-                          console.error('fancy button onPress error', e);
-                        }
-                        closeFancyAlert();
-                      }}
-                    >
-                      <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </View>
-          </Modal>
-        )}
+        {renderFancyAlert()}
         <View style={styles.profileContainer}>
           {/* Profile Picture */}
           <View style={[styles.avatarContainer, { shadowColor: isDark ? '#000' : '#000' }]}>
@@ -181,6 +158,7 @@ export const AuthScreen: React.FC = () => {
             onPress={handleSignOut}
             activeOpacity={0.8}
           >
+            <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
             <ThemedText style={styles.signOutButtonText}>Вийти</ThemedText>
           </TouchableOpacity>
         </View>
@@ -190,35 +168,7 @@ export const AuthScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Fancy alert modal */}
-      {fancyVisible && (
-        <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
-          <View style={styles.fancyModalOverlay}>
-            <View style={styles.fancyModal}>
-              {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
-              {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
-              <View style={styles.fancyButtonsRow}>
-                {fancyButtons.map((b, i) => (
-                  <Pressable
-                    key={i}
-                    style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
-                    onPress={async () => {
-                      try {
-                        if (b.onPress) await b.onPress();
-                      } catch (e) {
-                        console.error('fancy button onPress error', e);
-                      }
-                      closeFancyAlert();
-                    }}
-                  >
-                    <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+      {renderFancyAlert()}
       <View style={styles.signInContainer}>
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
@@ -235,7 +185,7 @@ export const AuthScreen: React.FC = () => {
           {isSigningIn ? (
             <View style={styles.loadingButton}>
               <ActivityIndicator size="small" color="#fff" />
-              <ThemedText style={styles.loadingButtonText}>Вхід...</ThemedText>
+              <IconSymbol name="hourglass" size={16} color="#fff" style={{ marginLeft: 8 }} />
             </View>
           ) : Platform.OS === 'web' ? (
             <TouchableOpacity
@@ -252,7 +202,7 @@ export const AuthScreen: React.FC = () => {
             >
               <View style={styles.webGoogleButtonContent}>
                 <View style={styles.webGoogleIcon}>
-                  <ThemedText style={styles.webGoogleIconText}>G</ThemedText>
+                  <IconSymbol name="lock.shield" size={20} color="#4285F4" />
                 </View>
                 <ThemedText style={styles.webGoogleButtonText}>
                   Увійти через Google
@@ -352,11 +302,13 @@ const styles = StyleSheet.create({
     color: '#4285F4',
     fontSize: 14,
     fontWeight: 'bold',
+    fontFamily: Fonts.sans,
   },
   webGoogleButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+    fontFamily: Fonts.sans,
   },
   loadingButton: {
     flexDirection: 'row',
@@ -374,6 +326,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: Fonts.sans,
   },
   profileContainer: {
     width: '100%',
@@ -412,22 +365,28 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#fff',
     fontSize: 48,
+    fontFamily: Fonts.sans,
   },
   userName: {
     marginBottom: 8,
+    fontFamily: Fonts.sans,
     textAlign: 'center',
   },
   userEmail: {
     opacity: 0.7,
     marginBottom: 32,
     textAlign: 'center',
+    fontFamily: Fonts.sans,
   },
   signOutButton: {
+    flexDirection: 'row',
+    gap: 8,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 8,
     minWidth: 200,
     alignItems: 'center',
+    justifyContent: 'center',
     ...Platform.select({
       ios: {
         shadowOffset: { width: 0, height: 2 },
@@ -443,16 +402,62 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: Fonts.sans,
   },
   // Fancy alert styles
-  fancyModalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  fancyModal: { width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
-  fancyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
-  fancyMessage: { fontSize: 15, opacity: 0.9, marginBottom: 16, textAlign: 'center' },
-  fancyButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
-  fancyButton: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, marginLeft: 8 },
-  fancyButtonText: { fontSize: 15, color: '#007AFF', fontWeight: '700' },
+  fancyModalOverlay: { 
+    position: 'absolute', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    bottom: 0, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(0,0,0,0.5)' 
+  },
+  fancyModal: { 
+    width: '85%', 
+    backgroundColor: '#fff', 
+    borderRadius: 12, 
+    padding: 20, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 8 }, 
+    shadowOpacity: 0.2, 
+    shadowRadius: 16, 
+    elevation: 10 
+  },
+  fancyTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    marginBottom: 8, 
+    textAlign: 'center', 
+    fontFamily: Fonts.sans 
+  },
+  fancyMessage: { 
+    fontSize: 15, 
+    opacity: 0.9, 
+    marginBottom: 16, 
+    textAlign: 'center', 
+    fontFamily: Fonts.sans 
+  },
+  fancyButtonsRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'flex-end' 
+  },
+  fancyButton: { 
+    paddingVertical: 10, 
+    paddingHorizontal: 14, 
+    borderRadius: 8, 
+    marginLeft: 8 
+  },
+  fancyButtonText: { 
+    fontSize: 15, 
+    color: '#007AFF', 
+    fontWeight: '700', 
+    fontFamily: Fonts.sans 
+  },
   fancyDestructiveButton: {},
-  fancyDestructiveButtonText: { color: '#D9534F' },
+  fancyDestructiveButtonText: { 
+    color: '#D9534F' 
+  },
 });
-

@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Comment, Participant, useGame } from '@/contexts/GameContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -696,7 +697,7 @@ export const GameScreen: React.FC = () => {
                       disabled={loading || currentGame.participants.length < 2}
                       activeOpacity={0.8}
                     >
-                      <ThemedText style={styles.buttonText}>Почати гру</ThemedText>
+                      <IconSymbol name="play.fill" size={16} color="#fff" />
                     </TouchableOpacity>
                   )}
                   {!isAdmin && (
@@ -740,7 +741,7 @@ export const GameScreen: React.FC = () => {
                                   {givingPoints[comment.id] ? (
                                     <ActivityIndicator size="small" color="#fff" />
                                   ) : (
-                                    <ThemedText style={styles.pointsButtonText}>+1 бал</ThemedText>
+                                    <IconSymbol name="plus.circle.fill" size={14} color="#fff" />
                                   )}
                                 </TouchableOpacity>
                               )}
@@ -765,9 +766,11 @@ export const GameScreen: React.FC = () => {
                               disabled={loading}
                               activeOpacity={0.8}
                             >
-                              <ThemedText style={styles.buttonText}>
-                                {loading ? 'Обробка...' : 'Завершити нарахування балів'}
-                              </ThemedText>
+                              {loading ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <IconSymbol name="checkmark.circle.fill" size={16} color="#fff" />
+                              )}
                             </TouchableOpacity>
                           )}
                           {currentGame.currentRound.pointsGiven && (
@@ -833,7 +836,7 @@ export const GameScreen: React.FC = () => {
                                 {isSubmittingComment ? (
                                   <ActivityIndicator size="small" color="#fff" />
                                 ) : (
-                                  <ThemedText style={styles.buttonText}>Відправити коментар</ThemedText>
+                                  <IconSymbol name="paperplane.fill" size={16} color="#fff" />
                                 )}
                               </TouchableOpacity>
                             </View>
@@ -927,7 +930,7 @@ export const GameScreen: React.FC = () => {
                             getRequiredComments()}
                           activeOpacity={0.8}
                         >
-                          <ThemedText style={styles.buttonText}>Показати коментарі</ThemedText>
+                          <IconSymbol name="eye.fill" size={16} color="#fff" />
                         </TouchableOpacity>
                       )}
                       {currentGame.currentRound.commentsVisible && 
@@ -945,9 +948,12 @@ export const GameScreen: React.FC = () => {
                           disabled={loading}
                           activeOpacity={0.8}
                         >
-                          <ThemedText style={styles.buttonText}>
-                            {loading ? 'Завантаження...' : 'Розпочати фазу вгадування'}
-                          </ThemedText>
+                          <>
+                            <IconSymbol name="brain.head.profile" size={16} color="#fff" />
+                            <ThemedText style={styles.buttonText}>
+                              {loading ? 'Завантаження...' : 'Розпочати фазу вгадування'}
+                            </ThemedText>
+                          </>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -1064,7 +1070,7 @@ export const GameScreen: React.FC = () => {
                             {isSubmittingGuesses ? (
                               <ActivityIndicator size="small" color="#fff" />
                             ) : (
-                              <ThemedText style={styles.buttonText}>Відправити мої відповіді</ThemedText>
+                              <IconSymbol name="arrow.up.circle.fill" size={16} color="#fff" />
                             )}
                           </TouchableOpacity>
                         )}
@@ -1100,7 +1106,7 @@ export const GameScreen: React.FC = () => {
                               {isFinalizingGuesses ? (
                                 <ActivityIndicator size="small" color="#fff" />
                               ) : (
-                                <ThemedText style={styles.buttonText}>Завершити та почати наступний раунд</ThemedText>
+                                <IconSymbol name="forward.end.fill" size={16} color="#fff" />
                               )}
                             </TouchableOpacity>
                           </View>
@@ -1126,7 +1132,7 @@ export const GameScreen: React.FC = () => {
                               {isFinalizingGuesses ? (
                                 <ActivityIndicator size="small" color="#fff" />
                               ) : (
-                                <ThemedText style={styles.buttonText}>Завершити гру</ThemedText>
+                                <IconSymbol name="flag.checkered" size={16} color="#fff" />
                               )}
                             </TouchableOpacity>
                           </View>
@@ -1254,7 +1260,9 @@ export const GameScreen: React.FC = () => {
                 onPress={handleLeaveGame}
                 activeOpacity={0.8}
               >
-                <ThemedText style={styles.leaveButtonText}>Вийти з гри</ThemedText>
+                <>
+                  <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
+                </>
               </TouchableOpacity>
             </View>
           </View>
@@ -1301,10 +1309,9 @@ export const GameScreen: React.FC = () => {
                 {isProcessingEnter ? (
                   <View style={styles.buttonLoading}>
                     <ActivityIndicator size="small" color="#fff" />
-                    <ThemedText style={styles.buttonText}>Обробка...</ThemedText>
                   </View>
                 ) : (
-                  <ThemedText style={styles.buttonText}>Продовжити</ThemedText>
+                  <IconSymbol name="arrow.right.circle.fill" size={16} color="#fff" />
                 )}
               </TouchableOpacity>
             </View>
@@ -1323,21 +1330,22 @@ const styles = StyleSheet.create({
   actionContainer: { flex: 1, justifyContent: 'center' },
   section: { marginBottom: 32 },
   sectionTitle: { marginBottom: 8 },
-  sectionDescription: { opacity: 0.7, marginBottom: 16, fontSize: 14, lineHeight: 20 },
-  input: { height: 50, borderRadius: 8, paddingHorizontal: 16, fontSize: 16, marginBottom: 16, borderWidth: 1, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  sectionDescription: { opacity: 0.7, marginBottom: 16, fontSize: 14, lineHeight: 20, fontFamily: Fonts.sans },
+  input: { height: 50, borderRadius: 8, paddingHorizontal: 16, fontSize: 16, marginBottom: 16, borderWidth: 1, fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
   toggleContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: 16, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: 8 },
   toggleInfo: { flex: 1, marginRight: 16 },
-  toggleLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
-  toggleDescription: { fontSize: 14, opacity: 0.7, lineHeight: 20 },
+  toggleLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
+  toggleDescription: { fontSize: 14, opacity: 0.7, lineHeight: 20, fontFamily: Fonts.sans },
   toggleButton: { width: 51, height: 31, borderRadius: 15.5, backgroundColor: '#767577', justifyContent: 'center', padding: 2 },
   toggleButtonActive: { backgroundColor: '#4CAF50' },
   toggleThumb: { width: 27, height: 27, borderRadius: 13.5, backgroundColor: '#f4f3f4' },
   toggleThumbActive: { backgroundColor: '#fff' },
-  createButton: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
-  joinButton: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  createButton: { width: 24, height: 24, borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  joinButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   buttonDisabled: { opacity: 0.6 },
-  buttonLoading: { flexDirection: 'row', alignItems: 'center' },
+  buttonLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+  iconButton: { width: 24, height: 24, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   gameContainer: { flex: 1 },
   gameInfoCard: { backgroundColor: 'transparent' },
   gameHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
@@ -1350,42 +1358,42 @@ const styles = StyleSheet.create({
   gameIdText: { fontSize: 18, fontWeight: '700', fontFamily: 'monospace', marginBottom: 4 },
   copyHint: { fontSize: 12, opacity: 0.6 },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  statusLabel: { marginRight: 12, fontSize: 16 },
+  statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
   statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   statusText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   participantsContainer: { marginBottom: 24 },
-  participantsTitle: { marginBottom: 12 },
+  participantsTitle: { marginBottom: 12, fontFamily: Fonts.sans },
   participantItem: { padding: 12, borderRadius: 8, marginBottom: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
   adminParticipant: { backgroundColor: 'rgba(255, 165, 0, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 165, 0, 0.3)' },
   participantInfo: { flex: 1 },
-  participantName: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
-  participantEmail: { fontSize: 14, opacity: 0.7 },
-  leaveButton: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
-  leaveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  participantName: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
+  participantEmail: { fontSize: 14, opacity: 0.7, fontFamily: Fonts.sans },
+  leaveButton: { width: 24, height: 24, borderRadius: 999, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  leaveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600', fontFamily: Fonts.sans },
   gameFlowContainer: { marginTop: 24, marginBottom: 24 },
-  startGameButton: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
-  waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16 },
+  startGameButton: { width: 24, height: 24, borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
   roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
-  roundTitle: { marginBottom: 8, textAlign: 'center' },
-  targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600' },
+  roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
+  targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600', fontFamily: Fonts.sans },
   targetView: { marginBottom: 20 },
   commentView: { marginBottom: 20 },
-  commentPrompt: { marginBottom: 12, fontSize: 16 },
-  commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16, borderWidth: 1, textAlignVertical: 'top', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
-  submitCommentButton: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },
+  commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  submitCommentButton: { width: 24, height: 24, borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
   commentsView: { marginTop: 16 },
-  commentsTitle: { marginBottom: 16, textAlign: 'center' },
+  commentsTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
   commentCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 12 },
-  commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22 },
-  pointsButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6, backgroundColor: '#4CAF50', alignSelf: 'flex-start' },
-  pointsButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  pointsGivenText: { fontSize: 14, fontWeight: '600', color: '#4CAF50', marginTop: 8 },
+  commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22, fontFamily: Fonts.sans },
+  pointsButton: { width: 24, height: 24, borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: '#4CAF50' },
+  pointsButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', fontFamily: Fonts.sans },
+  pointsGivenText: { fontSize: 14, fontWeight: '600', color: '#4CAF50', marginTop: 8, fontFamily: Fonts.sans },
   adminControls: { marginTop: 24 },
-  adminButton: { paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', marginBottom: 12, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
-  finishedTitle: { textAlign: 'center', marginBottom: 12 },
-  finishedText: { textAlign: 'center', opacity: 0.7, fontSize: 16 },
+  adminButton: { width: 24, height: 24, borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }, android: { elevation: 4 } }) },
+  finishedTitle: { textAlign: 'center', marginBottom: 12, fontFamily: Fonts.sans },
+  finishedText: { textAlign: 'center', opacity: 0.7, fontSize: 16, fontFamily: Fonts.sans },
   scoresContainer: { marginBottom: 24, marginTop: 8 },
-  scoresTitle: { marginBottom: 16, textAlign: 'center' },
+  scoresTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
   leaderboard: { borderRadius: 8, overflow: 'hidden' },
   leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
   leaderboardFirst: { backgroundColor: 'rgba(255, 215, 0, 0.2)', borderWidth: 2, borderColor: 'rgba(255, 215, 0, 0.5)' },
@@ -1415,9 +1423,9 @@ const styles = StyleSheet.create({
   roundHistoryPointsValue: { fontSize: 14, fontWeight: '600', color: '#4CAF50' },
   noCommentsText: { textAlign: 'center', opacity: 0.5, fontSize: 14, fontStyle: 'italic', padding: 8 },
   guessingContainer: { marginTop: 16 },
-  guessingInstructions: { fontSize: 16, marginBottom: 20, lineHeight: 24 },
+  guessingInstructions: { fontSize: 16, marginBottom: 20, lineHeight: 24, fontFamily: Fonts.sans },
   guessCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 20 },
-  guessPrompt: { fontSize: 14, fontWeight: '600', marginTop: 12, marginBottom: 8, color: '#555' },
+  guessPrompt: { fontSize: 14, fontWeight: '600', marginTop: 12, marginBottom: 8, color: '#555', fontFamily: Fonts.sans },
   authorOptionsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   authorOption: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.1)' },
   selectedAuthorOption: { backgroundColor: '#4285F4', borderColor: '#4285F4' },
