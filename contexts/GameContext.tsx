@@ -18,6 +18,8 @@ export interface Game {
   scores?: { [userId: string]: number };
   guessingData?: GuessingData;
   guessResults?: { [userId: string]: { correctGuesses: number } };
+  // Whether admin should also write comments (default: false)
+  adminWritesComments?: boolean;
 }
 
 export interface Participant {
@@ -74,15 +76,15 @@ export interface GuessingData {
 interface GameContextType {
   currentGame: Game | null;
   loading: boolean;
-  createGame: () => Promise<string>;
+  createGame: (adminWritesComments?: boolean) => Promise<string>;
   joinGame: (gameId: string) => Promise<void>;
   /**
    * Accepts a single input string from the UI. If the input matches the admin password
-   * stored in Firestore (collection `password`, doc `YR20RZ67FKy88HQVF6yW`),
-   * it will create a new game and return the new game id. Otherwise it attempts to join
-   * a game with the input treated as the game id.
+   * stored in Firestore (collection `password`, doc `YR20RZ67FKy88HQVF6yW'),
+   * it will create a new game and return its game id. Otherwise it attempts to join
+   * the game with the input treated as the game id.
    */
-  enterGame: (input: string) => Promise<string | void>;
+  enterGame: (input: string, adminWritesComments?: boolean) => Promise<string | void>;
   leaveGame: () => Promise<void>;
   refreshGame: (gameId: string) => Promise<void>;
   startGame: () => Promise<void>;
@@ -94,10 +96,10 @@ interface GameContextType {
   givePointsToTarget: (targetUserId: string, points?: number) => Promise<void>;
   startGuessingPhase: () => Promise<void>;
   finalizeGuessingPhase: () => Promise<void>;
-  submitGuess: (roundNumber: number, commentId: string, guessedAuthorId: string) => Promise<boolean>;
-  // Marks the current user (or given userId) as having submitted their guesses (useful when zero comments)
+  submitGuess: (roundNumber: number, commentId: string, guessedAuthorId: string) => Promise<void>;
   markPlayerGuessesSubmitted: (userId?: string) => Promise<void>;
-} 
+  updateAdminWritesComments: (adminWritesComments: boolean) => Promise<void>;
+}
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
@@ -147,7 +149,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     return () => unsubscribe();
   }, [currentGame?.id]);
 
-  const createGame = async (): Promise<string> => {
+  const createGame = async (adminWritesComments: boolean = false): Promise<string> => {
     if (!user) {
       throw new Error('You must be signed in to create a game');
     }
@@ -170,6 +172,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         ],
         createdAt: serverTimestamp(),
         status: 'waiting' as const,
+        adminWritesComments,
       };
 
       const docRef = await addDoc(collection(db, 'games'), gameData);
@@ -250,10 +253,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const enterGame = async (input: string): Promise<string | void> => {
-    if (!input || !input.trim()) {
-      throw new Error('Please enter a code or password');
+  const enterGame = async (input: string, adminWritesComments?: boolean): Promise<string | void> => {
+    if (!user) {
+      throw new Error('You must be signed in to enter a game');
     }
+
     try {
       // Fetch the admin password from Firestore
       const passwordRef = doc(db, 'password', 'YR20RZ67FKy88HQVF6yW');
@@ -262,7 +266,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
       if (adminPassword && input === adminPassword) {
         // Input matches the admin password -> create a new game and return its id
-        const newGameId = await createGame();
+        const newGameId = await createGame(adminWritesComments);
         return newGameId;
       } else {
         // Otherwise treat the input as a game ID and attempt to join
@@ -831,9 +835,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
       const usedTargets = previousRounds.map(r => r.targetUserId);
 
-      // Get participants who haven't been targets yet (excluding admin)
+      // Get participants who haven't been targets yet (include admin if adminWritesComments is true)
       const availableParticipants = (gameData.participants || []).filter(
-        p => p.userId !== gameData.adminId && !usedTargets.includes(p.userId)
+        p => {
+          // Always exclude admin if adminWritesComments is false
+          if (p.userId === gameData.adminId && !gameData.adminWritesComments) {
+            return false;
+          }
+          // Exclude anyone who has already been a target
+          return !usedTargets.includes(p.userId);
+        }
       );
 
       if (availableParticipants.length === 0) {
@@ -1153,6 +1164,32 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const updateAdminWritesComments = async (adminWritesComments: boolean): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can update this setting');
+    }
+
+    if (currentGame.status !== 'waiting') {
+      throw new Error('This setting can only be updated before the game starts');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      
+      await updateDoc(gameRef, {
+        adminWritesComments,
+      });
+      
+      console.log('updateAdminWritesComments: updated setting', { adminWritesComments });
+    } catch (err) {
+      console.error('Error updating admin writes comments setting:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: GameContextType = {
     currentGame,
     loading,
@@ -1172,6 +1209,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     givePointsToTarget,
     submitGuess,
     markPlayerGuessesSubmitted,
+    updateAdminWritesComments,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

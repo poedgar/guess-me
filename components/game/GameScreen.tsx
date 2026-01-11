@@ -2,7 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { Comment, Participant, Round, useGame } from '@/contexts/GameContext';
+import { Comment, Participant, useGame } from '@/contexts/GameContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
@@ -37,6 +37,7 @@ export const GameScreen: React.FC = () => {
     submitGuess,
     finalizeGuessingPhase,
     markPlayerGuessesSubmitted,
+    updateAdminWritesComments,
   } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
   const [isProcessingEnter, setIsProcessingEnter] = useState(false);
@@ -67,6 +68,17 @@ export const GameScreen: React.FC = () => {
     setFancyVisible(false);
   };
 
+  const handleToggleAdminComments = async () => {
+    if (!currentGame) return;
+    
+    try {
+      const newValue = !currentGame.adminWritesComments;
+      await updateAdminWritesComments(newValue);
+    } catch (error: any) {
+      showFancyAlert('Помилка', error.message || 'Не вдалося оновити налаштування.');
+    }
+  };
+
   const handleEnterGame = async () => {
     if (!isSignedIn) {
       showFancyAlert('Потрібно ввійти', 'Ви повинні увійти, щоб створити або приєднатися до гри.');
@@ -83,7 +95,7 @@ export const GameScreen: React.FC = () => {
       setIsProcessingEnter(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      const result = await enterGame(input);
+      const result = await enterGame(input, false); // Default to false for game creation
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -254,6 +266,21 @@ export const GameScreen: React.FC = () => {
   const allCommentsHaveGuesses = commentsForPlayer.length === 0 || commentsForPlayer.every(c => !!selectedGuesses[c.id]);
   const totalTargets = currentGame?.participants?.filter(p => p.userId !== currentGame?.adminId).length ?? 0;
   const isFinalRound = !!currentGame?.currentRound && currentGame.currentRound.roundNumber === totalTargets;
+  
+  // Calculate required number of comments for current round
+  const getRequiredComments = () => {
+    if (!currentGame?.currentRound) return 0;
+    const targetUserId = currentGame.currentRound.targetUserId;
+    const isTargetAdmin = targetUserId === currentGame.adminId;
+    
+    // If target is admin and admin doesn't write comments, exclude admin from comment writers
+    if (isTargetAdmin && !currentGame.adminWritesComments) {
+      return currentGame.participants.length - 1; // All non-admin participants
+    }
+    
+    // Otherwise, all participants except the target can write comments
+    return currentGame.participants.length - 1;
+  };
   
   // Participants sorted by join time (ascending). Show a 1-based index next to each name.
   const participantsByJoin = (currentGame?.participants || []).slice().sort((a, b) => {
@@ -504,6 +531,32 @@ export const GameScreen: React.FC = () => {
                   </ThemedText>
                 </View>
               </View>
+              {/* Admin settings (show only before game starts and only for admin) */}
+              {currentGame.status === 'waiting' && isAdmin && (
+                <View style={styles.toggleContainer}>
+                  <View style={styles.toggleInfo}>
+                    <ThemedText style={styles.toggleLabel}>
+                      Адміністратор також пише коментарі
+                    </ThemedText>
+                    <ThemedText style={styles.toggleDescription}>
+                      Якщо увімкнено, адміністратор буде брати участь у написанні коментарів про інших гравців
+                    </ThemedText>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      currentGame.adminWritesComments && styles.toggleButtonActive
+                    ]}
+                    onPress={handleToggleAdminComments}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[
+                      styles.toggleThumb,
+                      currentGame.adminWritesComments && styles.toggleThumbActive
+                    ]} />
+                  </TouchableOpacity>
+                </View>
+              )}
               {/* Participants (show only before game starts) */}
               {currentGame.status === 'waiting' && (
                 <View style={styles.participantsContainer}>
@@ -730,10 +783,18 @@ export const GameScreen: React.FC = () => {
                   {user?.uid !== currentGame.currentRound.targetUserId && (
                     <View style={styles.commentView}>
                       {(() => {
+                        // Check if user should write comments (exclude admin if adminWritesComments is false and target is not admin)
+                        const shouldUserWriteComments = !(
+                          user?.uid === currentGame.adminId && 
+                          !currentGame.adminWritesComments &&
+                          currentGame.currentRound.targetUserId !== currentGame.adminId
+                        );
+                        
                         const userComment = currentGame.currentRound.comments?.find(
                           (c: Comment) => c.authorId === user?.uid
                         );
-                        if (!userComment) {
+                        
+                        if (!userComment && shouldUserWriteComments) {
                           return (
                             <View>
                               <ThemedText style={styles.commentPrompt}>
@@ -776,6 +837,12 @@ export const GameScreen: React.FC = () => {
                                 )}
                               </TouchableOpacity>
                             </View>
+                          );
+                        } else if (!shouldUserWriteComments) {
+                          return (
+                            <ThemedText style={styles.waitingText}>
+                              Ви адміністратор і не берете участь у написанні коментарів у цій грі.
+                            </ThemedText>
                           );
                         } else if (!currentGame.currentRound.commentsVisible) {
                           return (
@@ -853,11 +920,11 @@ export const GameScreen: React.FC = () => {
                               shadowColor: '#000',
                             },
                             (currentGame.currentRound.comments?.length || 0) < 
-                              (currentGame.participants.length - 1) && styles.buttonDisabled,
+                              getRequiredComments() && styles.buttonDisabled,
                           ]}
                           onPress={handleShowComments}
                           disabled={(currentGame.currentRound.comments?.length || 0) < 
-                            (currentGame.participants.length - 1)}
+                            getRequiredComments()}
                           activeOpacity={0.8}
                         >
                           <ThemedText style={styles.buttonText}>Показати коментарі</ThemedText>
@@ -1088,70 +1155,94 @@ export const GameScreen: React.FC = () => {
                         Гра завершена! 🎉
                       </ThemedText>
                       <ThemedText style={styles.finishedText}>
-                        Усі раунди завершені. Перегляньте фінальні результати вище!
+                        Усі раунди завершені. Перегляньте фінальні результати нижче!
                       </ThemedText>
+                      
+                      {/* Final Leaderboard */}
+                      <View style={styles.scoresContainer}>
+                        <ThemedText type="subtitle" style={styles.scoresTitle}>
+                          🏆 Фінальна таблиця лідерів
+                        </ThemedText>
+                        {(() => {
+                          // Calculate game points (from rounds) and guess points separately
+                          // scores contains only game points (from comments and target points)
+                          // guessResults contains guess points
+                          // total = game points + guess points
+                          const participantsWithScores = currentGame.participants
+                            .map(p => {
+                              // Game points from Firestore (only from comments and target points)
+                              const gamePoints = currentGame.scores?.[p.userId] || 0;
+                              
+                              // Guess points (only available after finalization)
+                              const guessPoints = currentGame.guessResults?.[p.userId]?.correctGuesses || 0;
+                              
+                              // Total = game points + guess points
+                              const totalPoints = gamePoints + guessPoints;
+                              
+                              return {
+                                ...p,
+                                gamePoints,
+                                guessPoints,
+                                totalPoints
+                              };
+                            })
+                            .sort((a, b) => b.totalPoints - a.totalPoints);
+                          
+                          return (
+                            <ScrollView style={styles.leaderboardScroll} nestedScrollEnabled>
+                              <View style={styles.leaderboard}>
+                                {participantsWithScores.map((participant, index) => (
+                                <View
+                                  key={participant.userId}
+                                  style={[
+                                    styles.leaderboardItem,
+                                    index === 0 && styles.leaderboardFirst,
+                                    participant.userId === user?.uid && styles.leaderboardCurrentUser,
+                                  ]}
+                                >
+                                  <View style={styles.leaderboardRank}>
+                                    {index === 0 && <ThemedText style={styles.rankEmoji}>🥇</ThemedText>}
+                                    {index === 1 && <ThemedText style={styles.rankEmoji}>🥈</ThemedText>}
+                                    {index === 2 && <ThemedText style={styles.rankEmoji}>🥉</ThemedText>}
+                                    {index > 2 && (
+                                      <ThemedText style={styles.rankNumber}>#{index + 1}</ThemedText>
+                                    )}
+                                  </View>
+                                  <View style={styles.leaderboardInfo}>
+                                    <ThemedText style={styles.leaderboardName}>
+                                      {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : ''}
+                                      {participant.userName}
+                                      {participant.userId === currentGame.adminId && ' 👑'}
+                                      {participant.userId === user?.uid && ' (Ви)'}
+                                    </ThemedText>
+                                    <View style={styles.pointsRow}>
+                                      <ThemedText style={styles.pointsDetail}>
+                                        Гра: {participant.gamePoints}
+                                      </ThemedText>
+                                      {currentGame.guessResults && participant.guessPoints > 0 && (
+                                        <ThemedText style={styles.pointsDetail}>
+                                          • Вгадування: {participant.guessPoints}
+                                        </ThemedText>
+                                      )}
+                                    </View>
+                                  </View>
+                                  <View style={styles.leaderboardPoints}>
+                                    <ThemedText style={styles.pointsValue}>
+                                      {participant.totalPoints}
+                                    </ThemedText>
+                                    <ThemedText style={styles.pointsLabel}>всього</ThemedText>
+                                  </View>
+                                </View>
+                              ))}
+                            </View>
+                            </ScrollView>
+                          );
+                        })()}
+                      </View>
                     </>
                   )}
                 </View>
               )}
-              {/* Round History */}
-              {(() => {
-                const allRounds = currentGame.rounds || [];
-                const sortedRounds = [...allRounds].sort((a, b) => a.roundNumber - b.roundNumber);
-                const completedRounds = sortedRounds.filter(
-                  (round) => round.commentsVisible && round.pointsGiven
-                );
-                return completedRounds.length > 0 ? (
-                  <View style={styles.roundHistoryContainer}>
-                    <ThemedText type="subtitle" style={styles.roundHistoryTitle}>
-                      📜 Історія раундів ({completedRounds.length} {completedRounds.length === 1 ? 'раунд' : 'раунди'})
-                    </ThemedText>
-                    {completedRounds.map((round: Round) => (
-                      <View key={round.roundNumber} style={styles.roundHistoryItem}>
-                        <View style={styles.roundHistoryHeader}>
-                          <ThemedText style={styles.roundHistoryRoundNumber}>
-                            Раунд {round.roundNumber}
-                          </ThemedText>
-                          <ThemedText style={styles.roundHistoryTarget}>
-                            Ціль: {round && joinIndexById[round.targetUserId] ? `${joinIndexById[round.targetUserId]}. ` : ''}{round.targetUserName}
-                          </ThemedText>
-                          {(() => {
-                            const targetPoints = round.targetPointsGivenBy?.length ?? 0;
-                            return (
-                              <ThemedText style={styles.roundHistoryTargetPoints}>
-                                    Бали цілі: +{targetPoints} балів
-                                  </ThemedText>
-                            );
-                          })()}
-                        </View>
-                        <View style={styles.roundHistoryComments}>
-                          <ThemedText style={styles.roundHistoryCommentsTitle}>
-                            Коментарі ({round.comments?.length || 0}):
-                          </ThemedText>
-                          {round.comments && round.comments.length > 0 ? (
-                            round.comments.map((comment: Comment) => (
-                              <View key={comment.id} style={styles.roundHistoryComment}>
-                                <ThemedText style={styles.roundHistoryCommentText}>
-                                  "{comment.text}"
-                                </ThemedText>
-                                {comment.points !== undefined && (
-                                  <View style={styles.roundHistoryCommentPoints}>
-                                    <ThemedText style={styles.roundHistoryPointsValue}>
-                                      +{comment.points} pts
-                                    </ThemedText>
-                                  </View>
-                                )}
-                              </View>
-                            ))
-                          ) : (
-                            <ThemedText style={styles.noCommentsText}>Коментарів немає</ThemedText>
-                          )}
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                ) : null;
-              })()}
               <TouchableOpacity
                 style={[
                   styles.leaveButton,
@@ -1234,6 +1325,14 @@ const styles = StyleSheet.create({
   sectionTitle: { marginBottom: 8 },
   sectionDescription: { opacity: 0.7, marginBottom: 16, fontSize: 14, lineHeight: 20 },
   input: { height: 50, borderRadius: 8, paddingHorizontal: 16, fontSize: 16, marginBottom: 16, borderWidth: 1, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  toggleContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: 16, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: 8 },
+  toggleInfo: { flex: 1, marginRight: 16 },
+  toggleLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  toggleDescription: { fontSize: 14, opacity: 0.7, lineHeight: 20 },
+  toggleButton: { width: 51, height: 31, borderRadius: 15.5, backgroundColor: '#767577', justifyContent: 'center', padding: 2 },
+  toggleButtonActive: { backgroundColor: '#4CAF50' },
+  toggleThumb: { width: 27, height: 27, borderRadius: 13.5, backgroundColor: '#f4f3f4' },
+  toggleThumbActive: { backgroundColor: '#fff' },
   createButton: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   joinButton: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 8, alignItems: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   buttonDisabled: { opacity: 0.6 },

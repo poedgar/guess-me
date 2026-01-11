@@ -1,0 +1,166 @@
+import { ScrollView, StyleSheet, View } from 'react-native';
+
+import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { ThemedText } from '@/components/themed-text';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import type { Comment, Round } from '@/contexts/GameContext';
+import { Participant, useGame } from '@/contexts/GameContext';
+
+export default function TabTwoScreen() {
+  const { currentGame } = useGame();
+
+  const participantsByJoin = (currentGame?.participants || [])
+    .slice()
+    .sort((a: Participant, b: Participant) => (a.joinedAt || 0) - (b.joinedAt || 0));
+
+  const joinIndexById: Record<string, number> = {};
+  participantsByJoin.forEach((p, i) => (joinIndexById[p.userId] = i + 1));
+
+  const participantsWithScores = (currentGame?.participants || []).map(p => {
+    const gamePoints = currentGame?.scores?.[p.userId] || 0;
+    const guessPoints = currentGame?.guessResults?.[p.userId]?.correctGuesses || 0;
+    return { ...p, gamePoints, guessPoints, totalPoints: gamePoints + guessPoints };
+  }).sort((a, b) => b.totalPoints - a.totalPoints);
+  
+  return (
+    <ParallaxScrollView
+      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+      headerImage={
+        <IconSymbol
+          size={310}
+          color="#808080"
+          name="chevron.left.forwardslash.chevron.right"
+          style={styles.headerImage}
+        />
+      }>
+
+      {/* Show participants and leaderboard here when game is started */}
+      {currentGame && currentGame.status !== 'waiting' && (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+          <ThemedText type="subtitle" style={{ marginTop: 16, marginBottom: 8 }}>
+            🏆 Таблиця лідерів
+          </ThemedText>
+          <ScrollView style={styles.leaderboardScroll}>
+            {participantsWithScores.map((p, idx) => (
+              <View key={p.userId} style={styles.leaderboardRow}>
+                <ThemedText style={styles.leaderboardName}>{idx < 3 ? ['🥇','🥈','🥉'][idx] : `#${idx+1}`} {joinIndexById[p.userId] ? `${joinIndexById[p.userId]}. ` : ''}{p.userName}</ThemedText>
+                <ThemedText style={styles.points}>{p.totalPoints}</ThemedText>
+              </View>
+            ))}
+          </ScrollView>
+          
+          {/* Round History */}
+          {(() => {
+            const allRounds = currentGame.rounds || [];
+            const sortedRounds = [...allRounds].sort((a, b) => a.roundNumber - b.roundNumber);
+            const completedRounds = sortedRounds.filter(
+              (round) => round.commentsVisible && round.pointsGiven
+            );
+            return completedRounds.length > 0 ? (
+              <View style={styles.roundHistoryContainer}>
+                <ThemedText type="subtitle" style={styles.roundHistoryTitle}>
+                  📜 Історія раундів ({completedRounds.length} {completedRounds.length === 1 ? 'раунд' : 'раунди'})
+                </ThemedText>
+                {completedRounds.map((round: Round) => (
+                  <View key={round.roundNumber} style={styles.roundHistoryItem}>
+                    <View style={styles.roundHistoryHeader}>
+                      <ThemedText style={styles.roundHistoryRoundNumber}>
+                        Раунд {round.roundNumber}
+                      </ThemedText>
+                      <ThemedText style={styles.roundHistoryTarget}>
+                        Ціль: {round && joinIndexById[round.targetUserId] ? `${joinIndexById[round.targetUserId]}. ` : ''}{round.targetUserName}
+                      </ThemedText>
+                      {(() => {
+                        const targetPoints = round.targetPointsGivenBy?.length ?? 0;
+                        return (
+                          <ThemedText style={styles.roundHistoryTargetPoints}>
+                                Бали цілі: +{targetPoints} балів
+                              </ThemedText>
+                        );
+                      })()}
+                    </View>
+                    <View style={styles.roundHistoryComments}>
+                      <ThemedText style={styles.roundHistoryCommentsTitle}>
+                        Коментарі ({round.comments?.length || 0}):
+                      </ThemedText>
+                      {round.comments && round.comments.length > 0 ? (
+                        round.comments.map((comment: Comment) => (
+                          <View key={comment.id} style={styles.roundHistoryComment}>
+                            <ThemedText style={styles.roundHistoryCommentText}>
+                              "{comment.text}"
+                            </ThemedText>
+                            {comment.points !== undefined && (
+                              <View style={styles.roundHistoryCommentPoints}>
+                                <ThemedText style={styles.roundHistoryPointsValue}>
+                                  +{comment.points} pts
+                                </ThemedText>
+                              </View>
+                            )}
+                          </View>
+                        ))
+                      ) : (
+                        <ThemedText style={styles.noCommentsText}>Коментарів немає</ThemedText>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null;
+          })()}
+        </View>
+      )}
+    </ParallaxScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  headerImage: {
+    color: '#808080',
+    bottom: -90,
+    left: -35,
+    position: 'absolute',
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  userContainer: {
+    padding: 16,
+    marginVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  button: {
+    backgroundColor: '#4285F4',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  participantsScroll: { maxHeight: 260 },
+  participantRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
+  participantName: { fontSize: 16, fontWeight: '600' },
+  leaderboardScroll: { maxHeight: 260 },
+  leaderboardRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
+  leaderboardName: { fontSize: 16, fontWeight: '600' },
+  points: { fontSize: 16, fontWeight: '700', color: '#4CAF50' },
+  // Round History styles
+  roundHistoryContainer: { marginBottom: 24, marginTop: 8 },
+  roundHistoryTitle: { marginBottom: 16, textAlign: 'center' },
+  roundHistoryItem: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.1)' },
+  roundHistoryHeader: { marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(0, 0, 0, 0.1)' },
+  roundHistoryRoundNumber: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  roundHistoryTarget: { fontSize: 16, opacity: 0.7 },
+  roundHistoryTargetPoints: { marginTop: 6, fontSize: 14, fontWeight: '700', color: '#4CAF50' },
+  roundHistoryComments: { marginTop: 8 },
+  roundHistoryCommentsTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8, opacity: 0.8 },
+  roundHistoryComment: { padding: 12, marginBottom: 8, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.5)' },
+  roundHistoryCommentText: { fontSize: 14, lineHeight: 20, marginBottom: 8, fontStyle: 'italic' },
+  roundHistoryCommentPoints: { alignSelf: 'flex-end' },
+  roundHistoryPointsValue: { fontSize: 14, fontWeight: '600', color: '#4CAF50' },
+  noCommentsText: { textAlign: 'center', opacity: 0.5, fontSize: 14, fontStyle: 'italic', padding: 8 },
+});
