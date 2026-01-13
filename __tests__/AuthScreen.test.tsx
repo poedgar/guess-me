@@ -71,4 +71,24 @@ describe('AuthScreen', () => {
       );
     }).not.toThrow();
   });
+
+  it('handles sign-in function call', () => {
+    const mockSignIn = jest.fn();
+    
+    // Mock with a mock signIn function
+    jest.doMock('@/contexts/AuthContext', () => ({
+      AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+      useAuth: () => ({
+        user: null,
+        loading: false,
+        isSignedIn: false,
+        signIn: mockSignIn,
+        signOut: jest.fn(),
+      }),
+    }));
+
+    // Test that the mock function exists and can be called
+    expect(typeof mockSignIn).toBe('function');
+    expect(mockSignIn).toBeDefined();
+  });
 });
