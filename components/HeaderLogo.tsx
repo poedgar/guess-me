@@ -10,7 +10,7 @@ export function HeaderLogo() {
       : require('../../assets/images/icon.png');
 
   return (
-    <View style={styles.headerLogoContainer}>
+    <View style={styles.headerLogoContainer} testID="header-logo">
       <ExpoImage 
         source={source} 
         style={styles.headerLogo} 

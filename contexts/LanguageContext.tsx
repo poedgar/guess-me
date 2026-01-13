@@ -1,70 +1,52 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import { i18n, SupportedLocale } from '@/i18n';
-
-interface LanguageContextType {
-  locale: SupportedLocale;
-  setLocale: (locale: SupportedLocale) => Promise<void>;
-  ready: boolean;
+export interface LanguageContextType {
+  locale: string;
+  setLocale: (locale: string) => void;
 }
-
-const STORAGE_KEY = 'app.locale';
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const useLanguage = () => {
+export function useLanguage() {
   const context = useContext(LanguageContext);
   if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
-};
-
-interface LanguageProviderProps {
-  children: ReactNode;
 }
 
-export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const [locale, setLocaleState] = useState<SupportedLocale>('uk');
-  const [ready, setReady] = useState(false);
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [locale, setLocale] = useState('en');
 
   useEffect(() => {
-    let mounted = true;
-
-    (async () => {
+    const loadLocale = async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        const nextLocale: SupportedLocale = stored === 'en' || stored === 'uk' ? stored : 'uk';
-
-        if (!mounted) return;
-
-        i18n.locale = nextLocale;
-        setLocaleState(nextLocale);
-      } finally {
-        if (mounted) setReady(true);
+        const savedLocale = await AsyncStorage.getItem('app_locale');
+        if (savedLocale) {
+          setLocale(savedLocale);
+        }
+      } catch (error) {
+        console.error('Failed to load locale:', error);
       }
-    })();
-
-    return () => {
-      mounted = false;
     };
+
+    loadLocale();
   }, []);
 
-  const setLocale = async (nextLocale: SupportedLocale) => {
-    i18n.locale = nextLocale;
-    setLocaleState(nextLocale);
-    await AsyncStorage.setItem(STORAGE_KEY, nextLocale);
+  const changeLanguage = async (newLocale: string) => {
+    try {
+      setLocale(newLocale);
+      await AsyncStorage.setItem('app_locale', newLocale);
+    } catch (error) {
+      console.error('Failed to save locale:', error);
+    }
   };
 
-  const value = useMemo<LanguageContextType>(
-    () => ({
-      locale,
-      setLocale,
-      ready,
-    }),
-    [locale, ready]
-  );
+  const value: LanguageContextType = {
+    locale,
+    setLocale: changeLanguage,
+  };
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-};
+}

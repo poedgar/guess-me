@@ -11,14 +11,14 @@ import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -120,7 +120,7 @@ export const AuthScreen: React.FC = () => {
         </View>
         {renderFancyAlert()}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
+          <ActivityIndicator testID="loading-indicator" size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
           <ThemedText type="subtitle" style={styles.loadingText}>
             {t('common.loading', { locale })}
           </ThemedText>

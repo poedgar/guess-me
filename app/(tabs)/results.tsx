@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+safe to I what do I import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import type { Comment, Round } from '@/contexts/GameContext';

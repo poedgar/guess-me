@@ -13,7 +13,7 @@
 1. Refresh logo
 
 2.  Add test
-
+😫am not sure 
 
 # Rules
 Психологічна гра (комунікативний тренінг)
