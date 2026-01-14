@@ -1,4 +1,5 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { SoundToggle } from '@/components/SoundToggle';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -6,6 +7,7 @@ import { Colors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Comment, Participant, useGame } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
@@ -24,12 +26,10 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
-const HEADER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"><defs><linearGradient id="mysteryGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#6a11cb;stop-opacity:1" /><stop offset="100%" style="stop-color:#2575fc;stop-opacity:1" /></linearGradient></defs><g transform="translate(512 512) scale(5) translate(0 -70)"><path d="M-25,-20 C-45,-20 -60,-5 -60,20 C-60,45 -40,55 -25,70 C-15,80 -5,95 0,110" fill="none" stroke="url(#mysteryGradient)" stroke-width="16" stroke-linecap="round"/><path d="M-25,-20 C-5,-20 25,-15 40,5 C55,25 50,50 30,70 C15,85 -10,95 -15,120" fill="none" stroke="url(#mysteryGradient)" stroke-width="16" stroke-linecap="round"/><circle cx="0" cy="155" r="12" fill="url(#mysteryGradient)"/></g></svg>`;
-
 function HeaderLogo() {
   const source =
     Platform.OS === 'web'
-      ? { uri: `data:image/svg+xml;utf8,${encodeURIComponent(HEADER_LOGO_SVG)}` }
+      ? require('../../assets/images/logo.svg')
       : require('../../assets/images/icon.png');
 
   return (
@@ -46,6 +46,7 @@ function HeaderLogo() {
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
   const { locale } = useLanguage();
+  const { playSound } = useSound();
   const { 
     currentGame, 
     loading, 
@@ -113,9 +114,15 @@ export const GameScreen: React.FC = () => {
     if (!currentGame) return;
     
     try {
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const newValue = !currentGame.adminWritesComments;
       await updateAdminWritesComments(newValue);
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
     }
   };
@@ -134,10 +141,12 @@ export const GameScreen: React.FC = () => {
 
     try {
       setIsProcessingEnter(true);
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       const result = await enterGame(input, false); // Default to false for game creation
 
+      await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // If enterGame returned a string, it is the new game id (created as admin)
@@ -150,7 +159,8 @@ export const GameScreen: React.FC = () => {
           [
             {
               text: t('game.alerts.copyId', { locale }),
-              onPress: () => {
+              onPress: async () => {
+                await playSound('copy');
                 Clipboard.setString(gameId);
                 showFancyAlert(t('game.alerts.copiedTitle', { locale }), t('game.alerts.copiedMessage', { locale }));
               },
@@ -163,6 +173,7 @@ export const GameScreen: React.FC = () => {
         showFancyAlert(t('common.success', { locale }), t('game.alerts.joinedGameMessage', { locale }));
       }
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.enterGameFailed', { locale }));
     } finally {
@@ -210,10 +221,13 @@ export const GameScreen: React.FC = () => {
 
   const handleStartGame = async () => {
     try {
+      await playSound('gameStart');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await startGame();
+      await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.startGameFailed', { locale }));
     }
@@ -226,11 +240,14 @@ export const GameScreen: React.FC = () => {
     }
     try {
       setIsSubmittingComment(true);
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await submitComment(commentText.trim());
       setCommentText('');
+      await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.submitCommentFailed', { locale }));
     } finally {
@@ -256,11 +273,14 @@ export const GameScreen: React.FC = () => {
     }
     try {
       setGivingPoints(prev => ({ ...prev, [commentId]: true }));
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePoints(commentId, points);
+      await playSound('points');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFancyAlert(t('common.success', { locale }), t('game.alerts.pointsAwarded', { locale }));
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.pointsAwardFailed', { locale }));
     } finally {
@@ -286,17 +306,21 @@ export const GameScreen: React.FC = () => {
 
   const handleStartNextRound = async () => {
     try {
+      await playSound('gameStart');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await startNextRound();
+      await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.startNextRoundFailed', { locale }));
     }
   };
 
-  const handleCopyGameId = () => {
+  const handleCopyGameId = async () => {
     if (currentGame) {
+      await playSound('copy');
       Clipboard.setString(currentGame.id);
       showFancyAlert(t('game.alerts.copiedTitle', { locale }), t('game.alerts.copiedMessage', { locale }));
     }
@@ -480,11 +504,14 @@ export const GameScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <HeaderLogo />
         {!isSignedIn ? (
           <View style={styles.notSignedInContainer}>
             <View style={styles.inlineLanguageToggle}>
-              <LanguageSelector />
+              <HeaderLogo />
+              <View style={{marginTop: 12, display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: 12}}>
+                <LanguageSelector />
+                <SoundToggle />
+              </View>
             </View>
             <ThemedText type="title" style={styles.notSignedInText}>
               {t('game.ui.pleaseSignIn', { locale })}
@@ -496,17 +523,18 @@ export const GameScreen: React.FC = () => {
             <View style={styles.gameInfoCard}>
               <View style={styles.gameHeader}>
                 <ThemedText type="title" style={styles.gameTitle}>
-                  {t('game.ui.gameRoom', { locale })}
+                  <HeaderLogo />
                 </ThemedText>
                 <View style={styles.gameHeaderRight}>
-                  <View style={styles.languageSelectorHeader}>
+                  <View style={{marginTop: 12, display: 'flex', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', gap: 12}}>
                     <LanguageSelector />
-                  </View>
-                  {isAdmin && (
+                    <SoundToggle />
+                    {isAdmin && (
                     <View style={styles.adminBadge}>
                       <ThemedText style={styles.adminBadgeText}>{t('game.ui.adminBadge', { locale })}</ThemedText>
                     </View>
                   )}
+                  </View>
                 </View>
               </View>
               {currentGame.status === 'waiting' && (
@@ -1213,7 +1241,7 @@ export const GameScreen: React.FC = () => {
                       {/* Final Leaderboard */}
                       <View style={styles.scoresContainer}>
                         <ThemedText type="subtitle" style={styles.scoresTitle}>
-                          🏆 Фінальна таблиця лідерів
+                          Фінальна таблиця лідерів
                         </ThemedText>
                         {(() => {
                           // Calculate game points (from rounds) and guess points separately
@@ -1315,7 +1343,11 @@ export const GameScreen: React.FC = () => {
         ) : (
           <View style={styles.actionContainer}>
             <View style={styles.inlineLanguageToggle}>
-              <LanguageSelector />
+              <HeaderLogo/>
+              <View style={{marginTop: 12, display: 'flex', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', gap: 12}}>
+                <LanguageSelector />
+                <SoundToggle />
+              </View>
             </View>
             <View style={styles.section}>
               <ThemedText type="title" style={styles.sectionTitle}>
@@ -1341,8 +1373,6 @@ export const GameScreen: React.FC = () => {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-
-
               <TouchableOpacity
                 style={[
                   styles.joinButton,
@@ -1376,8 +1406,12 @@ export const GameScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   inlineLanguageToggle: {
-    alignSelf: 'flex-end',
-    marginBottom: 12,
+    // flex: 1, 
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 60,
+    marginBottom: 82,
   },
   scrollContent: { padding: 20, paddingBottom: 40 },
   notSignedInContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -1470,13 +1504,13 @@ const styles = StyleSheet.create({
   gameTitle: { flex: 1 },
   gameHeaderRight: { flexDirection: 'row', alignItems: 'center' },
   languageSelectorHeader: { marginRight: 10 },
-  adminBadge: { backgroundColor: '#FFA500', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginLeft: 12 },
-  adminBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  adminBadge: { height: 'max-content', backgroundColor: '#FFA500', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 12 },
+  adminBadgeText: { color: '#fff', fontSize: 8, fontWeight: '700' },
   gameIdContainer: { marginBottom: 20 },
   gameIdLabel: { marginBottom: 8, opacity: 0.7 },
   gameIdBox: { backgroundColor: 'rgba(76, 175, 80, 0.1)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(76, 175, 80, 0.3)' },
-  gameIdText: { fontSize: 18, fontWeight: '700', fontFamily: 'monospace', marginBottom: 4 },
-  copyHint: { fontSize: 12, opacity: 0.6 },
+  gameIdText: { fontSize: 14, fontWeight: '700', fontFamily: 'monospace', marginBottom: 4 },
+  copyHint: { fontSize: 10, opacity: 0.6 },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
   statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
@@ -1571,14 +1605,13 @@ const styles = StyleSheet.create({
   fancyDestructiveButtonText: { color: '#D9534F' },
   // Header logo styles
   headerLogoContainer: { 
-    height: 60, 
     justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: 20,
+    alignItems: 'flex-start', 
     backgroundColor: 'transparent',
+    marginTop: -60,
   },
   headerLogo: {
-    width: 40,
-    height: 40,
+    width: 80,
+    height: 80,
   },
 });

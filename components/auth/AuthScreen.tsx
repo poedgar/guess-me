@@ -1,4 +1,5 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { SoundToggle } from '@/components/SoundToggle';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -9,16 +10,17 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import * as Haptics from 'expo-haptics';
+import { Image as ExpoImage } from 'expo-image';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -80,6 +82,23 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
+  function HeaderLogo() {
+    const source =
+      Platform.OS === 'web'
+        ? require('../../assets/images/logo.svg')
+        : require('../../assets/images/icon.png');
+  
+    return (
+      <View style={styles.headerLogoContainer as any}>
+        <ExpoImage 
+          source={source} 
+          style={styles.headerLogo as any} 
+          contentFit="contain" 
+        />
+      </View>
+    );
+  }
+
   // Render fancy alert modal (shared across all states)
   const renderFancyAlert = () => (
     fancyVisible && (
@@ -116,7 +135,11 @@ export const AuthScreen: React.FC = () => {
     return (
       <ThemedView style={styles.container}>
         <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
-          <LanguageSelector />
+          <HeaderLogo/>
+          <View>
+<LanguageSelector />
+          <SoundToggle />
+          </View>
         </View>
         {renderFancyAlert()}
         <View style={styles.loadingContainer}>
@@ -133,7 +156,9 @@ export const AuthScreen: React.FC = () => {
     return (
       <ThemedView style={styles.container}>
         <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
+          <HeaderLogo/>
           <LanguageSelector />
+          <SoundToggle />
         </View>
         {renderFancyAlert()}
         <View style={styles.profileContainer}>
@@ -181,6 +206,7 @@ export const AuthScreen: React.FC = () => {
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
+        <HeaderLogo/>
         <LanguageSelector />
       </View>
       {renderFancyAlert()}
@@ -248,8 +274,13 @@ const styles = StyleSheet.create({
   },
   languageToggle: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 75,
+    paddingInline: 12,
     zIndex: 50,
   },
   loadingContainer: {
@@ -480,5 +511,15 @@ const styles = StyleSheet.create({
   fancyDestructiveButton: {},
   fancyDestructiveButtonText: { 
     color: '#D9534F' 
+  },
+  headerLogoContainer: { 
+    justifyContent: 'center', 
+    alignItems: 'flex-start', 
+    backgroundColor: 'transparent',
+    marginTop: -40,
+  },
+  headerLogo: {
+    width: 80,
+    height: 80,
   },
 });

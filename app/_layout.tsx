@@ -1,6 +1,6 @@
 import {
-  Philosopher_400Regular,
-  useFonts,
+    Philosopher_400Regular,
+    useFonts,
 } from '@expo-google-fonts/philosopher';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { GameProvider } from '@/contexts/GameContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { SoundProvider } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -27,18 +28,20 @@ export default function RootLayout() {
   }
 
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <GameProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
-        </GameProvider>
-      </AuthProvider>
-    </LanguageProvider>
+    <SoundProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <GameProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </GameProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </SoundProvider>
   );
 }

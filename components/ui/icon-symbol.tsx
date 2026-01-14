@@ -35,6 +35,10 @@ const MAPPING = {
   'crown.fill': 'workspace-premium',
   'hourglass': 'hourglass-empty',
   'lock.shield': 'security',
+  'speaker.2.fill': 'volume-up',
+  'speaker.1.fill': 'volume-down',
+  'speaker.wave.2.fill': 'volume-up',
+  'speaker.slash.fill': 'volume-off',
 } as const;
 
 /**
