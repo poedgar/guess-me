@@ -182,13 +182,14 @@ export const GameScreen: React.FC = () => {
   }; 
 
   const handleLeaveGame = async () => {
+    await playSound('click');
     showFancyAlert(
       t('game.alerts.leaveGameTitle', { locale }),
       t('game.alerts.leaveGameMessage', { locale }),
       [
         { text: t('common.cancel', { locale }), style: 'cancel' },
         {
-          text: t('auth.signOut', { locale }),
+          text: t('game.alerts.confirmLeave', { locale }),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -1334,9 +1335,7 @@ export const GameScreen: React.FC = () => {
                 onPress={handleLeaveGame}
                 activeOpacity={0.8}
               >
-                <>
-                  <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
-                </>
+                <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
@@ -1399,12 +1398,49 @@ export const GameScreen: React.FC = () => {
         )}
 
       </ScrollView>
+
+      {/* Fancy Alert Modal - Web Compatible */}
+      {fancyVisible && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ThemedText style={styles.modalTitle}>{fancyTitle}</ThemedText>
+            {fancyMessage && (
+              <ThemedText style={styles.modalMessage}>{fancyMessage}</ThemedText>
+            )}
+            <View style={styles.modalButtons}>
+              {fancyButtons.map((button, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.modalButton,
+                    button.style === 'destructive' && styles.modalButtonDestructive,
+                    button.style === 'cancel' && styles.modalButtonCancel,
+                  ]}
+                  onPress={() => {
+                    if (button.onPress) {
+                      button.onPress();
+                    }
+                    closeFancyAlert();
+                  }}
+                >
+                  <ThemedText style={[
+                    styles.modalButtonText,
+                    button.style === 'destructive' && styles.modalButtonTextDestructive,
+                  ]}>
+                    {button.text}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      )}
     </ThemedView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, position: 'relative' as const },
   inlineLanguageToggle: {
     // flex: 1, 
     display: 'flex',
@@ -1599,6 +1635,28 @@ const styles = StyleSheet.create({
   fancyTitle: { marginBottom: 8, textAlign: 'center' },
   fancyMessage: { fontSize: 15, opacity: 0.9, marginBottom: 16, textAlign: 'center' },
   fancyButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  // Modal styles for fancy alert
+  modalOverlay: { 
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    padding: 20,
+    zIndex: 1000
+  },
+  modalContent: { width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
+  modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8, textAlign: 'center' },
+  modalMessage: { fontSize: 15, opacity: 0.9, marginBottom: 16, textAlign: 'center' },
+  modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  modalButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, minWidth: 80, alignItems: 'center' },
+  modalButtonDestructive: { backgroundColor: '#ff3b30' },
+  modalButtonCancel: { backgroundColor: '#8e8e93' },
+  modalButtonText: { fontSize: 16, fontWeight: '600' },
+  modalButtonTextDestructive: { color: '#fff' },
   fancyButton: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, marginLeft: 8 },
   fancyButtonText: { fontSize: 15, color: '#007AFF', fontWeight: '700' },
   fancyDestructiveButton: {},

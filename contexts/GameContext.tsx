@@ -134,7 +134,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       (gameDoc) => {
         if (gameDoc.exists()) {
           const game = { id: gameDoc.id, ...gameDoc.data() } as Game;
-          setCurrentGame(game);
+          
+          // Only update currentGame if the current user is still a participant
+          // This prevents the listener from setting currentGame back after leaveGame()
+          const isUserStillParticipant = game.participants?.some(p => p.userId === user?.uid);
+          
+          if (isUserStillParticipant) {
+            setCurrentGame(game);
+          } else {
+            // User is no longer a participant, clear currentGame
+            setCurrentGame(null);
+          }
         } else {
           // Game was deleted
           setCurrentGame(null);
@@ -287,7 +297,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);
 
-      // Remove participant in a transaction to avoid races
+      // Remove participant in a transaction
       await runTransaction(db, async (transaction) => {
         const gameSnap = await transaction.get(gameRef);
         if (!gameSnap.exists()) {
@@ -297,19 +307,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const gameData = gameSnap.data() as Game;
         const updatedParticipants = (gameData.participants || []).filter(p => p.userId !== user.uid);
 
-          // If the leaving user was the admin, mark the game as finished and flag adminLeft
-          if (gameData.adminId === user.uid) {
-            transaction.update(gameRef, {
-              participants: updatedParticipants,
-              status: 'finished',
-              currentRound: null,
-              adminLeft: true,
-            });
-          } else {
-            transaction.update(gameRef, {
-              participants: updatedParticipants,
-            });
-          }
+        // If leaving user was the admin, mark the game as finished and flag adminLeft
+        if (gameData.adminId === user.uid) {
+          transaction.update(gameRef, {
+            participants: updatedParticipants,
+            status: 'finished',
+            currentRound: null,
+            adminLeft: true,
+          });
+        } else {
+          transaction.update(gameRef, {
+            participants: updatedParticipants,
+          });
+        }
       });
 
       // Locally clear currentGame so UI returns to join/create screen
