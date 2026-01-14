@@ -11,6 +11,10 @@
 # TODO
 
 1. Refresh logo
+2. More sounds
+3. Translations for final stage
+4. Buttons in a row
+5. No history and leader board so far
 
 # Testing Documentation
 
