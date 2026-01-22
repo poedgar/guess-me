@@ -14,15 +14,15 @@ import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Clipboard,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Animated,
+  Clipboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -1058,10 +1058,10 @@ export const GameScreen: React.FC = () => {
                 <View style={styles.gameFlowContainer}>
                   <View style={styles.roundInfo}>
                     <ThemedText type="subtitle" style={styles.roundTitle}>
-                      Вгадай авторів
+                      {t('game.ui.guessAuthorsTitle', { locale })}
                     </ThemedText>
                     <ThemedText style={styles.targetText}>
-                      Спробуйте вгадати, хто написав кожен коментар про вас
+                      {t('game.ui.guessAuthorsSubtitle', { locale })}
                     </ThemedText>
                   </View>
                   
@@ -1089,14 +1089,14 @@ export const GameScreen: React.FC = () => {
                       return (
                         <View style={styles.guessResultsContainer}>
                           <ThemedText type="subtitle" style={styles.guessResultsTitle}>
-                            Дякуємо — відповіді відправлено
+                            {t('game.ui.guessResultsTitle', { locale })}
                           </ThemedText>
                           <ThemedText style={styles.waitingText}>
-                            Чекаємо, поки адміністратор завершить фазу вгадування. Ви побачите результати після завершення.
+                            {t('game.ui.waitingForAdminToComplete', { locale })}
                           </ThemedText>
                           {isAdmin && !currentGame.guessingData.allPlayersSubmitted && (
                             <ThemedText style={styles.waitingText}>
-                              Чекаємо, поки всі гравці надішлють відповіді...
+                              {t('game.ui.waitingForAllPlayers', { locale })}
                             </ThemedText>
                           )}
                         </View>
@@ -1107,8 +1107,7 @@ export const GameScreen: React.FC = () => {
                     commentsForPlayer.length > 0 ? (
                       <View style={styles.guessingContainer}>
                         <ThemedText style={styles.guessingInstructions}>
-                            Нижче — всі коментарі, написані про вас під час гри.
-                            Спробуйте вгадати, хто написав кожен коментар. Після відправки ви побачите, скільки вгадали правильно.
+                            {t('game.ui.guessingInstructions', { locale })}
                           </ThemedText>
 
                         {commentsForPlayer.map((comment) => (
@@ -1116,7 +1115,7 @@ export const GameScreen: React.FC = () => {
                             <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
 
                             <ThemedText style={styles.guessPrompt}>
-                              Хто, на вашу думку, написав цей коментар?
+                              {t('game.ui.guessPrompt', { locale })}
                             </ThemedText>
 
                             <View style={styles.authorOptionsContainer}>
@@ -1170,7 +1169,7 @@ export const GameScreen: React.FC = () => {
                       </View>
                     ) : (
                       <ThemedText style={styles.waitingText}>
-                        Очікування, поки адміністратор розпочне фазу вгадування для вашого раунду.
+                        {t('game.ui.waitingForAdminToStartGuessing', { locale })}
                       </ThemedText>
                     )
                   )}
@@ -1242,25 +1241,25 @@ export const GameScreen: React.FC = () => {
                   {currentGame.adminLeft ? (
                     <>
                       <ThemedText type="title" style={styles.finishedTitle}>
-                        Адміністратор покинув гру
+                        {t('game.ui.adminLeftTitle', { locale })}
                       </ThemedText>
                       <ThemedText style={styles.finishedText}>
-                        Гру неможливо продовжувати без адміністратора. Будь ласка, вийдіть з кімнати або створіть нову гру.
+                        {t('game.ui.adminLeftMessage', { locale })}
                       </ThemedText>
                     </>
                   ) : (
                     <>
                       <ThemedText type="title" style={styles.finishedTitle}>
-                        Гра завершена! 🎉
+                        {t('game.ui.gameFinishedTitle', { locale })}
                       </ThemedText>
                       <ThemedText style={styles.finishedText}>
-                        Усі раунди завершені. Перегляньте фінальні результати нижче!
+                        {t('game.ui.gameFinishedMessage', { locale })}
                       </ThemedText>
                       
                       {/* Final Leaderboard */}
                       <View style={styles.scoresContainer}>
                         <ThemedText type="subtitle" style={styles.scoresTitle}>
-                          Фінальна таблиця лідерів
+                          {t('game.ui.finalLeaderboardTitle', { locale })}
                         </ThemedText>
                         {(() => {
                           // Calculate game points (from rounds) and guess points separately

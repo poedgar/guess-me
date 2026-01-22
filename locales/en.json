@@ -71,7 +71,9 @@
       "finishPointsFailed": "Could not finish awarding points.",
       "startNextRoundFailed": "Could not start the next round.",
       "targetPointsAwarded": "Points awarded to the target player.",
-      "targetPointsAwardFailed": "Could not award points to the target player."
+      "targetPointsAwardFailed": "Could not award points to the target player.",
+      "selectAuthorForEachCommentToEnableSubmit": "Select an author for each comment to enable submit",
+      "guessesSubmitted": "Your guesses have been submitted!"
     },
     "ui": {
       "pleaseSignIn": "Please sign in to create or join games",
@@ -124,7 +126,20 @@
         "title": "Create or join a game",
         "description": "Enter admin password to create a new game, or an existing game ID to join.",
         "inputPlaceholder": "Enter admin password or game ID"
-      }
+      },
+      "guessAuthorsTitle": "Guess the authors",
+      "guessAuthorsSubtitle": "Try to guess who wrote each comment about you",
+      "guessingInstructions": "Below are all comments written about you during the game. Try to guess who wrote each comment. After submitting, you'll see how many you guessed correctly.",
+      "guessPrompt": "Who, in your opinion, wrote this comment?",
+      "guessResultsTitle": "Thank you - guesses submitted",
+      "waitingForAdminToComplete": "Waiting for the admin to complete the guessing phase. You will see the results after completion.",
+      "waitingForAllPlayers": "Waiting for all players to submit their responses...",
+      "waitingForAdminToStartGuessing": "Waiting for the admin to start the guessing phase for your round.",
+      "gameFinishedTitle": "Game finished! 🎉",
+      "gameFinishedMessage": "All rounds completed. Check the final results below!",
+      "finalLeaderboardTitle": "Final leaderboard",
+      "adminLeftTitle": "Admin left the game",
+      "adminLeftMessage": "The game cannot continue without an admin. Please leave the room or create a new game."
     }
   },
   "settings": {
