@@ -14,15 +14,15 @@ import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Clipboard,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Animated,
+    Clipboard,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -258,10 +258,13 @@ export const GameScreen: React.FC = () => {
 
   const handleShowComments = async () => {
     try {
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await showComments();
+      await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.showCommentsFailed', { locale }));
     }
@@ -367,11 +370,14 @@ export const GameScreen: React.FC = () => {
     }
     try {
       setGivingPointsToTarget(true);
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePointsToTarget(currentGame.currentRound.targetUserId, points);
+      await playSound('points');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFancyAlert(t('common.success', { locale }), t('game.alerts.targetPointsAwarded', { locale }));
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.targetPointsAwardFailed', { locale }));
     } finally {
@@ -383,12 +389,15 @@ export const GameScreen: React.FC = () => {
     if (!isAdmin) return;
     
     try {
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await startGuessingPhase();
+      await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.startGuessingPhaseFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.startGuessingPhaseFailed', { locale }));
     }
   };
 
@@ -397,6 +406,7 @@ export const GameScreen: React.FC = () => {
 
     try {
       setIsSubmittingGuesses(true);
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       const commentsForPlayerLocal = currentGame.guessingData?.commentsByTarget?.[user?.uid || ''] || [];
@@ -440,6 +450,7 @@ export const GameScreen: React.FC = () => {
         const failedIds = failures.map(f => f.commentId).join(', ');
         showFancyAlert(t('game.alerts.partialError', { locale }), `${t('game.alerts.failedToSubmitGuessesForComments', { locale })}: ${failedIds}`);
       } else {
+        await playSound('correctGuess');
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         showFancyAlert(t('common.success', { locale }), t('game.alerts.guessesSubmitted', { locale }));
         setSelectedGuesses({});
@@ -457,13 +468,16 @@ export const GameScreen: React.FC = () => {
     
     try {
       setIsFinalizingGuesses(true);
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finalizeGuessingPhase();
+      await playSound('gameOver');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFancyAlert(t('common.success', { locale }), t('game.alerts.guessingPhaseCompleteGameFinished', { locale }));
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.finalizeGuessingFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.finalizeGuessingFailed', { locale }));
     } finally {
       setIsFinalizingGuesses(false);
     }
@@ -473,8 +487,10 @@ export const GameScreen: React.FC = () => {
     if (!isAdmin || !currentGame) return;
     try {
       setIsFinalizingGuesses(true);
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finalizeGuessingPhase();
+      await playSound('roundComplete');
       // Try to start the next round (may finish the game if no participants left)
       try {
         await startNextRound();
@@ -484,14 +500,16 @@ export const GameScreen: React.FC = () => {
       }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.finishAndStartNextRoundFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.finishAndStartNextRoundFailed', { locale }));
     } finally {
       setIsFinalizingGuesses(false);
     }
   };
 
   const handleGuessSelect = (commentId: string, authorId: string) => {
+    playSound('click');
     setSelectedGuesses(prev => ({
       ...prev,
       [commentId]: authorId
@@ -545,7 +563,7 @@ export const GameScreen: React.FC = () => {
                     {t('game.ui.gameIdLabel', { locale })}
                   </ThemedText>
                   <TouchableOpacity
-                    onPress={handleCopyGameId}
+                    onPress={async () => { await playSound('click'); handleCopyGameId(); }}
                     style={styles.gameIdBox}
                   >
                     <ThemedText style={styles.gameIdText}>{currentGame.id}</ThemedText>
@@ -1416,12 +1434,7 @@ export const GameScreen: React.FC = () => {
                     button.style === 'destructive' && styles.modalButtonDestructive,
                     button.style === 'cancel' && styles.modalButtonCancel,
                   ]}
-                  onPress={() => {
-                    if (button.onPress) {
-                      button.onPress();
-                    }
-                    closeFancyAlert();
-                  }}
+                  onPress={async () => { await playSound('click'); if (button.onPress) { await button.onPress(); } closeFancyAlert(); }}
                 >
                   <ThemedText style={[
                     styles.modalButtonText,

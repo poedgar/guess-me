@@ -1,4 +1,5 @@
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import { useState } from 'react';
 import { Alert, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -17,6 +18,7 @@ interface QRScannerProps {
 
 export default function QRScanner({ visible, onClose, onScanSuccess }: QRScannerProps) {
   const { locale } = useLanguage();
+  const { playSound } = useSound();
   const [scanning, setScanning] = useState(true);
 
   // On web, show a message instead of camera
@@ -43,7 +45,7 @@ export default function QRScanner({ visible, onClose, onScanSuccess }: QRScanner
             </Text>
             <TouchableOpacity
               style={[styles.button, styles.webButton]}
-              onPress={onClose}
+              onPress={async () => { await playSound('click'); onClose(); }}
             >
               <Text style={styles.buttonText}>
                 {t('common.ok', { locale })}
@@ -60,18 +62,20 @@ export default function QRScanner({ visible, onClose, onScanSuccess }: QRScanner
     
     setScanning(false);
     
-    // Check if the scanned data matches our game ID format
+    // Check if scanned data matches our game ID format
     // Game IDs are typically alphanumeric strings
     const gameIdRegex = /^[A-Za-z0-9]+$/;
     
     if (gameIdRegex.test(data)) {
+      playSound('success');
       onScanSuccess(data);
       onClose();
     } else {
+      playSound('error');
       Alert.alert(
         t('qr.invalidTitle', { locale }),
         t('qr.invalidMessage', { locale }),
-        [{ text: t('common.ok', { locale }), onPress: () => setScanning(true) }]
+        [{ text: t('common.ok', { locale }), onPress: async () => { await playSound('click'); setScanning(true); } }]
       );
     }
   };
@@ -85,7 +89,7 @@ export default function QRScanner({ visible, onClose, onScanSuccess }: QRScanner
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity onPress={async () => { await playSound('click'); onClose(); }} style={styles.closeButton}>
             <Text style={styles.closeText}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{t('qr.scanTitle', { locale })}</Text>

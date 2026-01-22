@@ -6,6 +6,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
@@ -13,20 +14,21 @@ import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Image,
+    Modal,
+    Platform,
+    Pressable,
+    StyleSheet,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const AuthScreen: React.FC = () => {
   const { signIn, signOut, user, loading, isSignedIn } = useAuth();
   const { locale } = useLanguage();
+  const { playSound } = useSound();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -52,10 +54,13 @@ export const AuthScreen: React.FC = () => {
   const handleSignIn = async () => {
     try {
       setIsSigningIn(true);
+      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await signIn();
+      await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert('Помилка входу', error.message || 'Не вдалося увійти. Спробуйте ще раз.');
     } finally {
@@ -71,8 +76,10 @@ export const AuthScreen: React.FC = () => {
           text: t('auth.signOut', { locale }),
           style: 'destructive',
           onPress: async () => {
+            await playSound('click');
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             await signOut();
+            await playSound('success');
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           },
         },
@@ -114,6 +121,7 @@ export const AuthScreen: React.FC = () => {
                   style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
                   onPress={async () => {
                     try {
+                      await playSound('click');
                       if (b.onPress) await b.onPress();
                     } catch (e) {
                       console.error('fancy button onPress error', e);
