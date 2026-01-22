@@ -13,7 +13,7 @@ const HEADER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10
 function HeaderLogo() {
   const source =
     Platform.OS === 'web'
-      ? { uri: `data:image/svg+xml;utf8,${encodeURIComponent(HEADER_LOGO_SVG)}` }
+      ? require('../../assets/images/logo.svg')
       : require('../../assets/images/icon.png');
 
   return (
@@ -30,6 +30,19 @@ function HeaderLogo() {
 export default function TabTwoScreen() {
   const { currentGame } = useGame();
   const { locale } = useLanguage();
+
+  // Simple test to verify console logging works
+  console.log('=== RESULTS TAB RENDERING ===');
+  console.log('Current game exists:', !!currentGame);
+  
+  // Debug at component level - this will always run when component renders
+  console.log('Results Debug:', {
+    currentGame,
+    hasGame: !!currentGame,
+    gameStatus: currentGame?.status,
+    roundsCount: currentGame?.rounds?.length || 0,
+    scoresCount: currentGame?.scores ? Object.keys(currentGame.scores).length : 0
+  });
 
   const participantsByJoin = (currentGame?.participants || [])
     .slice()
@@ -51,12 +64,25 @@ export default function TabTwoScreen() {
     >
       <HeaderLogo />
 
+      {/* Show no game message when no game exists */}
+      {!currentGame || currentGame.status == 'waiting' && (
+        <View style={styles.noResultsContainer}>
+          <ThemedText style={styles.noResultsTitle}>
+            🎯 {t('results.noResultsTitle', { locale })}
+          </ThemedText>
+          <ThemedText style={styles.noResultsMessage}>
+            {t('results.noResultsMessage', { locale })}
+          </ThemedText>
+        </View>
+      )}
+
       {/* Show participants and leaderboard here when game is started */}
       {currentGame && currentGame.status !== 'waiting' && (
         <View style={{ paddingHorizontal: 16, paddingBottom: 40 }}>
           <ThemedText type="subtitle" style={{ marginTop: 16, marginBottom: 8 }}>
             🏆 {t('results.leaderboardTitle', { locale })}
           </ThemedText>
+          
           <ScrollView style={styles.leaderboardScroll}>
             {participantsWithScores.map((p, idx) => (
               <View key={p.userId} style={styles.leaderboardRow}>
@@ -198,4 +224,28 @@ const styles = StyleSheet.create({
   roundHistoryCommentPoints: { alignSelf: 'flex-end' },
   roundHistoryPointsValue: { fontSize: 14, fontWeight: '600', color: '#4CAF50' },
   noCommentsText: { textAlign: 'center', opacity: 0.5, fontSize: 14, fontStyle: 'italic', padding: 8 },
+  // No results styles
+  noResultsContainer: { 
+    alignItems: 'center', 
+    padding: 40, 
+    marginTop: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)'
+  },
+  noResultsTitle: { 
+    fontSize: 24, 
+    fontWeight: '700', 
+    marginBottom: 12,
+    textAlign: 'center',
+    color: '#666'
+  },
+  noResultsMessage: { 
+    fontSize: 16, 
+    textAlign: 'center', 
+    lineHeight: 24,
+    color: '#888',
+    maxWidth: 300
+  },
 });

@@ -204,5 +204,7 @@
     "round": "Round",
     "target": "Target",
     "targetPoints": "Target points",
+    "noResultsTitle": "No Results Yet",
+    "noResultsMessage": "Start playing to see results and leaderboard here!"
 }
 }

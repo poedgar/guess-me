@@ -8,6 +8,10 @@
 
 - google-services.json is from Firebase Console (app with package name com.pscycho.play)
 
+# Inviroments
+
+1. Node v20
+
 # TODO
 
 1. Refresh logo
