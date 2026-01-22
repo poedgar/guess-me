@@ -1007,48 +1007,50 @@ export const GameScreen: React.FC = () => {
                   {/* Admin controls */}
                   {isAdmin && (
                     <View style={styles.adminControls}>
-                      {!currentGame.currentRound.commentsVisible && (
-                        <TouchableOpacity
-                          style={[
-                            styles.adminButton,
-                            {
-                              backgroundColor: '#FF9800',
-                              shadowColor: '#000',
-                            },
-                            (currentGame.currentRound.comments?.length || 0) < 
-                              getRequiredComments() && styles.buttonDisabled,
-                          ]}
-                          onPress={handleShowComments}
-                          disabled={(currentGame.currentRound.comments?.length || 0) < 
-                            getRequiredComments()}
-                          activeOpacity={0.8}
-                        >
-                          <IconSymbol name="eye.fill" size={16} color="#fff" />
-                        </TouchableOpacity>
-                      )}
-                      {currentGame.currentRound.commentsVisible && 
-                        currentGame.currentRound.pointsGiven && (
-                        <TouchableOpacity
-                          style={[
-                            styles.adminButton,
-                            {
-                              backgroundColor: '#9C27B0',
-                              shadowColor: '#000',
-                            },
-                            loading && styles.buttonDisabled,
-                          ]}
-                          onPress={handleStartGuessingPhase}
-                          disabled={loading}
-                          activeOpacity={0.8}
-                        >
-                          <>
-                            <IconSymbol name="brain.head.profile" size={16} color="#fff" />
-                            <ThemedText style={styles.buttonText}>
-                              {loading ? 'Завантаження...' : ''}
-                            </ThemedText>
-                          </>
-                        </TouchableOpacity>
-                      )}
+                      <View style={styles.adminButtonsRow}>
+                        {!currentGame.currentRound.commentsVisible && (
+                          <TouchableOpacity
+                            style={[
+                              styles.adminButton,
+                              {
+                                backgroundColor: '#FF9800',
+                                shadowColor: '#000',
+                              },
+                              (currentGame.currentRound.comments?.length || 0) < 
+                                getRequiredComments() && styles.buttonDisabled,
+                            ]}
+                            onPress={handleShowComments}
+                            disabled={(currentGame.currentRound.comments?.length || 0) < 
+                              getRequiredComments()}
+                            activeOpacity={0.8}
+                          >
+                            <IconSymbol name="eye.fill" size={16} color="#fff" />
+                          </TouchableOpacity>
+                        )}
+                        {currentGame.currentRound.commentsVisible && 
+                          currentGame.currentRound.pointsGiven && (
+                          <TouchableOpacity
+                            style={[
+                              styles.adminButton,
+                              {
+                                backgroundColor: '#9C27B0',
+                                shadowColor: '#000',
+                              },
+                              loading && styles.buttonDisabled,
+                            ]}
+                            onPress={handleStartGuessingPhase}
+                            disabled={loading}
+                            activeOpacity={0.8}
+                          >
+                            <>
+                              <IconSymbol name="brain.head.profile" size={16} color="#fff" />
+                              <ThemedText style={styles.buttonText}>
+                                {loading ? 'Завантаження...' : ''}
+                              </ThemedText>
+                            </>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                   )}
                 </View>

@@ -14,8 +14,9 @@
 
 # TODO
 
-1. Refresh logo
-4. Buttons in a row
+1. Buttons in a row
+2. Create apk
+3. Publish to Google Play
 
 # Testing Documentation
 
