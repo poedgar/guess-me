@@ -1,94 +1,104 @@
 import { auth } from '@/config/firebase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithPopup } from 'firebase/auth';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithPopup, User } from 'firebase/auth';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-export interface User {
-  uid: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-}
-
-export interface AuthContextType {
+interface AuthContextType {
   user: User | null;
   loading: boolean;
-  isSignedIn: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  isSignedIn: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    // Configure Google Sign-In only for native platforms
+    if (Platform.OS !== 'web') {
+      GoogleSignin.configure({
+        webClientId: "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+        scopes: ['profile', 'email'],
+        offlineAccess: true,
+        forceCodeForRefreshToken: false,
+      });
+    }
+
+    // Listen to auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
-      if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          displayName: firebaseUser.displayName || '',
-          photoURL: firebaseUser.photoURL || undefined,
-        });
-      } else {
-        setUser(null);
-      }
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   const signIn = async () => {
     try {
+      setLoading(true);
+      
       if (Platform.OS === 'web') {
+        // Use Firebase web authentication for web platform
         const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        setUser({
-          uid: user.uid,
-          email: user.email || '',
-          displayName: user.displayName || '',
-          photoURL: user.photoURL || undefined,
-        });
+        await signInWithPopup(auth, provider);
       } else {
-        // Native platform
-        await GoogleSignin.hasPlayServices();
-        const result = await GoogleSignin.signIn();
-        const credential = GoogleAuthProvider.credential(result.data.idToken);
-        const firebaseResult = await signInWithCredential(auth, credential);
-        const user = firebaseResult.user;
-        setUser({
-          uid: user.uid,
-          email: user.email || '',
-          displayName: user.displayName || '',
-          photoURL: user.photoURL || undefined,
-        });
+        // Use native Google Sign-In for iOS/Android
+        // Check if device has Google Play Services (Android only)
+        if (Platform.OS === 'android') {
+          await GoogleSignin.hasPlayServices();
+        }
+        
+        // Get user info from Google Sign-In
+        const response = await GoogleSignin.signIn();
+        // Handle different response structures (v16+ uses data property)
+        const idToken = (response as any).data?.idToken || (response as any).idToken;
+        
+        if (!idToken) {
+          throw new Error('No ID token received from Google Sign-In');
+        }
+        
+        // Create a Google credential with the token
+        const googleCredential = GoogleAuthProvider.credential(idToken);
+        
+        // Sign in the user with the credential
+        await signInWithCredential(auth, googleCredential);
       }
-    } catch (error) {
-      console.error('Sign in error:', error);
+    } catch (error: any) {
+      console.error('Sign-in error:', error);
+      setLoading(false);
       throw error;
     }
   };
 
   const signOut = async () => {
     try {
+      setLoading(true);
+      // Sign out from Firebase
       await firebaseSignOut(auth);
-      setUser(null);
-    } catch (error) {
-      console.error('Sign out error:', error);
+      // Sign out from Google Sign-In (native only)
+      if (Platform.OS !== 'web') {
+        await GoogleSignin.signOut();
+      }
+    } catch (error: any) {
+      console.error('Sign-out error:', error);
+      setLoading(false);
       throw error;
     }
   };
@@ -96,10 +106,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextType = {
     user,
     loading,
-    isSignedIn: !!user,
     signIn,
     signOut,
+    isSignedIn: !!user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+};
