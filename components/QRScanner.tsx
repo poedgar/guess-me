@@ -1,14 +1,7 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
-import { useState } from 'react';
-import { Alert, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-// Only import BarCodeScanner on native platforms
-let BarCodeScannerComponent: any = null;
-if (Platform.OS !== 'web') {
-  BarCodeScannerComponent = require('react-native-camera').BarCodeScanner;
-}
+import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface QRScannerProps {
   visible: boolean;
@@ -19,65 +12,39 @@ interface QRScannerProps {
 export default function QRScanner({ visible, onClose, onScanSuccess }: QRScannerProps) {
   const { locale } = useLanguage();
   const { playSound } = useSound();
-  const [scanning, setScanning] = useState(true);
 
-  // On web, show a message instead of camera
-  if (Platform.OS === 'web') {
-    return (
-      <Modal
-        visible={visible}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={onClose}
-      >
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeText}>✕</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>{t('qr.scanTitle', { locale })}</Text>
-            <View style={styles.placeholder} />
-          </View>
-
-          <View style={styles.webScannerContainer}>
-            <Text style={styles.webMessage}>
-              {t('qr.webNotSupported', { locale })}
-            </Text>
-            <TouchableOpacity
-              style={[styles.button, styles.webButton]}
-              onPress={async () => { await playSound('click'); onClose(); }}
-            >
-              <Text style={styles.buttonText}>
-                {t('common.ok', { locale })}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+  // For now, show a message that QR scanning is not available
+  // We can implement this later with a proper camera solution
+  const handleManualInput = () => {
+    Alert.prompt(
+      t('qr.manualTitle', { locale }),
+      t('qr.manualMessage', { locale }),
+      [
+        {
+          text: t('common.cancel', { locale }),
+          style: 'cancel',
+          onPress: async () => { await playSound('click'); }
+        },
+        {
+          text: t('common.ok', { locale }),
+          onPress: async (text?: string) => {
+            await playSound('click');
+            if (text && /^[A-Za-z0-9]+$/.test(text)) {
+              playSound('success');
+              onScanSuccess(text);
+              onClose();
+            } else {
+              playSound('error');
+              Alert.alert(
+                t('qr.invalidTitle', { locale }),
+                t('qr.invalidMessage', { locale })
+              );
+            }
+          }
+        }
+      ],
+      'plain-text'
     );
-  }
-
-  const handleBarCodeRead = ({ data }: { data: string }) => {
-    if (!scanning) return;
-    
-    setScanning(false);
-    
-    // Check if scanned data matches our game ID format
-    // Game IDs are typically alphanumeric strings
-    const gameIdRegex = /^[A-Za-z0-9]+$/;
-    
-    if (gameIdRegex.test(data)) {
-      playSound('success');
-      onScanSuccess(data);
-      onClose();
-    } else {
-      playSound('error');
-      Alert.alert(
-        t('qr.invalidTitle', { locale }),
-        t('qr.invalidMessage', { locale }),
-        [{ text: t('common.ok', { locale }), onPress: async () => { await playSound('click'); setScanning(true); } }]
-      );
-    }
   };
 
   return (
@@ -96,23 +63,19 @@ export default function QRScanner({ visible, onClose, onScanSuccess }: QRScanner
           <View style={styles.placeholder} />
         </View>
 
-        <View style={styles.scannerContainer}>
-          {BarCodeScannerComponent && (
-            <>
-              <BarCodeScannerComponent
-                onBarCodeRead={scanning ? handleBarCodeRead : undefined}
-                style={StyleSheet.absoluteFillObject as any}
-                barCodeTypes={[BarCodeScannerComponent.Constants.BarCodeType.qr]}
-              />
-              
-              <View style={styles.overlay}>
-                <View style={styles.scanFrame} />
-                <Text style={styles.instruction}>
-                  {t('qr.instruction', { locale })}
-                </Text>
-              </View>
-            </>
-          )}
+        <View style={styles.content}>
+          <View style={styles.scanFrame} />
+          <Text style={styles.message}>
+            {t('qr.cameraNotAvailable', { locale })}
+          </Text>
+          <TouchableOpacity
+            style={[styles.button, styles.manualButton]}
+            onPress={handleManualInput}
+          >
+            <Text style={styles.buttonText}>
+              {t('qr.manualInput', { locale })}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -149,18 +112,11 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
-  scannerContainer: {
+  content: {
     flex: 1,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 40,
   },
   scanFrame: {
     width: 250,
@@ -168,24 +124,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#fff',
+    marginBottom: 20,
   },
-  instruction: {
+  message: {
     color: '#fff',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
-  },
-  webScannerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  webMessage: {
     textAlign: 'center',
     fontSize: 16,
     marginBottom: 20,
-    color: '#fff',
   },
   button: {
     borderRadius: 8,
@@ -200,7 +145,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  webButton: {
+  manualButton: {
     backgroundColor: '#2196F3',
   },
   buttonText: {

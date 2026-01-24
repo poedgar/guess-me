@@ -1,68 +1,40 @@
-import { LanguageSelector } from '@/components/LanguageSelector';
-import { SoundToggle } from '@/components/SoundToggle';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { t } from '@/i18n';
 import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import * as Haptics from 'expo-haptics';
-import { Image as ExpoImage } from 'expo-image';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const AuthScreen: React.FC = () => {
   const { signIn, signOut, user, loading, isSignedIn } = useAuth();
-  const { locale } = useLanguage();
-  const { playSound } = useSound();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const insets = useSafeAreaInsets();
-
-  // Fancy alert state
-  const [fancyVisible, setFancyVisible] = useState(false);
-  const [fancyTitle, setFancyTitle] = useState<string | null>(null);
-  const [fancyMessage, setFancyMessage] = useState<string | null>(null);
-  const [fancyButtons, setFancyButtons] = useState<Array<{ text: string; onPress?: () => void; style?: any }>>([]);
-
-  const showFancyAlert = (title: string, message?: string | null, buttons?: Array<{ text: string; onPress?: () => void; style?: any }>) => {
-    setFancyTitle(title);
-    setFancyMessage(message ?? null);
-    setFancyButtons(buttons && buttons.length > 0 ? buttons : [{ text: 'ОК' }]);
-    setFancyVisible(true);
-  };
-
-  const closeFancyAlert = () => {
-    setFancyVisible(false);
-  };
 
   const handleSignIn = async () => {
     try {
       setIsSigningIn(true);
-      await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await signIn();
-      await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
-      await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка входу', error.message || 'Не вдалося увійти. Спробуйте ще раз.');
+      Alert.alert(
+        'Sign In Error',
+        error.message || 'Failed to sign in. Please try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsSigningIn(false);
     }
@@ -70,90 +42,34 @@ export const AuthScreen: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      showFancyAlert(t('auth.signOutConfirmTitle', { locale }), t('auth.signOutConfirmMessage', { locale }), [
-        { text: t('common.cancel', { locale }), style: 'cancel' },
-        {
-          text: t('auth.signOut', { locale }),
-          style: 'destructive',
-          onPress: async () => {
-            await playSound('click');
-            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            await signOut();
-            await playSound('success');
-            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: async () => {
+              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              await signOut();
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            },
           },
-        },
-      ]);
+        ]
+      );
     } catch (error: any) {
-      showFancyAlert('Помилка виходу', error.message || 'Не вдалося вийти. Спробуйте ще раз.');
+      Alert.alert('Sign Out Error', error.message || 'Failed to sign out. Please try again.');
     }
   };
-
-  function HeaderLogo() {
-    const source =
-      Platform.OS === 'web'
-        ? require('../../assets/images/logo.svg')
-        : require('../../assets/images/icon.png');
-  
-    return (
-      <View style={styles.headerLogoContainer as any}>
-        <ExpoImage 
-          source={source} 
-          style={styles.headerLogo as any} 
-          contentFit="contain" 
-        />
-      </View>
-    );
-  }
-
-  // Render fancy alert modal (shared across all states)
-  const renderFancyAlert = () => (
-    fancyVisible && (
-      <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
-        <View style={styles.fancyModalOverlay}>
-          <View style={styles.fancyModal}>
-            {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
-            {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
-            <View style={styles.fancyButtonsRow}>
-              {fancyButtons.map((b, i) => (
-                <Pressable
-                  key={i}
-                  style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
-                  onPress={async () => {
-                    try {
-                      await playSound('click');
-                      if (b.onPress) await b.onPress();
-                    } catch (e) {
-                      console.error('fancy button onPress error', e);
-                    }
-                    closeFancyAlert();
-                  }}
-                >
-                  <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </View>
-      </Modal>
-    )
-  );
 
   if (loading) {
     return (
       <ThemedView style={styles.container}>
-        <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
-          <HeaderLogo/>
-          <View>
-<LanguageSelector />
-          <SoundToggle />
-          </View>
-        </View>
-        {renderFancyAlert()}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator testID="loading-indicator" size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
+          <ActivityIndicator size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
           <ThemedText type="subtitle" style={styles.loadingText}>
-            {t('common.loading', { locale })}
+            Loading...
           </ThemedText>
         </View>
       </ThemedView>
@@ -163,12 +79,6 @@ export const AuthScreen: React.FC = () => {
   if (isSignedIn && user) {
     return (
       <ThemedView style={styles.container}>
-        <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
-          <HeaderLogo/>
-          <LanguageSelector />
-          <SoundToggle />
-        </View>
-        {renderFancyAlert()}
         <View style={styles.profileContainer}>
           {/* Profile Picture */}
           <View style={[styles.avatarContainer, { shadowColor: isDark ? '#000' : '#000' }]}>
@@ -185,7 +95,7 @@ export const AuthScreen: React.FC = () => {
 
           {/* User Info */}
           <ThemedText type="title" style={styles.userName}>
-            {user.displayName || t('auth.userFallback', { locale })}
+            {user.displayName || 'User'}
           </ThemedText>
           <ThemedText type="subtitle" style={styles.userEmail}>
             {user.email}
@@ -203,8 +113,7 @@ export const AuthScreen: React.FC = () => {
             onPress={handleSignOut}
             activeOpacity={0.8}
           >
-            <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
-            <ThemedText style={styles.signOutButtonText}>{t('auth.signOut', { locale })}</ThemedText>
+            <ThemedText style={styles.signOutButtonText}>Sign Out</ThemedText>
           </TouchableOpacity>
         </View>
       </ThemedView>
@@ -213,19 +122,14 @@ export const AuthScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
-        <HeaderLogo/>
-        <LanguageSelector />
-      </View>
-      {renderFancyAlert()}
       <View style={styles.signInContainer}>
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
           <ThemedText type="title" style={styles.welcomeTitle}>
-            {t('auth.welcome', { locale })}!
+            Welcome!
           </ThemedText>
           <ThemedText type="subtitle" style={styles.welcomeSubtitle}>
-            {t('auth.continue', { locale })}
+            Sign in to continue
           </ThemedText>
         </View>
 
@@ -234,7 +138,7 @@ export const AuthScreen: React.FC = () => {
           {isSigningIn ? (
             <View style={styles.loadingButton}>
               <ActivityIndicator size="small" color="#fff" />
-              <IconSymbol name="hourglass" size={16} color="#fff" style={{ marginLeft: 8 }} />
+              <ThemedText style={styles.loadingButtonText}>Signing in...</ThemedText>
             </View>
           ) : Platform.OS === 'web' ? (
             <TouchableOpacity
@@ -251,10 +155,10 @@ export const AuthScreen: React.FC = () => {
             >
               <View style={styles.webGoogleButtonContent}>
                 <View style={styles.webGoogleIcon}>
-                  <IconSymbol name="lock.shield" size={20} color="#4285F4" />
+                  <ThemedText style={styles.webGoogleIconText}>G</ThemedText>
                 </View>
                 <ThemedText style={styles.webGoogleButtonText}>
-                  {t('auth.signInWithGoogle', { locale })}
+                  Sign in with Google
                 </ThemedText>
               </View>
             </TouchableOpacity>
@@ -279,17 +183,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  },
-  languageToggle: {
-    position: 'absolute',
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 75,
-    paddingInline: 12,
-    zIndex: 50,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -359,16 +252,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   webGoogleIconText: {
-    color: '#4285F4',
+    color: '#42f45aff',
     fontSize: 14,
     fontWeight: 'bold',
-    fontFamily: Fonts.sans,
   },
   webGoogleButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
-    fontFamily: Fonts.sans,
   },
   loadingButton: {
     flexDirection: 'row',
@@ -386,7 +277,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: Fonts.sans,
   },
   profileContainer: {
     width: '100%',
@@ -425,28 +315,22 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#fff',
     fontSize: 48,
-    fontFamily: Fonts.sans,
   },
   userName: {
     marginBottom: 8,
-    fontFamily: Fonts.sans,
     textAlign: 'center',
   },
   userEmail: {
     opacity: 0.7,
     marginBottom: 32,
     textAlign: 'center',
-    fontFamily: Fonts.sans,
   },
   signOutButton: {
-    flexDirection: 'row',
-    gap: 8,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 8,
     minWidth: 200,
     alignItems: 'center',
-    justifyContent: 'center',
     ...Platform.select({
       ios: {
         shadowOffset: { width: 0, height: 2 },
@@ -462,72 +346,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: Fonts.sans,
-  },
-  // Fancy alert styles
-  fancyModalOverlay: { 
-    position: 'absolute', 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    bottom: 0, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(0,0,0,0.5)' 
-  },
-  fancyModal: { 
-    width: '85%', 
-    backgroundColor: '#fff', 
-    borderRadius: 12, 
-    padding: 20, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 8 }, 
-    shadowOpacity: 0.2, 
-    shadowRadius: 16, 
-    elevation: 10 
-  },
-  fancyTitle: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    marginBottom: 8, 
-    textAlign: 'center', 
-    fontFamily: Fonts.sans 
-  },
-  fancyMessage: { 
-    fontSize: 15, 
-    opacity: 0.9, 
-    marginBottom: 16, 
-    textAlign: 'center', 
-    fontFamily: Fonts.sans 
-  },
-  fancyButtonsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'flex-end' 
-  },
-  fancyButton: { 
-    paddingVertical: 10, 
-    paddingHorizontal: 14, 
-    borderRadius: 8, 
-    marginLeft: 8 
-  },
-  fancyButtonText: { 
-    fontSize: 15, 
-    color: '#007AFF', 
-    fontWeight: '700', 
-    fontFamily: Fonts.sans 
-  },
-  fancyDestructiveButton: {},
-  fancyDestructiveButtonText: { 
-    color: '#D9534F' 
-  },
-  headerLogoContainer: { 
-    justifyContent: 'center', 
-    alignItems: 'flex-start', 
-    backgroundColor: 'transparent',
-    marginTop: -40,
-  },
-  headerLogo: {
-    width: 80,
-    height: 80,
   },
 });

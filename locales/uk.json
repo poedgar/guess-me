@@ -225,12 +225,10 @@
     "instruction": "Відцентруйте QR-код у рамці для сканування",
     "invalidTitle": "Невірний QR-код",
     "invalidMessage": "Цей QR-код не містить дійсного ID гри",
-    "shareTitle": "Поділитися грою",
-    "shareMessage": "Приєднуйтесь до моєї гри! ID гри: {{gameId}}",
-    "shareButton": "Поділитися",
-    "gameIdLabel": "ID гри",
-    "scanButton": "Сканувати",
-    "generateButton": "Згенерувати",
+    "manualTitle": "Введіть ID гри",
+    "manualMessage": "Введіть ID гри вручну:",
+    "manualInput": "Вручну",
+    "cameraNotAvailable": "Камера недоступна",
     "webNotSupported": "Сканування QR-кодів не підтримується на вебі"
   }
 }

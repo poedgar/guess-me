@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Guess Me",
+    "name": "myapp",
     "slug": "myapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "guess-me",
+    "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -14,7 +14,6 @@
     },
     "android": {
       "package": "com.psycho.play",
-      "scheme": "guess-me",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -31,6 +30,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-font",
       [
         "expo-splash-screen",
         {
@@ -43,8 +43,7 @@
           }
         }
       ],
-      "@react-native-google-signin/google-signin",
-      "./plugins/withAndroidCameraGradle"
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -59,6 +58,12 @@
         "webClientId": "627274303735-t5egjmpffjsg29qoco7nv7lqjlqlt02s.apps.googleusercontent.com",
         "androidClientId": "726884000116-mfedbdu3fkb8knq3v6u8hequ0oab68s9.apps.googleusercontent.com"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8fea70c3-3e0e-469f-ae8f-7cb0650a1c1d"
     }
   }
 }

@@ -216,5 +216,16 @@
     "targetPoints": "Target points",
     "noResultsTitle": "No Results Yet",
     "noResultsMessage": "Start playing to see results and leaderboard here!"
-}
+  },
+  "qr": {
+    "scanTitle": "Scan QR Code",
+    "instruction": "Center the QR code in the frame to scan",
+    "invalidTitle": "Invalid QR Code",
+    "invalidMessage": "This QR code does not contain a valid game ID",
+    "manualTitle": "Enter Game ID",
+    "manualMessage": "Enter the game ID manually:",
+    "manualInput": "Manual Input",
+    "cameraNotAvailable": "Camera is not available",
+    "webNotSupported": "QR code scanning is not supported on web"
+  }
 }

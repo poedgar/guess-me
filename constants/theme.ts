@@ -3,7 +3,6 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-import { Philosopher_400Regular } from '@expo-google-fonts/philosopher';
 import { Platform } from 'react-native';
 
 const tintColorLight = '#0a7ea4';
@@ -31,18 +30,18 @@ export const Colors = {
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: Philosopher_400Regular,
+    sans: 'Philosopher-Regular',
     /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: Philosopher_400Regular,
+    serif: 'Philosopher-Regular',
     /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: Philosopher_400Regular,
+    rounded: 'Philosopher-Regular',
     /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
-    sans: Philosopher_400Regular,
-    serif: Philosopher_400Regular,
-    rounded: Philosopher_400Regular,
+    sans: 'Philosopher-Regular',
+    serif: 'Philosopher-Regular',
+    rounded: 'Philosopher-Regular',
     mono: 'monospace',
   },
   web: {
