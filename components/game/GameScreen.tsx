@@ -1,5 +1,4 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
-import { SoundToggle } from '@/components/SoundToggle';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -529,7 +528,7 @@ export const GameScreen: React.FC = () => {
               <HeaderLogo />
               <View style={{marginTop: 12, display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: 12}}>
                 <LanguageSelector />
-                <SoundToggle />
+                {/* <SoundToggle /> */}
               </View>
             </View>
             <ThemedText type="title" style={styles.notSignedInText}>
@@ -547,7 +546,7 @@ export const GameScreen: React.FC = () => {
                 <View style={styles.gameHeaderRight}>
                   <View style={{marginTop: 12, display: 'flex', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', gap: 12}}>
                     <LanguageSelector />
-                    <SoundToggle />
+                    {/* <SoundToggle /> */}
                     {isAdmin && (
                     <View style={styles.adminBadge}>
                       <ThemedText style={styles.adminBadgeText}>{t('game.ui.adminBadge', { locale })}</ThemedText>
@@ -1364,7 +1363,7 @@ export const GameScreen: React.FC = () => {
               <HeaderLogo/>
               <View style={{marginTop: 12, display: 'flex', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', gap: 12}}>
                 <LanguageSelector />
-                <SoundToggle />
+                {/* <SoundToggle /> */}
               </View>
             </View>
             <View style={styles.section}>
