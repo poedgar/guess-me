@@ -135,7 +135,10 @@
       "guessResultsTitle": "Дякуємо — відповіді відправлено",
       "waitingForAdminToComplete": "Чекаємо, поки адміністратор завершить фазу вгадування. Ви побачите результати після завершення.",
       "waitingForAllPlayers": "Чекаємо, поки всі гравці надішлють відповіді...",
-      "waitingForAdminToStartGuessing": "Очікування, поки адміністратор розпочне фазу вгадування для вашого раунду."
+      "waitingForAdminToStartGuessing": "Очікування, поки адміністратор розпочне фазу вгадування для вашого раунду.",
+      "gameFinishedTitle": "Гру завершено!",
+      "gameFinishedMessage": "Чудова гра, усі! Дякуємо за участь!",
+      "finalLeaderboardTitle": "Фінальна таблиця лідерів"
     }
   },
   "settings": {

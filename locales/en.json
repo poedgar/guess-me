@@ -134,7 +134,10 @@
       "guessResultsTitle": "Thank you - guesses submitted",
       "waitingForAdminToComplete": "Waiting for the admin to complete the guessing phase. You will see the results after completion.",
       "waitingForAllPlayers": "Waiting for all players to submit their responses...",
-      "waitingForAdminToStartGuessing": "Waiting for the admin to start the guessing phase for your round."
+      "waitingForAdminToStartGuessing": "Waiting for the admin to start the guessing phase for your round.",
+      "gameFinishedTitle": "Game Finished!",
+      "gameFinishedMessage": "Great game everyone! Thanks for playing!",
+      "finalLeaderboardTitle": "Final Leaderboard"
     }
   },
   "settings": {
