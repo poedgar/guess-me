@@ -1,6 +1,6 @@
 import {
-    Philosopher_400Regular,
-    useFonts,
+  Philosopher_400Regular,
+  useFonts,
 } from '@expo-google-fonts/philosopher';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
@@ -37,7 +37,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
               </Stack>
-              <StatusBar style="auto" />
+              <StatusBar hidden />
             </ThemeProvider>
           </GameProvider>
         </AuthProvider>
