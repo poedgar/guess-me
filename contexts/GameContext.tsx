@@ -20,6 +20,8 @@ export interface Game {
   guessResults?: { [userId: string]: { correctGuesses: number } };
   // Whether admin should also write comments (default: false)
   adminWritesComments?: boolean;
+  // Whether to show participant surnames (default: false)
+  showSurnames?: boolean;
 }
 
 export interface Participant {
@@ -99,6 +101,7 @@ interface GameContextType {
   submitGuess: (roundNumber: number, commentId: string, guessedAuthorId: string) => Promise<void>;
   markPlayerGuessesSubmitted: (userId?: string) => Promise<void>;
   updateAdminWritesComments: (adminWritesComments: boolean) => Promise<void>;
+  updateShowSurnames: (showSurnames: boolean) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -183,6 +186,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         createdAt: serverTimestamp(),
         status: 'waiting' as const,
         adminWritesComments,
+        showSurnames: false,
       };
 
       const docRef = await addDoc(collection(db, 'games'), gameData);
@@ -1200,6 +1204,32 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const updateShowSurnames = async (showSurnames: boolean): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can update this setting');
+    }
+
+    if (currentGame.status !== 'waiting') {
+      throw new Error('This setting can only be updated before the game starts');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      
+      await updateDoc(gameRef, {
+        showSurnames,
+      });
+      
+      console.log('updateShowSurnames: updated setting', { showSurnames });
+    } catch (err) {
+      console.error('Error updating show surnames setting:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: GameContextType = {
     currentGame,
     loading,
@@ -1220,6 +1250,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     submitGuess,
     markPlayerGuessesSubmitted,
     updateAdminWritesComments,
+    updateShowSurnames,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

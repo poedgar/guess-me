@@ -10,7 +10,7 @@
 
 # Inviroments
 
-1. Node v20
+1. Node v22
 
 # TODO
 

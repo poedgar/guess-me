@@ -63,6 +63,7 @@ export const GameScreen: React.FC = () => {
     finalizeGuessingPhase,
     markPlayerGuessesSubmitted,
     updateAdminWritesComments,
+    updateShowSurnames,
   } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
   const [isProcessingEnter, setIsProcessingEnter] = useState(false);
@@ -76,8 +77,18 @@ export const GameScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  // Helper function to get display name based on showSurnames setting
+  const getDisplayName = (fullName: string) => {
+    if (currentGame?.showSurnames) {
+      return fullName; // Show full name
+    }
+    // Show only first name (split by space and take first part)
+    return fullName.split(' ')[0];
+  };
+
   // Animation for admin toggle
   const toggleAnimation = useRef(new Animated.Value(0)).current;
+  const surnamesToggleAnimation = useRef(new Animated.Value(0)).current;
 
   // Update toggle animation when adminWritesComments changes
   useEffect(() => {
@@ -87,6 +98,15 @@ export const GameScreen: React.FC = () => {
       useNativeDriver: false,
     }).start();
   }, [currentGame?.adminWritesComments]);
+
+  // Update surnames toggle animation when showSurnames changes
+  useEffect(() => {
+    Animated.timing(surnamesToggleAnimation, {
+      toValue: currentGame?.showSurnames ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [currentGame?.showSurnames]);
 
   // Fancy alert state
   const [fancyVisible, setFancyVisible] = useState(false);
@@ -117,6 +137,23 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const newValue = !currentGame.adminWritesComments;
       await updateAdminWritesComments(newValue);
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
+    }
+  };
+
+  const handleToggleShowSurnames = async () => {
+    if (!currentGame) return;
+    
+    try {
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const newValue = !currentGame.showSurnames;
+      await updateShowSurnames(newValue);
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
@@ -650,6 +687,40 @@ export const GameScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               )}
+              {/* Show Surnames toggle (show only before game starts and only for admin) */}
+              {currentGame.status === 'waiting' && isAdmin && (
+                <View style={styles.toggleContainer}>
+                  <View style={styles.toggleInfo}>
+                    <ThemedText style={styles.toggleLabel}>
+                      {t('game.ui.showSurnamesTitle', { locale })}
+                    </ThemedText>
+                    <ThemedText style={styles.toggleDescription}>
+                      {t('game.ui.showSurnamesDescription', { locale })}
+                    </ThemedText>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      currentGame.showSurnames && styles.toggleButtonActive
+                    ]}
+                    onPress={handleToggleShowSurnames}
+                    activeOpacity={0.8}
+                  >
+                    <Animated.View style={[
+                      styles.toggleThumb,
+                      currentGame.showSurnames ? styles.toggleThumbActive : {},
+                      {
+                        transform: [{
+                          translateX: surnamesToggleAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 20] // Move thumb 20px to the right when active
+                          })
+                        }]
+                      }
+                    ] as any} />
+                  </TouchableOpacity>
+                </View>
+              )}
               {/* Participants (show only before game starts) */}
               {currentGame.status === 'waiting' && (
                 <View style={styles.participantsContainer}>
@@ -674,7 +745,7 @@ export const GameScreen: React.FC = () => {
                       >
                         <View style={styles.participantInfo}>
                           <ThemedText style={styles.participantName}>
-                            {`${idx + 1}. `}{participant.userName}
+                            {`${idx + 1}. `}{getDisplayName(participant.userName)}
                             {participant.userId === currentGame.adminId && ' 👑'}
                             {currentGame.status === 'guessing_phase' && participant.userId !== currentGame.adminId && (
                               (currentGame.guessingData?.playersWhoSubmittedGuesses?.includes(participant.userId)) ? ' ✅' : ' ⏳'
@@ -743,7 +814,7 @@ export const GameScreen: React.FC = () => {
                             <View style={styles.leaderboardInfo}>
                               <ThemedText style={styles.leaderboardName}>
                                 {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : ''}
-                                {participant.userName}
+                                {getDisplayName(participant.userName)}
                                 {participant.userId === currentGame.adminId && ' 👑'}
                                 {participant.userId === user?.uid && ` ${t('game.ui.youLabel', { locale })}`}
                               </ThemedText>
@@ -806,7 +877,7 @@ export const GameScreen: React.FC = () => {
                       {t('game.ui.round', { locale })} {currentGame.currentRound.roundNumber}
                     </ThemedText>
                     <ThemedText style={styles.targetText}>
-                      {t('game.ui.target', { locale })}: {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
+                      {t('game.ui.target', { locale })}: {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{getDisplayName(currentGame.currentRound.targetUserName)}
                     </ThemedText>
                   </View>
                   {/* User is the target */}
@@ -893,7 +964,7 @@ export const GameScreen: React.FC = () => {
                           return (
                             <View>
                               <ThemedText style={styles.commentPrompt}>
-                                {t('game.ui.writeAnonymousCommentAbout', { locale, name: `${currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}${currentGame.currentRound.targetUserName}` })}
+                                {t('game.ui.writeAnonymousCommentAbout', { locale, name: `${currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}${getDisplayName(currentGame.currentRound.targetUserName)}` })}
                               </ThemedText>
                               <TextInput
                                 style={[
@@ -968,7 +1039,7 @@ export const GameScreen: React.FC = () => {
                                   return (
                                     <View style={{ marginTop: 16 }}>
                                         <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
-                                        Тепер ви можете нарахувати бали для {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{currentGame.currentRound.targetUserName}
+                                        Тепер ви можете нарахувати бали для {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{getDisplayName(currentGame.currentRound.targetUserName)}
                                       </ThemedText>
                                       <TouchableOpacity
                                         style={[
@@ -1133,7 +1204,7 @@ export const GameScreen: React.FC = () => {
                                         styles.authorName,
                                         selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName
                                       ]}>
-                                        {joinIndexById[author.userId] ? `${joinIndexById[author.userId]}. ` : ''}{author.userName}
+                                        {joinIndexById[author.userId] ? `${joinIndexById[author.userId]}. ` : ''}{getDisplayName(author.userName)}
                                       </ThemedText>
                                 </TouchableOpacity>
                               ))}
@@ -1310,7 +1381,7 @@ export const GameScreen: React.FC = () => {
                                   <View style={styles.leaderboardInfo}>
                                     <ThemedText style={styles.leaderboardName}>
                                       {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : ''}
-                                      {participant.userName}
+                                      {getDisplayName(participant.userName)}
                                       {participant.userId === currentGame.adminId && ' 👑'}
                                       {participant.userId === user?.uid && ' (Ви)'}
                                     </ThemedText>

@@ -88,6 +88,8 @@
       "statusFinished": "Finished",
       "adminWritesCommentsTitle": "Admin also writes comments",
       "adminWritesCommentsDescription": "If enabled, the admin will participate by writing comments about other players.",
+      "showSurnamesTitle": "Show surnames",
+      "showSurnamesDescription": "If disabled, only participant names will be shown without surnames",
       "participants": "Participants",
       "submitted": "Submitted",
       "leaderboard": "Leaderboard",

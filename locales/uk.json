@@ -88,6 +88,8 @@
       "statusFinished": "Завершено",
       "adminWritesCommentsTitle": "Адміністратор також пише коментарі",
       "adminWritesCommentsDescription": "Якщо увімкнено, адміністратор буде брати участь у написанні коментарів про інших гравців",
+      "showSurnamesTitle": "Показувати прізвища",
+      "showSurnamesDescription": "Якщо вимкнено, будуть показані лише імена учасників без прізвищ",
       "participants": "Учасники",
       "submitted": "Відправлено",
       "leaderboard": "Таблиця лідерів",
