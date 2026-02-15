@@ -1,3 +1,22 @@
+# Admin Pass
+YR20RZ67FKy88HQVF6yW3
+
+# Deploy command
+eas build:configure --platform android
+
+eas build --platform android --profile production
+eas build --platform android --profile preview
+
+# Scheme change
+eas build:configure --platform android
+
+eas build --platform android --profile production
+eas build --platform android --profile preview
+
+eas credentials
+
+and insert SHA-1 into Firebase
+
 # Firebase Google Auth 👋
 
 - No need in Google Cloud Console

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "myapp",
-    "slug": "myapp",
+    "name": "guessme",
+    "slug": "guessme",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "guessme",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -52,7 +52,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "8fea70c3-3e0e-469f-ae8f-7cb0650a1c1d"
+        "projectId": "8f2c577b-6d07-41f7-b21a-b1badf4fa19a"
       },
       "googleAuth": {
         "webClientId": "627274303735-t5egjmpffjsg29qoco7nv7lqjlqlt02s.apps.googleusercontent.com",
@@ -63,7 +63,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/8fea70c3-3e0e-469f-ae8f-7cb0650a1c1d"
+      "url": "https://u.expo.dev/8f2c577b-6d07-41f7-b21a-b1badf4fa19a"
     }
   }
 }
