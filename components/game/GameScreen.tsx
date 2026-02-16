@@ -13,15 +13,15 @@ import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Clipboard,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Animated,
+    Clipboard,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -64,6 +64,8 @@ export const GameScreen: React.FC = () => {
     markPlayerGuessesSubmitted,
     updateAdminWritesComments,
     updateShowSurnames,
+    updateTargetSelectionMode,
+    updateShowGuessResults,
   } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
   const [isProcessingEnter, setIsProcessingEnter] = useState(false);
@@ -89,6 +91,8 @@ export const GameScreen: React.FC = () => {
   // Animation for admin toggle
   const toggleAnimation = useRef(new Animated.Value(0)).current;
   const surnamesToggleAnimation = useRef(new Animated.Value(0)).current;
+  const targetSelectionModeAnimation = useRef(new Animated.Value(0)).current;
+  const showGuessResultsAnimation = useRef(new Animated.Value(0)).current;
 
   // Update toggle animation when adminWritesComments changes
   useEffect(() => {
@@ -107,6 +111,24 @@ export const GameScreen: React.FC = () => {
       useNativeDriver: false,
     }).start();
   }, [currentGame?.showSurnames]);
+
+  // Update target selection mode animation when targetSelectionMode changes
+  useEffect(() => {
+    Animated.timing(targetSelectionModeAnimation, {
+      toValue: currentGame?.targetSelectionMode === 'chronological' ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [currentGame?.targetSelectionMode]);
+
+  // Update show guess results animation when showGuessResults changes
+  useEffect(() => {
+    Animated.timing(showGuessResultsAnimation, {
+      toValue: currentGame?.showGuessResults ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [currentGame?.showGuessResults]);
 
   // Fancy alert state
   const [fancyVisible, setFancyVisible] = useState(false);
@@ -154,6 +176,40 @@ export const GameScreen: React.FC = () => {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const newValue = !currentGame.showSurnames;
       await updateShowSurnames(newValue);
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
+    }
+  };
+
+  const handleToggleTargetSelectionMode = async () => {
+    if (!currentGame) return;
+    
+    try {
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const newValue = currentGame.targetSelectionMode === 'random' ? 'chronological' : 'random';
+      await updateTargetSelectionMode(newValue);
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
+    }
+  };
+
+  const handleToggleShowGuessResults = async () => {
+    if (!currentGame) return;
+    
+    try {
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const newValue = !currentGame.showGuessResults;
+      await updateShowGuessResults(newValue);
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
@@ -712,6 +768,74 @@ export const GameScreen: React.FC = () => {
                       {
                         transform: [{
                           translateX: surnamesToggleAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 20] // Move thumb 20px to the right when active
+                          })
+                        }]
+                      }
+                    ] as any} />
+                  </TouchableOpacity>
+                </View>
+              )}
+              {/* Target Selection Mode toggle (show only before game starts and only for admin) */}
+              {currentGame.status === 'waiting' && isAdmin && (
+                <View style={styles.toggleContainer}>
+                  <View style={styles.toggleInfo}>
+                    <ThemedText style={styles.toggleLabel}>
+                      {t('game.ui.targetSelectionModeTitle', { locale })}
+                    </ThemedText>
+                    <ThemedText style={styles.toggleDescription}>
+                      {t('game.ui.targetSelectionModeDescription', { locale })}
+                    </ThemedText>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      currentGame.targetSelectionMode === 'chronological' && styles.toggleButtonActive
+                    ]}
+                    onPress={handleToggleTargetSelectionMode}
+                    activeOpacity={0.8}
+                  >
+                    <Animated.View style={[
+                      styles.toggleThumb,
+                      currentGame.targetSelectionMode === 'chronological' ? styles.toggleThumbActive : {},
+                      {
+                        transform: [{
+                          translateX: targetSelectionModeAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 20] // Move thumb 20px to the right when active
+                          })
+                        }]
+                      }
+                    ] as any} />
+                  </TouchableOpacity>
+                </View>
+              )}
+              {/* Show Guess Results toggle (show only before game starts and only for admin) */}
+              {currentGame.status === 'waiting' && isAdmin && (
+                <View style={styles.toggleContainer}>
+                  <View style={styles.toggleInfo}>
+                    <ThemedText style={styles.toggleLabel}>
+                      {t('game.ui.showGuessResultsTitle', { locale })}
+                    </ThemedText>
+                    <ThemedText style={styles.toggleDescription}>
+                      {t('game.ui.showGuessResultsDescription', { locale })}
+                    </ThemedText>
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.toggleButton,
+                      currentGame.showGuessResults && styles.toggleButtonActive
+                    ]}
+                    onPress={handleToggleShowGuessResults}
+                    activeOpacity={0.8}
+                  >
+                    <Animated.View style={[
+                      styles.toggleThumb,
+                      currentGame.showGuessResults ? styles.toggleThumbActive : {},
+                      {
+                        transform: [{
+                          translateX: showGuessResultsAnimation.interpolate({
                             inputRange: [0, 1],
                             outputRange: [0, 20] // Move thumb 20px to the right when active
                           })
@@ -1492,9 +1616,9 @@ export const GameScreen: React.FC = () => {
       {fancyVisible && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <ThemedText style={styles.modalTitle}>{fancyTitle}</ThemedText>
+            <ThemedText style={styles.modalTitle} lightColor="#000" darkColor="#fff">{fancyTitle}</ThemedText>
             {fancyMessage && (
-              <ThemedText style={styles.modalMessage}>{fancyMessage}</ThemedText>
+              <ThemedText style={styles.modalMessage} lightColor="#333" darkColor="#ccc">{fancyMessage}</ThemedText>
             )}
             <View style={styles.modalButtons}>
               {fancyButtons.map((button, index) => (
@@ -1510,7 +1634,7 @@ export const GameScreen: React.FC = () => {
                   <ThemedText style={[
                     styles.modalButtonText,
                     button.style === 'destructive' && styles.modalButtonTextDestructive,
-                  ]}>
+                  ]} lightColor="#007AFF" darkColor="#0A84FF">
                     {button.text}
                   </ThemedText>
                 </TouchableOpacity>
@@ -1734,7 +1858,7 @@ const styles = StyleSheet.create({
   },
   modalContent: { width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
   modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8, textAlign: 'center' },
-  modalMessage: { fontSize: 15, opacity: 0.9, marginBottom: 16, textAlign: 'center' },
+  modalMessage: { fontSize: 15, marginBottom: 16, textAlign: 'center' },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
   modalButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, minWidth: 80, alignItems: 'center' },
   modalButtonDestructive: { backgroundColor: '#ff3b30' },

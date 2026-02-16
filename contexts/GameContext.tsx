@@ -1,6 +1,7 @@
 import { db } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { addDoc, arrayUnion, collection, doc, getDoc, onSnapshot, runTransaction, serverTimestamp, Unsubscribe, updateDoc } from 'firebase/firestore';
+import { generateGameId } from '@/utils/gameIdGenerator';
+import { arrayUnion, doc, getDoc, onSnapshot, runTransaction, serverTimestamp, setDoc, Unsubscribe, updateDoc } from 'firebase/firestore';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export interface Game {
@@ -102,6 +103,8 @@ interface GameContextType {
   markPlayerGuessesSubmitted: (userId?: string) => Promise<void>;
   updateAdminWritesComments: (adminWritesComments: boolean) => Promise<void>;
   updateShowSurnames: (showSurnames: boolean) => Promise<void>;
+  updateTargetSelectionMode: (targetSelectionMode: 'random' | 'chronological') => Promise<void>;
+  updateShowGuessResults: (showGuessResults: boolean) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -170,6 +173,19 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       
+      // Generate custom game ID using Ukrainian words
+      let gameId: string;
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      do {
+        gameId = generateGameId();
+        attempts++;
+        const existingDoc = await getDoc(doc(db, 'games', gameId));
+        if (!existingDoc.exists()) break;
+        if (attempts >= maxAttempts) throw new Error('Unable to generate unique game ID after multiple attempts');
+      } while (true);
+      
       const now = new Date();
       const gameData = {
         adminId: user.uid,
@@ -189,10 +205,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         showSurnames: false,
       };
 
-      const docRef = await addDoc(collection(db, 'games'), gameData);
+      // Use setDoc with custom ID instead of addDoc
+      const docRef = doc(db, 'games', gameId);
+      await setDoc(docRef, gameData);
       
       // Set the game ID - the real-time listener will update the full game data
-      const gameId = docRef.id;
       const initialGame: Game = {
         id: gameId,
         ...gameData,
@@ -1230,6 +1247,58 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const updateTargetSelectionMode = async (targetSelectionMode: 'random' | 'chronological'): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can update this setting');
+    }
+
+    if (currentGame.status !== 'waiting') {
+      throw new Error('This setting can only be updated before the game starts');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      
+      await updateDoc(gameRef, {
+        targetSelectionMode,
+      });
+      
+      console.log('updateTargetSelectionMode: updated setting', { targetSelectionMode });
+    } catch (err) {
+      console.error('Error updating target selection mode setting:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateShowGuessResults = async (showGuessResults: boolean): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can update this setting');
+    }
+
+    if (currentGame.status !== 'waiting') {
+      throw new Error('This setting can only be updated before the game starts');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      
+      await updateDoc(gameRef, {
+        showGuessResults,
+      });
+      
+      console.log('updateShowGuessResults: updated setting', { showGuessResults });
+    } catch (err) {
+      console.error('Error updating show guess results setting:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: GameContextType = {
     currentGame,
     loading,
@@ -1251,6 +1320,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     markPlayerGuessesSubmitted,
     updateAdminWritesComments,
     updateShowSurnames,
+    updateTargetSelectionMode,
+    updateShowGuessResults,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
