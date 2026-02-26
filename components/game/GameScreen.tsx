@@ -13,15 +13,15 @@ import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    Clipboard,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Animated,
+  Clipboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -73,7 +73,10 @@ export const GameScreen: React.FC = () => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
   const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
-  const [selectedGuesses, setSelectedGuesses] = useState<Record<string, string>>({});
+  const [selectedGuesses, setSelectedGuesses] = useState<{ [commentId: string]: string }>({});
+  const [hasSubmittedGuesses, setHasSubmittedGuesses] = useState(false);
+  const hasSubmittedGuessesRef = useRef(false);
+  const [guessResultModal, setGuessResultModal] = useState<{ correct: boolean; message: string } | null>(null);
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
   const colorScheme = useColorScheme();
@@ -129,6 +132,15 @@ export const GameScreen: React.FC = () => {
       useNativeDriver: false,
     }).start();
   }, [currentGame?.showGuessResults]);
+
+  // Reset submission state when entering guessing phase
+  useEffect(() => {
+    if (currentGame?.status === 'guessing_phase') {
+      setHasSubmittedGuesses(false);
+      hasSubmittedGuessesRef.current = false; // Reset ref too
+      setGuessResultModal(null); // Reset modal too
+    }
+  }, [currentGame?.status]);
 
   // Fancy alert state
   const [fancyVisible, setFancyVisible] = useState(false);
@@ -212,6 +224,12 @@ export const GameScreen: React.FC = () => {
       await updateShowGuessResults(newValue);
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showFancyAlert(
+        t('common.success', { locale }), 
+        newValue 
+          ? t('game.alerts.showGuessResultsEnabled', { locale })
+          : t('game.alerts.showGuessResultsDisabled', { locale })
+      );
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -427,6 +445,20 @@ export const GameScreen: React.FC = () => {
   const allCommentsHaveGuesses = commentsForPlayer.length === 0 || commentsForPlayer.every(c => !!selectedGuesses[c.id]);
   const totalTargets = currentGame?.participants?.filter(p => p.userId !== currentGame?.adminId).length ?? 0;
   const isFinalRound = !!currentGame?.currentRound && currentGame.currentRound.roundNumber === totalTargets;
+
+  // Trigger modal when first guess result is available after submission
+  useEffect(() => {
+    if (hasSubmittedGuessesRef.current && commentsForPlayer.length > 0) {
+      // Find the first comment with a guess and show modal
+      const firstCommentWithGuess = commentsForPlayer.find(comment => selectedGuesses[comment.id]);
+      if (firstCommentWithGuess && !guessResultModal) {
+        const result = getGuessResultDisplay(firstCommentWithGuess.id);
+        if (result) {
+          setGuessResultModal(result);
+        }
+      }
+    }
+  }, [hasSubmittedGuessesRef.current, selectedGuesses, commentsForPlayer, guessResultModal]);
   
   // Calculate required number of comments for current round
   const getRequiredComments = () => {
@@ -533,6 +565,8 @@ export const GameScreen: React.FC = () => {
       }
 
       try {
+        hasSubmittedGuessesRef.current = true; // Set ref immediately
+        setHasSubmittedGuesses(true); // Update state too
         await markPlayerGuessesSubmitted();
       } catch (err) {
         console.warn('Failed to mark player as submitted', err);
@@ -544,7 +578,6 @@ export const GameScreen: React.FC = () => {
       } else {
         await playSound('correctGuess');
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        showFancyAlert(t('common.success', { locale }), t('game.alerts.guessesSubmitted', { locale }));
         setSelectedGuesses({});
       }
     } catch (error: any) {
@@ -606,6 +639,33 @@ export const GameScreen: React.FC = () => {
       ...prev,
       [commentId]: authorId
     }));
+  };
+
+  // Helper function to check if a guess was correct
+  const isGuessCorrect = (commentId: string, guessedAuthorId: string): boolean => {
+    // Find the comment and check if the guessed author matches the actual author
+    const comment = commentsForPlayer.find(c => c.id === commentId);
+
+    return comment ? comment.authorId === guessedAuthorId : false;
+  };
+
+  // Helper function to get guess result for display
+  const getGuessResultDisplay = (commentId: string) => {
+    if (!currentGame?.showGuessResults) return null;
+    
+    // Use ref for immediate synchronous check
+    if (!hasSubmittedGuessesRef.current) return null;
+
+    const guessedAuthorId = selectedGuesses[commentId];
+    if (!guessedAuthorId) return null;
+    
+    const correct = isGuessCorrect(commentId, guessedAuthorId);
+    const message = correct 
+      ? t('game.ui.guessCorrect', { locale })
+      : t('game.ui.guessIncorrect', { locale });
+    
+    // Return result object instead of setting modal
+    return { correct, message };
   };
 
 
@@ -1306,35 +1366,50 @@ export const GameScreen: React.FC = () => {
                             {t('game.ui.guessingInstructions', { locale })}
                           </ThemedText>
 
-                        {commentsForPlayer.map((comment) => (
-                          <View key={comment.id} style={styles.guessCard}>
-                            <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
+                        {commentsForPlayer.map((comment) => {
+                          const guessResult = getGuessResultDisplay(comment.id);
+                          return (
+                            <View key={comment.id} style={styles.guessCard}>
+                              <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
 
-                            <ThemedText style={styles.guessPrompt}>
-                              {t('game.ui.guessPrompt', { locale })}
-                            </ThemedText>
+                              <ThemedText style={styles.guessPrompt}>
+                                {t('game.ui.guessPrompt', { locale })}
+                              </ThemedText>
 
-                            <View style={styles.authorOptionsContainer}>
-                              {(currentGame.guessingData?.possibleAuthors || []).map((author) => (
-                                <TouchableOpacity
-                                  key={author.userId}
-                                  style={[
-                                    styles.authorOption,
-                                    selectedGuesses[comment.id] === author.userId && styles.selectedAuthorOption
-                                  ]}
-                                  onPress={() => handleGuessSelect(comment.id, author.userId)}
-                                >
+                              <View style={styles.authorOptionsContainer}>
+                                {(currentGame.guessingData?.possibleAuthors || []).map((author) => (
+                                  <TouchableOpacity
+                                    key={author.userId}
+                                    style={[
+                                      styles.authorOption,
+                                      selectedGuesses[comment.id] === author.userId && styles.selectedAuthorOption
+                                    ]}
+                                    onPress={() => handleGuessSelect(comment.id, author.userId)}
+                                  >
                                       <ThemedText style={[
                                         styles.authorName,
                                         selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName
                                       ]}>
                                         {joinIndexById[author.userId] ? `${joinIndexById[author.userId]}. ` : ''}{getDisplayName(author.userName)}
                                       </ThemedText>
-                                </TouchableOpacity>
-                              ))}
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+
+                              {/* Show guess result feedback when enabled */}
+                              {guessResult && (
+                                <View style={styles.guessResultContainer}>
+                                  <ThemedText style={[
+                                    styles.guessResultText,
+                                    guessResult.correct ? styles.guessResultCorrect : styles.guessResultIncorrect
+                                  ]}>
+                                    {guessResult.message}
+                                  </ThemedText>
+                                </View>
+                              )}
                             </View>
-                          </View>
-                        ))}
+                          );
+                        })}
 
                           {(commentsForPlayer.length > 0 && !allCommentsHaveGuesses) && (
                           <ThemedText style={{ textAlign: 'center', color: '#999', marginBottom: 8 }}>
@@ -1616,9 +1691,9 @@ export const GameScreen: React.FC = () => {
       {fancyVisible && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <ThemedText style={styles.modalTitle} lightColor="#000" darkColor="#fff">{fancyTitle}</ThemedText>
+            <ThemedText style={styles.modalTitle} lightColor="#000" darkColor="#000">{fancyTitle}</ThemedText>
             {fancyMessage && (
-              <ThemedText style={styles.modalMessage} lightColor="#333" darkColor="#ccc">{fancyMessage}</ThemedText>
+              <ThemedText style={styles.modalMessage} lightColor="#000" darkColor="#000">{fancyMessage}</ThemedText>
             )}
             <View style={styles.modalButtons}>
               {fancyButtons.map((button, index) => (
@@ -1639,6 +1714,33 @@ export const GameScreen: React.FC = () => {
                   </ThemedText>
                 </TouchableOpacity>
               ))}
+            </View>
+          </View>
+        </View>
+      )}
+      
+      {/* Guess Result Modal */}
+      {guessResultModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ThemedText 
+              style={[
+                styles.modalTitle, 
+                { color: guessResultModal.correct ? '#34C759' : '#FF3B30' }
+              ]}
+            >
+              {guessResultModal.correct ? t('game.ui.correct', { locale }) : t('game.ui.incorrect', { locale })}
+            </ThemedText>
+            <ThemedText style={styles.modalMessage} lightColor="#000" darkColor="#000">
+              {guessResultModal.message}
+            </ThemedText>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#37ff00ff' }]}
+                onPress={() => setGuessResultModal(null)}
+              >
+                <ThemedText style={styles.modalButtonTextDestructive}>OK</ThemedText>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -1703,6 +1805,10 @@ const styles = StyleSheet.create({
   scanButton: {
     backgroundColor: '#FF9800',
   },
+  guessResultContainer: { marginTop: 16, alignItems: 'center' },
+  guessResultText: { fontSize: 18, fontWeight: '600', textAlign: 'center', color: '#4CAF50', marginBottom: 8 },
+  guessResultCorrect: { color: '#4CAF50' },
+  guessResultIncorrect: { color: '#F44336' },
   generateButton: {
     backgroundColor: '#4CAF50',
   },

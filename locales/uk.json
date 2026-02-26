@@ -73,7 +73,9 @@
       "targetPointsAwarded": "Бали нараховано цільовому гравцю.",
       "targetPointsAwardFailed": "Не вдалося нарахувати бали цільовому гравцю.",
       "selectAuthorForEachCommentToEnableSubmit": "Оберіть автора для кожного коментаря, щоб увімкнути відправку",
-      "guessesSubmitted": "Ваші відповіді відправлено!"
+      "guessesSubmitted": "Ваші відповіді відправлено!",
+      "showGuessResultsEnabled": "Результати вгадування тепер будуть показані цілям",
+      "showGuessResultsDisabled": "Результати вгадування тепер будуть приховані від цілей"
     },
     "ui": {
       "pleaseSignIn": "Будь ласка, увійдіть, щоб створювати або приєднуватися до ігор",
@@ -94,6 +96,12 @@
       "targetSelectionModeDescription": "Оберіть, як обираються цілі: випадково або за порядком приєднання",
       "showGuessResultsTitle": "Показувати результати вгадування",
       "showGuessResultsDescription": "Показувати, чи правильно цілі впізнали коментаторів",
+      "guessCorrect": "Ваш вибір був правильним!",
+      "guessIncorrect": "Ваш вибір був неправильним.",
+      "correct": "Правильно!",
+      "incorrect": "Неправильно!",
+      "adminLeftTitle": "Адміністратор покинув гру",
+      "adminLeftMessage": "Адміністратор покинув гру. Гра продовжиться, але деякі функції можуть бути обмежені.",
       "participants": "Учасники",
       "submitted": "Відправлено",
       "leaderboard": "Таблиця лідерів",

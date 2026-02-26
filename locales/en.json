@@ -73,7 +73,9 @@
       "targetPointsAwarded": "Points awarded to the target player.",
       "targetPointsAwardFailed": "Could not award points to the target player.",
       "selectAuthorForEachCommentToEnableSubmit": "Select an author for each comment to enable submit",
-      "guessesSubmitted": "Your guesses have been submitted!"
+      "guessesSubmitted": "Your guesses have been submitted!",
+      "showGuessResultsEnabled": "Guess results will now be shown to targets",
+      "showGuessResultsDisabled": "Guess results will now be hidden from targets"
     },
     "ui": {
       "pleaseSignIn": "Please sign in to create or join games",
@@ -94,6 +96,12 @@
       "targetSelectionModeDescription": "Choose how targets are selected: random or by join order",
       "showGuessResultsTitle": "Show guess results",
       "showGuessResultsDescription": "Show whether targets correctly identified commentators",
+      "guessCorrect": "Your choice was correct!",
+      "guessIncorrect": "Your choice was incorrect.",
+      "correct": "Correct!",
+      "incorrect": "Incorrect!",
+      "adminLeftTitle": "Admin has left the game",
+      "adminLeftMessage": "The admin has left the game. The game will continue but some features may be limited.",
       "participants": "Participants",
       "submitted": "Submitted",
       "leaderboard": "Leaderboard",

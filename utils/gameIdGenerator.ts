@@ -235,7 +235,7 @@ export function generateGameId(): string {
   let noun = randomNoun.toLowerCase().replace(/\s+/g, '-');
   
   // Fix adjective gender to match noun gender
-  // Most nouns in our list are masculine, but some are feminine
+  // Most nouns in our list are masculine, but some are feminine or neuter
   const feminineNouns = [
     'квітка', 'ріка', 'хмара', 'вода', 'земля', 'картина', 'дорога', 'пустеля',
     'долина', 'площа', 'вулиця', 'хата', 'стіна', 'брама', 'підлога', 'стеля',
@@ -252,8 +252,32 @@ export function generateGameId(): string {
     'музика', 'книга', 'хата', 'стіна', 'брама', 'підлога', 'стеля', 'кімната'
   ];
   
-  // Check if noun is feminine and adjust adjective ending
-  if (feminineNouns.includes(noun)) {
+  const neuterNouns = [
+    'літо', 'місяць', 'сонце', 'місто', 'поле', 'озеро', 'море', 'життя',
+    'вікно', 'двері', 'лице', 'плече', 'коліно', 'вухо', 'око', 'серце',
+    'місце', 'джерело', 'зерняло', 'перо', 'крило', 'дерево', 'листя',
+    'зерно', 'молоко', 'м\'ясо', 'яєчко', 'яйце', 'вогнище', 'плем\'я',
+    'плем\'я', 'ім\'я', 'час', 'тело', 'тіло', 'обличчя', 'плечі',
+    'коліна', 'вуха', 'очі', 'серця', 'місця', 'дерева', 'листя',
+    'зерна', 'молока', 'м\'яса', 'яєчка', 'вогнища', 'племена',
+    'імена', 'часи', 'тела', 'тіла', 'обличчя', 'плечі', 'коліна', 'вуха',
+    'очі', 'серця', 'місця', 'дерева', 'листя', 'зерна', 'молока', 'м\'яса',
+    'яєчка', 'вогнища', 'племена', 'імена', 'часи', 'тела', 'тіла', 'обличчя'
+  ];
+  
+  // Check if noun is neuter and adjust adjective ending
+  if (neuterNouns.includes(noun)) {
+    // Change masculine adjective ending to neuter
+    if (adjective.endsWith('ий')) {
+      adjective = adjective.slice(0, -2) + 'е';
+    } else if (adjective.endsWith('ній')) {
+      adjective = adjective.slice(0, -3) + 'не';
+    } else if (adjective.endsWith('чний')) {
+      adjective = adjective.slice(0, -4) + 'чне';
+    } else if (adjective.endsWith('ний')) {
+      adjective = adjective.slice(0, -3) + 'не';
+    }
+  } else if (feminineNouns.includes(noun)) {
     // Change masculine adjective ending to feminine
     if (adjective.endsWith('ий')) {
       adjective = adjective.slice(0, -2) + 'а';
@@ -266,5 +290,5 @@ export function generateGameId(): string {
     }
   }
   
-  return `${adjective}-${noun}`;
+  return `${adjective} ${noun}`;
 }

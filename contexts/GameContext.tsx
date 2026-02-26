@@ -23,6 +23,10 @@ export interface Game {
   adminWritesComments?: boolean;
   // Whether to show participant surnames (default: false)
   showSurnames?: boolean;
+  // Whether to show guess results to targets (default: false)
+  showGuessResults?: boolean;
+  // Target selection mode: 'random' or 'chronological' (default: 'random')
+  targetSelectionMode?: 'random' | 'chronological';
 }
 
 export interface Participant {
@@ -203,6 +207,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         status: 'waiting' as const,
         adminWritesComments,
         showSurnames: false,
+        showGuessResults: false,
+        targetSelectionMode: 'random',
       };
 
       // Use setDoc with custom ID instead of addDoc
@@ -973,9 +979,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         await updateDoc(gameRef, {
           status: 'guessing_phase',
           guessingData,
-          guessResults: {},
+          // Preserve existing guessResults instead of overwriting them
           rounds: completedRounds,
           currentRound: null,
+          guessResults: gameData.guessResults || {},
         });
         return;
       }
@@ -1003,9 +1010,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       await updateDoc(gameRef, {
         status: 'guessing_phase',
         guessingData: guessingDataAll,
-        guessResults: {},
+        // Preserve existing guessResults instead of overwriting them
         rounds: completedRounds,
         currentRound: null,
+        guessResults: gameData.guessResults || {},
       });
     } catch (err) {
       console.error('Error starting guessing phase:', err);
