@@ -76,7 +76,7 @@ export const GameScreen: React.FC = () => {
   const [selectedGuesses, setSelectedGuesses] = useState<{ [commentId: string]: string }>({});
   const [hasSubmittedGuesses, setHasSubmittedGuesses] = useState(false);
   const hasSubmittedGuessesRef = useRef(false);
-  const [guessResultModal, setGuessResultModal] = useState<{ correct: boolean; message: string } | null>(null);
+  const [guessResultModal, setGuessResultModal] = useState<{ correct: boolean; message: string; commentText: string } | null>(null);
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
   const colorScheme = useColorScheme();
@@ -659,13 +659,14 @@ export const GameScreen: React.FC = () => {
     const guessedAuthorId = selectedGuesses[commentId];
     if (!guessedAuthorId) return null;
     
+    const comment = commentsForPlayer.find(c => c.id === commentId);
     const correct = isGuessCorrect(commentId, guessedAuthorId);
     const message = correct 
       ? t('game.ui.guessCorrect', { locale })
       : t('game.ui.guessIncorrect', { locale });
     
-    // Return result object instead of setting modal
-    return { correct, message };
+    // Return result object with comment text
+    return { correct, message, commentText: comment?.text || '' };
   };
 
 
@@ -1734,9 +1735,12 @@ export const GameScreen: React.FC = () => {
             <ThemedText style={styles.modalMessage} lightColor="#000" darkColor="#000">
               {guessResultModal.message}
             </ThemedText>
+            <ThemedText style={[styles.modalMessage, { fontStyle: 'italic', marginBottom: 16 }]} lightColor="#000" darkColor="#000">
+              "{guessResultModal.commentText}"
+            </ThemedText>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#37ff00ff' }]}
+                style={[styles.modalButton, { backgroundColor: '#34C759' }]}
                 onPress={() => setGuessResultModal(null)}
               >
                 <ThemedText style={styles.modalButtonTextDestructive}>OK</ThemedText>

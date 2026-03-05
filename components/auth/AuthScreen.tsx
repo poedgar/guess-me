@@ -486,6 +486,7 @@ const styles = StyleSheet.create({
     elevation: 10 
   },
   fancyTitle: { 
+    color: 'black',
     fontSize: 18, 
     fontWeight: '700', 
     marginBottom: 8, 
@@ -493,6 +494,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans 
   },
   fancyMessage: { 
+    color: 'black',
     fontSize: 15, 
     opacity: 0.9, 
     marginBottom: 16, 
