@@ -76,7 +76,7 @@ export const GameScreen: React.FC = () => {
   const [selectedGuesses, setSelectedGuesses] = useState<{ [commentId: string]: string }>({});
   const [hasSubmittedGuesses, setHasSubmittedGuesses] = useState(false);
   const hasSubmittedGuessesRef = useRef(false);
-  const [guessResultModal, setGuessResultModal] = useState<{ correct: boolean; message: string; commentText: string } | null>(null);
+  const [guessResultModal, setGuessResultModal] = useState<{ correct: boolean; message: string; details: string; commentText: string; actualAuthorName: string; guessedAuthorName: string }[] | null>(null);
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
   const colorScheme = useColorScheme();
@@ -449,12 +449,16 @@ export const GameScreen: React.FC = () => {
   // Trigger modal when first guess result is available after submission
   useEffect(() => {
     if (hasSubmittedGuessesRef.current && commentsForPlayer.length > 0) {
-      // Find the first comment with a guess and show modal
-      const firstCommentWithGuess = commentsForPlayer.find(comment => selectedGuesses[comment.id]);
-      if (firstCommentWithGuess && !guessResultModal) {
-        const result = getGuessResultDisplay(firstCommentWithGuess.id);
-        if (result) {
-          setGuessResultModal(result);
+      // Find all comments with guesses and show results for all
+      const commentsWithGuesses = commentsForPlayer.filter(comment => selectedGuesses[comment.id]);
+      if (commentsWithGuesses.length > 0 && !guessResultModal) {
+        const allResults = commentsWithGuesses.map(comment => {
+          const result = getGuessResultDisplay(comment.id);
+          return result;
+        }).filter((result): result is NonNullable<typeof result> => result !== null); // Remove null results with proper type guard
+        
+        if (allResults.length > 0) {
+          setGuessResultModal(allResults);
         }
       }
     }
@@ -660,13 +664,35 @@ export const GameScreen: React.FC = () => {
     if (!guessedAuthorId) return null;
     
     const comment = commentsForPlayer.find(c => c.id === commentId);
+    if (!comment) return null;
+    
     const correct = isGuessCorrect(commentId, guessedAuthorId);
+    
+    // Get participant names for display
+    const actualAuthor = currentGame.participants.find(p => p.userId === comment.authorId);
+    const guessedAuthor = currentGame.participants.find(p => p.userId === guessedAuthorId);
+    
+    const actualAuthorName = getDisplayName(actualAuthor?.userName || 'Unknown');
+    const guessedAuthorName = getDisplayName(guessedAuthor?.userName || 'Unknown');
+    
+    // Create detailed message showing the comparison
     const message = correct 
       ? t('game.ui.guessCorrect', { locale })
       : t('game.ui.guessIncorrect', { locale });
     
-    // Return result object with comment text
-    return { correct, message, commentText: comment?.text || '' };
+    const details = correct
+      ? t('game.ui.guessCorrectDetails', { locale, actual: actualAuthorName, guessed: guessedAuthorName })
+      : t('game.ui.guessIncorrectDetails', { locale, actual: actualAuthorName, guessed: guessedAuthorName });
+    
+    // Return result object with comment text and author comparison
+    return { 
+      correct, 
+      message, 
+      details,
+      commentText: comment?.text || '',
+      actualAuthorName,
+      guessedAuthorName
+    };
   };
 
 
@@ -1724,26 +1750,88 @@ export const GameScreen: React.FC = () => {
       {guessResultModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <ThemedText 
-              style={[
-                styles.modalTitle, 
-                { color: guessResultModal.correct ? '#34C759' : '#FF3B30' }
-              ]}
-            >
-              {guessResultModal.correct ? t('game.ui.correct', { locale }) : t('game.ui.incorrect', { locale })}
+            <ThemedText style={styles.modalTitle}>
+              {t('game.ui.guessResultsTitle', { locale })}
             </ThemedText>
-            <ThemedText style={styles.modalMessage} lightColor="#000" darkColor="#000">
-              {guessResultModal.message}
-            </ThemedText>
-            <ThemedText style={[styles.modalMessage, { fontStyle: 'italic', marginBottom: 16 }]} lightColor="#000" darkColor="#000">
-              "{guessResultModal.commentText}"
-            </ThemedText>
+            
+            <ScrollView style={{ maxHeight: 400, width: '100%' }}>
+              {guessResultModal.map((result, index) => (
+                <View key={index} style={{ 
+                  backgroundColor: result.correct ? '#E8F5E8' : '#FFEBEE', 
+                  borderColor: result.correct ? '#34C759' : '#FF3B30',
+                  borderWidth: 1,
+                  borderRadius: 8,
+                  padding: 16,
+                  marginBottom: 12 
+                }}>
+                  <ThemedText style={{ 
+                    fontSize: 16, 
+                    fontWeight: '600', 
+                    marginBottom: 8, 
+                    textAlign: 'center',
+                    color: result.correct ? '#34C759' : '#FF3B30'
+                  }}>
+                    {result.correct ? t('game.ui.correct', { locale }) : t('game.ui.incorrect', { locale })}
+                  </ThemedText>
+                  
+                  <ThemedText style={{ 
+                    fontSize: 14, 
+                    fontStyle: 'italic', 
+                    marginBottom: 12, 
+                    textAlign: 'center' 
+                  }}>
+                    "{result.commentText}"
+                  </ThemedText>
+                  
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    marginBottom: 6 
+                  }}>
+                    <ThemedText style={{ 
+                      fontSize: 14, 
+                      opacity: 0.7 
+                    }}>
+                      {t('game.ui.actualAuthor', { locale })}:
+                    </ThemedText>
+                    <ThemedText style={{ 
+                      fontSize: 14, 
+                      fontWeight: '600', 
+                      color: result.correct ? '#34C759' : '#FF3B30' 
+                    }}>
+                      {result.actualAuthorName}
+                    </ThemedText>
+                  </View>
+                  
+                  <View style={{ 
+                    flexDirection: 'row', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center' 
+                  }}>
+                    <ThemedText style={{ 
+                      fontSize: 14, 
+                      opacity: 0.7 
+                    }}>
+                      {t('game.ui.yourGuess', { locale })}:
+                    </ThemedText>
+                    <ThemedText style={{ 
+                      fontSize: 14, 
+                      fontWeight: '600' 
+                    }}>
+                      {result.guessedAuthorName}
+                    </ThemedText>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: '#34C759' }]}
                 onPress={() => setGuessResultModal(null)}
               >
-                <ThemedText style={styles.modalButtonTextDestructive}>OK</ThemedText>
+                <ThemedText style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>OK</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
