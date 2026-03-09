@@ -76,7 +76,7 @@ export const GameScreen: React.FC = () => {
   const [selectedGuesses, setSelectedGuesses] = useState<{ [commentId: string]: string }>({});
   const [hasSubmittedGuesses, setHasSubmittedGuesses] = useState(false);
   const hasSubmittedGuessesRef = useRef(false);
-  const [guessResultModal, setGuessResultModal] = useState<{ correct: boolean; message: string; details: string; commentText: string; actualAuthorName: string; guessedAuthorName: string }[] | null>(null);
+  const [guessResultModal, setGuessResultModal] = useState<{ correct: boolean; message: string; details: string; commentText: string; actualAuthorName: string; guessedAuthorName: string; guessPoints: number; commentPoints: number; totalPoints: number }[] | null>(null);
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
   const colorScheme = useColorScheme();
@@ -655,8 +655,6 @@ export const GameScreen: React.FC = () => {
 
   // Helper function to get guess result for display
   const getGuessResultDisplay = (commentId: string) => {
-    if (!currentGame?.showGuessResults) return null;
-    
     // Use ref for immediate synchronous check
     if (!hasSubmittedGuessesRef.current) return null;
 
@@ -675,6 +673,10 @@ export const GameScreen: React.FC = () => {
     const actualAuthorName = getDisplayName(actualAuthor?.userName || 'Unknown');
     const guessedAuthorName = getDisplayName(guessedAuthor?.userName || 'Unknown');
     
+    // Calculate points for this guess - show immediate feedback for correct guesses
+    const guessPoints = correct ? 1 : 0; // +1 point for correct guess
+    const commentPoints = comment.points || 0; // Points this comment received
+    
     // Create detailed message showing the comparison
     const message = correct 
       ? t('game.ui.guessCorrect', { locale })
@@ -684,14 +686,17 @@ export const GameScreen: React.FC = () => {
       ? t('game.ui.guessCorrectDetails', { locale, actual: actualAuthorName, guessed: guessedAuthorName })
       : t('game.ui.guessIncorrectDetails', { locale, actual: actualAuthorName, guessed: guessedAuthorName });
     
-    // Return result object with comment text and author comparison
+    // Return result object with comment text, author comparison, and scoring info
     return { 
       correct, 
       message, 
       details,
       commentText: comment?.text || '',
       actualAuthorName,
-      guessedAuthorName
+      guessedAuthorName,
+      guessPoints,
+      commentPoints,
+      totalPoints: guessPoints + commentPoints
     };
   };
 
@@ -1024,8 +1029,7 @@ export const GameScreen: React.FC = () => {
                             </View>
                             <View style={styles.leaderboardInfo}>
                               <ThemedText style={styles.leaderboardName}>
-                                {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : ''}
-                                {getDisplayName(participant.userName)}
+                                {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : `${getDisplayName(participant.userName)}`}
                                 {participant.userId === currentGame.adminId && ' 👑'}
                                 {participant.userId === user?.uid && ` ${t('game.ui.youLabel', { locale })}`}
                               </ThemedText>
@@ -1033,11 +1037,9 @@ export const GameScreen: React.FC = () => {
                                 <ThemedText style={styles.pointsDetail}>
                                   {t('game.ui.pointsGame', { locale })}: {participant.gamePoints}
                                 </ThemedText>
-                                {currentGame.guessResults && participant.guessPoints > 0 && (
-                                  <ThemedText style={styles.pointsDetail}>
-                                    • {t('game.ui.pointsGuessing', { locale })}: {participant.guessPoints}
-                                  </ThemedText>
-                                )}
+                                <ThemedText style={styles.pointsDetail}>
+                                  {t('game.ui.pointsGuessing', { locale })}: {participant.guessPoints}
+                                </ThemedText>
                               </View>
                             </View>
                             <View style={styles.leaderboardPoints}>
@@ -1615,11 +1617,9 @@ export const GameScreen: React.FC = () => {
                                       <ThemedText style={styles.pointsDetail}>
                                         Гра: {participant.gamePoints}
                                       </ThemedText>
-                                      {currentGame.guessResults && participant.guessPoints > 0 && (
-                                        <ThemedText style={styles.pointsDetail}>
-                                          • Вгадування: {participant.guessPoints}
-                                        </ThemedText>
-                                      )}
+                                      <ThemedText style={styles.pointsDetail}>
+                                        Вгадування: {participant.guessPoints}
+                                      </ThemedText>
                                     </View>
                                   </View>
                                   <View style={styles.leaderboardPoints}>
@@ -1807,7 +1807,8 @@ export const GameScreen: React.FC = () => {
                   <View style={{ 
                     flexDirection: 'row', 
                     justifyContent: 'space-between', 
-                    alignItems: 'center' 
+                    alignItems: 'center', 
+                    marginBottom: 8 
                   }}>
                     <ThemedText style={{ 
                       fontSize: 14, 
@@ -1821,6 +1822,69 @@ export const GameScreen: React.FC = () => {
                     }}>
                       {result.guessedAuthorName}
                     </ThemedText>
+                  </View>
+                  
+                  {/* Points Breakdown */}
+                  <View style={{ 
+                    backgroundColor: 'rgba(0,0,0,0.05)', 
+                    borderRadius: 6, 
+                    padding: 12, 
+                    marginTop: 8 
+                  }}>
+                    <ThemedText style={{ 
+                      fontSize: 12, 
+                      fontWeight: '600', 
+                      marginBottom: 6, 
+                      textAlign: 'center',
+                      color: '#666'
+                    }}>
+                      {t('game.ui.pointsBreakdown', { locale })}
+                    </ThemedText>
+                    
+                    <View style={{ 
+                      flexDirection: 'row', 
+                      justifyContent: 'space-between', 
+                      marginBottom: 4 
+                    }}>
+                      <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>
+                        {t('game.ui.commentPoints', { locale })}:
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 12, fontWeight: '500' }}>
+                        +{result.commentPoints}
+                      </ThemedText>
+                    </View>
+                    
+                    <View style={{ 
+                      flexDirection: 'row', 
+                      justifyContent: 'space-between', 
+                      marginBottom: 4 
+                    }}>
+                      <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>
+                        {t('game.ui.guessPoints', { locale })}:
+                      </ThemedText>
+                      <ThemedText style={{ 
+                        fontSize: 12, 
+                        fontWeight: '500', 
+                        color: result.guessPoints > 0 ? '#34C759' : '#FF3B30' 
+                      }}>
+                        {result.guessPoints > 0 ? `+${result.guessPoints}` : '0'}
+                      </ThemedText>
+                    </View>
+                    
+                    <View style={{ 
+                      flexDirection: 'row', 
+                      justifyContent: 'space-between', 
+                      borderTopWidth: 1, 
+                      borderTopColor: 'rgba(0,0,0,0.1)', 
+                      paddingTop: 6 
+                    }}>
+                      <ThemedText style={{ fontSize: 12, fontWeight: '600', opacity: 0.8 }}>
+                        {t('game.ui.totalForThisComment', { locale })}:
+                      </ThemedText>
+                      <ThemedText style={{ fontSize: 12, fontWeight: '700', color: '#4CAF50' }}>
+                        +{result.totalPoints}
+                      </ThemedText>
+                    </View>
                   </View>
                 </View>
               ))}
