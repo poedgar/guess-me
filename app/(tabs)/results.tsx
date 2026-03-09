@@ -88,7 +88,10 @@ export default function TabTwoScreen() {
             {participantsWithScores.map((p, idx) => (
               <View key={p.userId} style={styles.leaderboardRow}>
                 <ThemedText style={styles.leaderboardName}>{idx < 3 ? ['🥇','🥈','🥉'][idx] : `#${idx+1}`} {joinIndexById[p.userId] ? `${joinIndexById[p.userId]}. ` : ''}{p.userName}</ThemedText>
-                <ThemedText style={styles.points}>{p.totalPoints}</ThemedText>
+                <ThemedText style={styles.points}>
+                  {p.totalPoints}
+                  {p.guessPoints ? ` (${p.guessPoints})` : ''}
+                </ThemedText>
               </View>
             ))}
           </ScrollView>
