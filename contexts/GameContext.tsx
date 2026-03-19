@@ -940,7 +940,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
 
     // Check if all non-target players have completed the post-comment phase
-    const nonTargetPlayers = currentGame.participants.filter(p => p.userId !== currentGame.currentRound?.targetUserId);
+    let nonTargetPlayers = currentGame.participants.filter(p => p.userId !== currentGame.currentRound?.targetUserId);
+    
+    // If admin doesn't write comments, exclude admin from the check
+    if (!currentGame.adminWritesComments) {
+      nonTargetPlayers = nonTargetPlayers.filter(p => p.userId !== currentGame.adminId);
+    }
+    
     const completedPlayers = currentGame.playersWhoCompletedPostCommentPhase || [];
     const incompletePlayers = nonTargetPlayers.filter(p => !completedPlayers.includes(p.userId));
     
