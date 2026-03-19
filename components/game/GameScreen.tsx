@@ -476,13 +476,32 @@ export const GameScreen: React.FC = () => {
     const targetUserId = currentGame.currentRound.targetUserId;
     const isTargetAdmin = targetUserId === currentGame.adminId;
     
+    console.log('DEBUG getRequiredComments:');
+    console.log('  - targetUserId:', targetUserId);
+    console.log('  - adminId:', currentGame.adminId);
+    console.log('  - isTargetAdmin:', isTargetAdmin);
+    console.log('  - adminWritesComments:', currentGame.adminWritesComments);
+    console.log('  - participants.length:', currentGame.participants.length);
+    
+    // If admin doesn't write comments, exclude admin from comment writers
+    if (!currentGame.adminWritesComments) {
+      // Also exclude the target since they don't write comments about themselves
+      const result = currentGame.participants.length - 2;
+      console.log('  - admin not participating, exclude admin and target, required:', result);
+      return result;
+    }
+    
     // If target is admin and admin doesn't write comments, exclude admin from comment writers
     if (isTargetAdmin && !currentGame.adminWritesComments) {
-      return currentGame.participants.length - 1; // All non-admin participants
+      const result = currentGame.participants.length - 1;
+      console.log('  - target is admin and admin not participating, required:', result);
+      return result;
     }
     
     // Otherwise, all participants except the target can write comments
-    return currentGame.participants.length - 1;
+    const result = currentGame.participants.length - 1;
+    console.log('  - default case, required:', result);
+    return result;
   };
   
   // Participants sorted by join time (ascending). Show a 1-based index next to each name.
@@ -1164,6 +1183,62 @@ export const GameScreen: React.FC = () => {
                       {t('game.ui.target', { locale })}: {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{getDisplayName(currentGame.currentRound.targetUserName)}
                     </ThemedText>
                   </View>
+                  {/* Admin controls - moved outside target view */}
+                  {isAdmin && (
+                    <View style={styles.adminControls}>
+                      <View style={styles.adminButtonsRow}>
+                        {!currentGame.currentRound.commentsVisible && (
+                          <TouchableOpacity
+                            style={[
+                              styles.adminButton,
+                              {
+                                backgroundColor: '#FF9800',
+                                shadowColor: '#000',
+                              },
+                              (currentGame.currentRound.comments?.length || 0) < 
+                                getRequiredComments() && styles.buttonDisabled,
+                            ]}
+                            onPress={() => {
+                              console.log('DEBUG: Show Comments button clicked');
+                              console.log('DEBUG: Comments length:', currentGame.currentRound.comments?.length || 0);
+                              console.log('DEBUG: Required comments:', getRequiredComments());
+                              console.log('DEBUG: adminWritesComments:', currentGame.adminWritesComments);
+                              console.log('DEBUG: Participants length:', currentGame.participants.length);
+                              handleShowComments();
+                            }}
+                            disabled={(currentGame.currentRound.comments?.length || 0) < 
+                              getRequiredComments()}
+                            activeOpacity={0.8}
+                          >
+                            <IconSymbol name="eye.fill" size={16} color="#fff" />
+                          </TouchableOpacity>
+                        )}
+                        {currentGame.currentRound.commentsVisible && 
+                          currentGame.currentRound.pointsGiven && (
+                          <TouchableOpacity
+                            style={[
+                              styles.adminButton,
+                              {
+                                backgroundColor: '#9C27B0',
+                                shadowColor: '#000',
+                              },
+                              loading && styles.buttonDisabled,
+                            ]}
+                            onPress={handleStartGuessingPhase}
+                            disabled={loading}
+                            activeOpacity={0.8}
+                          >
+                            <>
+                              <IconSymbol name="brain.head.profile" size={16} color="#fff" />
+                              <ThemedText style={styles.buttonText}>
+                                {loading ? 'Завантаження...' : ''}
+                              </ThemedText>
+                            </>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  )}
                   {/* User is the target */}
                   {user?.uid === currentGame.currentRound.targetUserId && (
                     <View style={styles.targetView}>
@@ -1384,55 +1459,6 @@ export const GameScreen: React.FC = () => {
                           );
                         }
                       })()}
-                    </View>
-                  )}
-                  {/* Admin controls */}
-                  {isAdmin && (
-                    <View style={styles.adminControls}>
-                      <View style={styles.adminButtonsRow}>
-                        {!currentGame.currentRound.commentsVisible && (
-                          <TouchableOpacity
-                            style={[
-                              styles.adminButton,
-                              {
-                                backgroundColor: '#FF9800',
-                                shadowColor: '#000',
-                              },
-                              (currentGame.currentRound.comments?.length || 0) < 
-                                getRequiredComments() && styles.buttonDisabled,
-                            ]}
-                            onPress={handleShowComments}
-                            disabled={(currentGame.currentRound.comments?.length || 0) < 
-                              getRequiredComments()}
-                            activeOpacity={0.8}
-                          >
-                            <IconSymbol name="eye.fill" size={16} color="#fff" />
-                          </TouchableOpacity>
-                        )}
-                        {currentGame.currentRound.commentsVisible && 
-                          currentGame.currentRound.pointsGiven && (
-                          <TouchableOpacity
-                            style={[
-                              styles.adminButton,
-                              {
-                                backgroundColor: '#9C27B0',
-                                shadowColor: '#000',
-                              },
-                              loading && styles.buttonDisabled,
-                            ]}
-                            onPress={handleStartGuessingPhase}
-                            disabled={loading}
-                            activeOpacity={0.8}
-                          >
-                            <>
-                              <IconSymbol name="brain.head.profile" size={16} color="#fff" />
-                              <ThemedText style={styles.buttonText}>
-                                {loading ? 'Завантаження...' : ''}
-                              </ThemedText>
-                            </>
-                          </TouchableOpacity>
-                        )}
-                      </View>
                     </View>
                   )}
                 </View>
