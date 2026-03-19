@@ -66,6 +66,9 @@ export const GameScreen: React.FC = () => {
     updateShowSurnames,
     updateTargetSelectionMode,
     updateShowGuessResults,
+    startPostGuessingPointPhase,
+    awardPointsToPlayers,
+    skipPostCommentPhase,
   } = useGame();
   const [gameIdInput, setGameIdInput] = useState('');
   const [isProcessingEnter, setIsProcessingEnter] = useState(false);
@@ -79,6 +82,9 @@ export const GameScreen: React.FC = () => {
   const [guessResultModal, setGuessResultModal] = useState<{ correct: boolean; message: string; details: string; commentText: string; actualAuthorName: string; guessedAuthorName: string; guessPoints: number; commentPoints: number; totalPoints: number }[] | null>(null);
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
+  // State for post-guessing point awards
+  const [selectedPlayersForPoints, setSelectedPlayersForPoints] = useState<Record<string, number>>({});
+  const [isAwardingPoints, setIsAwardingPoints] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -513,6 +519,24 @@ export const GameScreen: React.FC = () => {
     }
   };
 
+  const handleSkipPostCommentPhase = async () => {
+    if (!skipPostCommentPhase) {
+      showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
+      return;
+    }
+    try {
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await skipPostCommentPhase();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showFancyAlert(t('common.success', { locale }), 'You skipped the post-comment phase');
+    } catch (error: any) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t('common.error', { locale }), error?.message || 'Failed to skip phase');
+    }
+  };
+
   const handleStartGuessingPhase = async () => {
     if (!isAdmin) return;
     
@@ -635,6 +659,53 @@ export const GameScreen: React.FC = () => {
     } finally {
       setIsFinalizingGuesses(false);
     }
+  };
+
+  const handleAwardPointsToPlayers = async () => {
+    if (!currentGame || !user) return;
+
+    try {
+      setIsAwardingPoints(true);
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      // Convert selected players to awards array
+      const awards = Object.entries(selectedPlayersForPoints).map(([playerId, points]) => ({
+        recipientId: playerId,
+        points
+      }));
+
+      if (awards.length === 0) {
+        showFancyAlert(t('common.error', { locale }), 'Please select at least one player to award points to');
+        return;
+      }
+
+      await awardPointsToPlayers(awards);
+      await playSound('points');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showFancyAlert(t('common.success', { locale }), 'Points awarded successfully!');
+      setSelectedPlayersForPoints({});
+    } catch (error: any) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t('common.error', { locale }), error?.message || 'Failed to award points');
+    } finally {
+      setIsAwardingPoints(false);
+    }
+  };
+
+  const handlePlayerSelectForPoints = (playerId: string, points: number) => {
+    setSelectedPlayersForPoints(prev => {
+      if (prev[playerId] === points) {
+        // Remove player if same points clicked again
+        const newSelection = { ...prev };
+        delete newSelection[playerId];
+        return newSelection;
+      } else {
+        // Add or update player points
+        return { ...prev, [playerId]: points };
+      }
+    });
   };
 
   const handleGuessSelect = (commentId: string, authorId: string) => {
@@ -1100,7 +1171,7 @@ export const GameScreen: React.FC = () => {
                         <ThemedText style={styles.waitingText}>
                           {t('game.ui.waitingForCommentsAboutYou', { locale })}
                         </ThemedText>
-                      ) : (
+                      ) : !currentGame.currentRound.pointsGiven ? (
                         <View style={styles.commentsView}>
                           <ThemedText type="subtitle" style={styles.commentsTitle}>
                             {t('game.ui.commentsAboutYou', { locale })}
@@ -1155,6 +1226,10 @@ export const GameScreen: React.FC = () => {
                             </ThemedText>
                           )}
                         </View>
+                      ) : (
+                        <ThemedText style={styles.waitingText}>
+                          {t('game.ui.finishedAwardingPointsWaitAdmin', { locale })}
+                        </ThemedText>
                       )}
                     </View>
                   )}
@@ -1249,34 +1324,58 @@ export const GameScreen: React.FC = () => {
                                 (() => {
                                   const alreadyGaveTargetPoints = 
                                     currentGame.currentRound.targetPointsGivenBy?.includes(user?.uid ?? '') ?? false;
+                                  const hasCompletedPhase = currentGame.playersWhoCompletedPostCommentPhase?.includes(user?.uid || '') ?? false;
                                   return (
                                     <View style={{ marginTop: 16 }}>
-                                        <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
-                                        Тепер ви можете нарахувати бали для {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{getDisplayName(currentGame.currentRound.targetUserName)}
+                                      <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
+                                        {hasCompletedPhase || alreadyGaveTargetPoints ? 'Готово' : 'Тепер ви можете нарахувати бали для'} {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{getDisplayName(currentGame.currentRound.targetUserName)}
                                       </ThemedText>
-                                      <TouchableOpacity
-                                        style={[
-                                          styles.submitCommentButton,
-                                          {
-                                            backgroundColor: '#4CAF50',
-                                            shadowColor: '#000',
-                                          },
-                                          alreadyGaveTargetPoints && styles.buttonDisabled,
-                                        ]}
-                                        onPress={() => handleGivePointsToTarget(1)}
-                                        disabled={alreadyGaveTargetPoints || givingPointsToTarget}
-                                        activeOpacity={0.8}
-                                      >
-                                        {givingPointsToTarget ? (
-                                          <ActivityIndicator size="small" color="#fff" />
-                                        ) : (
+                                      {/* Give points to target button */}
+                                      {currentGame.currentRound.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.submitCommentButton,
+                                            {
+                                              backgroundColor: '#4CAF50',
+                                              shadowColor: '#000',
+                                            },
+                                          ]}
+                                          onPress={() => handleGivePointsToTarget(1)}
+                                          disabled={alreadyGaveTargetPoints || givingPointsToTarget}
+                                          activeOpacity={0.8}
+                                        >
+                                          {givingPointsToTarget ? (
+                                            <ActivityIndicator size="small" color="#fff" />
+                                          ) : (
                                             <ThemedText style={styles.buttonText}>
-                                            {alreadyGaveTargetPoints 
-                                              ? 'Бали нараховано' 
-                                              : 'Дати 1 бал цільовому гравцю'}
+                                              {alreadyGaveTargetPoints 
+                                                ? 'Бали нараховано' 
+                                                : 'Дати 1 бал цільовому гравцю'}
+                                            </ThemedText>
+                                          )}
+                                        </TouchableOpacity>
+                                      )}
+                                      {/* Skip button */}
+                                      {currentGame.currentRound.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.submitCommentButton,
+                                            {
+                                              backgroundColor: '#9E9E9E',
+                                              shadowColor: '#000',
+                                              marginTop: 8,
+                                            },
+                                          ]}
+                                          onPress={handleSkipPostCommentPhase}
+                                          activeOpacity={0.8}
+                                        >
+                                          <ThemedText style={styles.buttonText}>
+                                            {currentGame.playersWhoCompletedPostCommentPhase?.includes(user?.uid || '') 
+                                              ? 'Пропущено' 
+                                              : 'Пропустити'}
                                           </ThemedText>
-                                        )}
-                                      </TouchableOpacity>
+                                        </TouchableOpacity>
+                                      )}
                                     </View>
                                   );
                                 })()
@@ -1533,6 +1632,119 @@ export const GameScreen: React.FC = () => {
 
                       return null;
                     })()
+                  )}
+                </View>
+              )}
+              {/* Post-Guessing Point Awards Phase */}
+              {currentGame.status === 'guessing_phase' && currentGame.postGuessingPointPhase && currentGame.currentRound?.pointsGiven && (
+                <View style={styles.gameFlowContainer}>
+                  <View style={styles.roundInfo}>
+                    <ThemedText type="subtitle" style={styles.roundTitle}>
+                      Award Points to Players
+                    </ThemedText>
+                    <ThemedText style={styles.targetText}>
+                      Select players and award points for their performance
+                    </ThemedText>
+                  </View>
+                  
+                  {/* Check if user has already awarded points */}
+                  {currentGame.playersWhoAwardedPostGuessPoints?.includes(user?.uid || '') ? (
+                    <View style={styles.guessResultsContainer}>
+                      <ThemedText type="subtitle" style={styles.guessResultsTitle}>
+                        Points Already Awarded
+                      </ThemedText>
+                      <View style={styles.guessResultCard}>
+                        <ThemedText style={styles.guessResultText}>
+                          You have already awarded points in this phase.
+                        </ThemedText>
+                        <ThemedText style={styles.guessResultDetail}>
+                          Wait for the next round to award points again.
+                        </ThemedText>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.postGuessingPointsContainer}>
+                      <ThemedText style={styles.guessingInstructions}>
+                        Select any number of players and award them points. You can do this only once per round.
+                      </ThemedText>
+
+                      {/* Player selection list */}
+                      <ScrollView style={styles.playersSelectionScroll} nestedScrollEnabled>
+                        <View style={styles.playersSelectionList}>
+                          {currentGame.participants
+                            .filter(p => p.userId !== user?.uid) // Exclude self
+                            .map((participant) => {
+                              const isSelected = selectedPlayersForPoints[participant.userId] !== undefined;
+                              const selectedPoints = selectedPlayersForPoints[participant.userId] || 0;
+                              
+                              return (
+                                <View key={participant.userId} style={styles.playerSelectionItem}>
+                                  <View style={styles.playerSelectionInfo}>
+                                    <ThemedText style={styles.playerSelectionName}>
+                                      {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : ''}
+                                      {getDisplayName(participant.userName)}
+                                      {participant.userId === currentGame.adminId && ' 👑'}
+                                    </ThemedText>
+                                    <ThemedText style={styles.playerSelectionEmail}>
+                                      {participant.userEmail}
+                                    </ThemedText>
+                                  </View>
+                                  
+                                  {/* Point selection buttons */}
+                                  <View style={styles.pointButtonsContainer}>
+                                    {[1, 2, 3].map(points => (
+                                      <TouchableOpacity
+                                        key={points}
+                                        style={[
+                                          styles.pointButton,
+                                          isSelected && selectedPoints === points && styles.pointButtonSelected,
+                                        ]}
+                                        onPress={() => handlePlayerSelectForPoints(participant.userId, points)}
+                                        activeOpacity={0.8}
+                                      >
+                                        <ThemedText style={[
+                                          styles.pointButtonText,
+                                          isSelected && selectedPoints === points && styles.pointButtonTextSelected,
+                                        ]}>
+                                          {points}
+                                        </ThemedText>
+                                      </TouchableOpacity>
+                                    ))}
+                                  </View>
+                                </View>
+                              );
+                            })}
+                        </View>
+                      </ScrollView>
+
+                      {/* Submit button */}
+                      {Object.keys(selectedPlayersForPoints).length > 0 && (
+                        <TouchableOpacity
+                          style={[
+                            styles.submitGuessButton,
+                            {
+                              backgroundColor: '#4CAF50',
+                              shadowColor: '#000',
+                            },
+                            isAwardingPoints && styles.buttonDisabled,
+                          ]}
+                          onPress={handleAwardPointsToPlayers}
+                          disabled={isAwardingPoints}
+                          activeOpacity={0.8}
+                        >
+                          {isAwardingPoints ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <>
+                              <IconSymbol name="star.fill" size={16} color="#fff" />
+                              <ThemedText style={styles.buttonText}>
+                                Award Points ({Object.values(selectedPlayersForPoints).reduce((sum, points) => sum + points, 0)} total)
+                              </ThemedText>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   )}
                 </View>
               )}
@@ -1825,7 +2037,7 @@ export const GameScreen: React.FC = () => {
                   </View>
                   
                   {/* Points Breakdown */}
-                  <View style={{ 
+                  {/* <View style={{ 
                     backgroundColor: 'rgba(0,0,0,0.05)', 
                     borderRadius: 6, 
                     padding: 12, 
@@ -1885,7 +2097,7 @@ export const GameScreen: React.FC = () => {
                         +{result.totalPoints}
                       </ThemedText>
                     </View>
-                  </View>
+                  </View> */}
                 </View>
               ))}
             </ScrollView>
@@ -2127,6 +2339,56 @@ const styles = StyleSheet.create({
   modalButtonCancel: { backgroundColor: '#8e8e93' },
   modalButtonText: { fontSize: 16, fontWeight: '600' },
   modalButtonTextDestructive: { color: '#fff' },
+  // Post-guessing point awards styles
+  postGuessingPointsContainer: { marginTop: 16 },
+  playersSelectionScroll: { maxHeight: 300, marginTop: 8 },
+  playersSelectionList: { gap: 12 },
+  playerSelectionItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    marginBottom: 8
+  },
+  playerSelectionInfo: { flex: 1, marginRight: 16 },
+  playerSelectionName: { 
+    fontSize: 16, 
+    fontWeight: '600',
+    marginBottom: 4
+  },
+  playerSelectionEmail: { 
+    fontSize: 14, 
+    opacity: 0.7
+  },
+  pointButtonsContainer: { 
+    flexDirection: 'row', 
+    gap: 8,
+    alignItems: 'center'
+  },
+  pointButton: { 
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  pointButtonSelected: { 
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50'
+  },
+  pointButtonText: { 
+    fontSize: 14, 
+    fontWeight: '600',
+    color: '#666'
+  },
+  pointButtonTextSelected: { 
+    color: '#fff'
+  },
   fancyButton: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, marginLeft: 8 },
   fancyButtonText: { fontSize: 15, color: '#007AFF', fontWeight: '700' },
   fancyDestructiveButton: {},

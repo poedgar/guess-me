@@ -12,6 +12,12 @@ export interface Game {
   participants: Participant[];
   createdAt: any;
   status: 'waiting' | 'active' | 'guessing_phase' | 'finished';
+  // If set, indicates that target has submitted guesses and players can now award points to each other
+  postGuessingPointPhase?: boolean;
+  // Track which players have already awarded points in post-guessing phase
+  playersWhoAwardedPostGuessPoints?: string[];
+  // Track which players have completed the post-comment point phase (either gave target points or skipped)
+  playersWhoCompletedPostCommentPhase?: string[];
   // If set, indicates the admin left the game and it cannot continue
   adminLeft?: boolean;
   currentRound?: Round | null;
@@ -109,6 +115,9 @@ interface GameContextType {
   updateShowSurnames: (showSurnames: boolean) => Promise<void>;
   updateTargetSelectionMode: (targetSelectionMode: 'random' | 'chronological') => Promise<void>;
   updateShowGuessResults: (showGuessResults: boolean) => Promise<void>;
+  startPostGuessingPointPhase: () => Promise<void>;
+  awardPointsToPlayers: (awards: { recipientId: string; points: number }[]) => Promise<void>;
+  skipPostCommentPhase: () => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -684,6 +693,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         'currentRound.targetPoints': newTargetPoints,
         'currentRound.targetPointsGivenBy': arrayUnion(userId),
         scores: newScores,
+        playersWhoCompletedPostCommentPhase: arrayUnion(userId),
       });
       console.log('givePointsToTarget: updateDoc complete');
       // onSnapshot will replace local state with authoritative server state
@@ -697,7 +707,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const submitGuess = async (roundNumber: number, commentId: string, guessedAuthorId: string): Promise<boolean> => {
+  const submitGuess = async (roundNumber: number, commentId: string, guessedAuthorId: string): Promise<void> => {
     if (!currentGame || !user) throw new Error('No active game or user');
     const userId = user.uid;
 
@@ -826,8 +836,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       } catch (e) {
         console.error('Error updating guessing submission state', e);
       }
-
-      return correct;
     } catch (err) {
       console.error('Error submitting guess:', err);
       throw err;
@@ -913,6 +921,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       await updateDoc(gameRef, {
         currentRound: nextRound,
         rounds: previousRounds,
+        postGuessingPointPhase: false,
+        playersWhoAwardedPostGuessPoints: [],
+        playersWhoCompletedPostCommentPhase: [],
+        guessingData: null,
       });
     } catch (error: any) {
       console.error('Error starting next round:', error);
@@ -926,6 +938,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
       throw new Error('Only the admin can start the guessing phase');
     }
+
+    // Check if all non-target players have completed the post-comment phase
+    const nonTargetPlayers = currentGame.participants.filter(p => p.userId !== currentGame.currentRound?.targetUserId);
+    const completedPlayers = currentGame.playersWhoCompletedPostCommentPhase || [];
+    const incompletePlayers = nonTargetPlayers.filter(p => !completedPlayers.includes(p.userId));
+    
+    if (incompletePlayers.length > 0) {
+      throw new Error(`Cannot start guessing phase. Waiting for ${incompletePlayers.length} player(s) to complete the post-comment phase.`);
+    }
+
     // Two modes:
     // 1) If the current round is completed (commentsVisible && pointsGiven) -> start guessing for *that* round only.
     // 2) Otherwise (legacy or admin wants to start final guessing) -> use all completed rounds (from `rounds`).
@@ -1045,10 +1067,18 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       const totalTargets = (gameData.participants?.length ?? 0) - 1; // exclude admin
       const allSubmitted = newPlayersCount >= totalTargets;
 
-      await updateDoc(gameRef, {
+      const updates: any = {
         'guessingData.playersWhoSubmittedGuesses': arrayUnion(playerId),
         'guessingData.allPlayersSubmitted': allSubmitted,
-      });
+      };
+
+      // If this is the target player submitting and all players have submitted, start post-guessing point phase
+      if (allSubmitted && gameData.guessingData?.singleRoundTargetId === playerId) {
+        updates.postGuessingPointPhase = true;
+        updates.playersWhoAwardedPostGuessPoints = [];
+      }
+
+      await updateDoc(gameRef, updates);
     } catch (err) {
       console.error('Error marking player as submitted:', err);
       throw err;
@@ -1307,6 +1337,114 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const startPostGuessingPointPhase = async (): Promise<void> => {
+    if (!currentGame || !user) throw new Error('No active game or user');
+    if (user.uid !== currentGame.adminId) throw new Error('Only admin can start post-guessing point phase');
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      
+      await updateDoc(gameRef, {
+        postGuessingPointPhase: true,
+        playersWhoAwardedPostGuessPoints: [],
+      });
+      
+      console.log('startPostGuessingPointPhase: phase started');
+    } catch (err) {
+      console.error('Error starting post-guessing point phase:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const awardPointsToPlayers = async (awards: { recipientId: string; points: number }[]): Promise<void> => {
+    if (!currentGame || !user) throw new Error('No active game or user');
+    if (!currentGame.postGuessingPointPhase) throw new Error('Post-guessing point phase is not active');
+    
+    const userId = user.uid;
+    
+    // Check if user has already awarded points in this phase
+    if (currentGame.playersWhoAwardedPostGuessPoints?.includes(userId)) {
+      throw new Error('You have already awarded points in this phase');
+    }
+
+    // Validate awards
+    if (awards.length === 0) throw new Error('No awards specified');
+    if (awards.some(a => a.recipientId === userId)) {
+      throw new Error('You cannot award points to yourself');
+    }
+    if (awards.some(a => a.points <= 0)) {
+      throw new Error('Points must be positive');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+
+      await runTransaction(db, async (transaction) => {
+        const gameSnap = await transaction.get(gameRef);
+        if (!gameSnap.exists()) throw new Error('Game not found');
+        const gameData = gameSnap.data() as Game;
+
+        // Calculate new scores
+        const currentScores = gameData.scores || {};
+        const newScores = { ...currentScores };
+        
+        awards.forEach(award => {
+          newScores[award.recipientId] = (newScores[award.recipientId] || 0) + award.points;
+        });
+
+        // Update game state
+        transaction.update(gameRef, {
+          scores: newScores,
+          playersWhoAwardedPostGuessPoints: arrayUnion(userId),
+        });
+      });
+
+      console.log('awardPointsToPlayers: awards processed', { userId, awards });
+    } catch (err) {
+      console.error('Error awarding points to players:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const skipPostCommentPhase = async (): Promise<void> => {
+    if (!currentGame || !user) throw new Error('No active game or user');
+    if (!currentGame.currentRound?.pointsGiven) throw new Error('Target has not finished giving points yet');
+    
+    const userId = user.uid;
+    
+    // Check if user has already completed this phase
+    if (currentGame.playersWhoCompletedPostCommentPhase?.includes(userId)) {
+      throw new Error('You have already completed this phase');
+    }
+
+    // Exclude target from this phase
+    if (userId === currentGame.currentRound.targetUserId) {
+      throw new Error('Target cannot skip this phase');
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      
+      await updateDoc(gameRef, {
+        playersWhoCompletedPostCommentPhase: arrayUnion(userId),
+      });
+      
+      console.log('skipPostCommentPhase: user skipped phase', { userId });
+    } catch (err) {
+      console.error('Error skipping post-comment phase:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: GameContextType = {
     currentGame,
     loading,
@@ -1330,6 +1468,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     updateShowSurnames,
     updateTargetSelectionMode,
     updateShowGuessResults,
+    startPostGuessingPointPhase,
+    awardPointsToPlayers,
+    skipPostCommentPhase,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
