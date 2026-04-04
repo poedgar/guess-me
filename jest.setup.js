@@ -45,35 +45,23 @@ jest.mock('firebase/auth', () => ({
 
 jest.mock('firebase/firestore', () => {
   const mockUnsubscribe = jest.fn();
-  const mockCallbacks = new Map();
-  
   return {
-    doc: jest.fn(),
+    doc: jest.fn(() => ({ path: 'mock/path' })),
     getDoc: jest.fn(),
+    setDoc: jest.fn(),
     updateDoc: jest.fn(),
     addDoc: jest.fn(),
     collection: jest.fn(),
     runTransaction: jest.fn(),
     arrayUnion: jest.fn((val) => val),
-    onSnapshot: jest.fn((docRef, callback) => {
-      // Store the callback
-      mockCallbacks.set(docRef.path, callback);
-      // Return the mock unsubscribe function
-      return mockUnsubscribe;
-    }),
+    arrayRemove: jest.fn((val) => val),
+    onSnapshot: jest.fn(() => mockUnsubscribe),
     serverTimestamp: jest.fn(() => new Date()),
     query: jest.fn(),
     where: jest.fn(),
     orderBy: jest.fn(),
     limit: jest.fn(),
     getDocs: jest.fn(() => Promise.resolve({ docs: [] })),
-    // Helper to trigger callbacks
-    __triggerCallback: (docRef, data) => {
-      const callback = mockCallbacks.get(docRef.path);
-      if (callback) {
-        callback(data);
-      }
-    }
   };
 });
 
@@ -101,21 +89,14 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
   },
 }));
 
-// Mock react-native-qrcode-scanner
-jest.mock('react-native-qrcode-scanner', () => ({
-  RNCamera: {
-    Constants: {
-      Aspect: { fill: 'fill' },
-      BarCodeType: { qr: 'QR_CODE' },
-      CaptureMode: { still: 'still' },
-      CaptureQuality: { high: 'high' },
-      CaptureTarget: { cameraRoll: 'cameraRoll' },
-      FlashMode: { on: 'on', off: 'off' },
-      Orientation: { auto: 'auto' },
-      TorchMode: { on: 'on', off: 'off' },
-      Type: { front: 'front', back: 'back' },
-    },
-  },
+// Mock SoundContext
+jest.mock('@/contexts/SoundContext', () => ({
+  SoundProvider: ({ children }) => children,
+  useSound: () => ({
+    playSound: jest.fn(() => Promise.resolve()),
+    isMuted: false,
+    toggleMute: jest.fn(),
+  }),
 }));
 
 // Mock expo-image

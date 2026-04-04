@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { LanguageProvider } from '../contexts/LanguageContext';
@@ -43,15 +43,15 @@ describe('LanguageSelector', () => {
     expect(uaButton).toBeTruthy();
   });
 
-  it('switches language when pressed', () => {
+  it('switches language when pressed', async () => {
     const { getByText } = renderWithProvider(<LanguageSelector />);
-    
+
     const uaButton = getByText('UA');
-    
-    // Press the UA button
-    fireEvent.press(uaButton);
-    
-    // The test passes if no errors are thrown during the press
+
+    await act(async () => {
+      fireEvent.press(uaButton);
+    });
+
     expect(uaButton).toBeTruthy();
   });
 

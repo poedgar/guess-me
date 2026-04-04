@@ -73,7 +73,6 @@ export function SoundProvider({ children }: { children: ReactNode }) {
       oscillator.stop(audioContext.currentTime + duration);
       
     } catch (error) {
-      console.log('Audio generation not available, using fallback');
       // Fallback to haptics if audio fails
       if (typeof window !== 'undefined' && 'navigator' in window) {
         try {

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { i18n } from '@/i18n';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export interface LanguageContextType {
@@ -24,6 +25,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       try {
         const savedLocale = await AsyncStorage.getItem('app_locale');
         if (savedLocale) {
+          i18n.locale = savedLocale;
           setLocale(savedLocale);
         }
       } catch (error) {
@@ -36,6 +38,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const changeLanguage = async (newLocale: string) => {
     try {
+      i18n.locale = newLocale;
       setLocale(newLocale);
       await AsyncStorage.setItem('app_locale', newLocale);
     } catch (error) {

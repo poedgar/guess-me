@@ -139,25 +139,36 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [currentGame, setCurrentGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Set up real-time listener for the current game
+  // Set up real-time listener for the current game.
+  // Depends on both currentGame?.id and user?.uid so the listener is torn down
+  // and recreated whenever the signed-in user changes (e.g. sign-out mid-game).
   useEffect(() => {
+    // If the user signs out, clear the game immediately — no listener needed.
+    if (!user) {
+      setCurrentGame(null);
+      return;
+    }
+
     if (!currentGame?.id) {
       return;
     }
 
+    const currentUserId = user.uid;
     const gameRef = doc(db, 'games', currentGame.id);
-    
+
     // Set up real-time listener
     const unsubscribe: Unsubscribe = onSnapshot(
       gameRef,
       (gameDoc) => {
         if (gameDoc.exists()) {
           const game = { id: gameDoc.id, ...gameDoc.data() } as Game;
-          
-          // Only update currentGame if the current user is still a participant
-          // This prevents the listener from setting currentGame back after leaveGame()
-          const isUserStillParticipant = game.participants?.some(p => p.userId === user?.uid);
-          
+
+          // Only update currentGame if the current user is still a participant.
+          // Uses the uid captured at effect-creation time (not a stale closure).
+          const isUserStillParticipant = game.participants?.some(
+            (p) => p.userId === currentUserId
+          );
+
           if (isUserStillParticipant) {
             setCurrentGame(game);
           } else {
@@ -174,9 +185,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
     );
 
-    // Cleanup listener on unmount or when game changes
+    // Cleanup listener on unmount or when game/user changes
     return () => unsubscribe();
-  }, [currentGame?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentGame?.id, user?.uid]);
 
   const createGame = async (adminWritesComments: boolean = false): Promise<string> => {
     if (!user) {
@@ -325,8 +337,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const leaveGame = async (): Promise<void> => {
-    if (!currentGame || !user) {
-      return;
+    if (!user) {
+      throw new Error('You must be signed in to leave a game');
+    }
+    if (!currentGame) {
+      return; // Not in a game — nothing to do, not an error
     }
 
     try {
@@ -422,7 +437,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         startedAt: new Date(),
       };
 
-      console.log('startGame: starting, target', { targetUserId: target.userId });
 
       await updateDoc(gameRef, {
         status: 'active',
@@ -480,7 +494,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         submittedAt: new Date(),
       };
 
-      console.log('submitComment: newComment', newComment);
 
       const updatedComments = [...(currentRound.comments || []), newComment];
 
@@ -488,7 +501,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         'currentRound.comments': updatedComments,
       });
 
-      console.log('submitComment: updateDoc complete');
     } catch (error: any) {
       console.error('Error submitting comment:', error);
       throw error;
@@ -506,7 +518,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw new Error('No active round');
     }
 
-    console.log('showComments called by admin', { gameId: currentGame.id, roundNumber: currentGame.currentRound.roundNumber });
 
     try {
       setLoading(true);
@@ -535,7 +546,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     // Allow awarding points to multiple commenters within the same round.
     // We'll mark the round's `pointsGiven` flag only when all comments have been awarded.
 
-    console.log('givePoints called', { commentId, points, userId: user.uid, roundNumber: currentGame.currentRound.roundNumber });
 
     try {
       setLoading(true);
@@ -571,7 +581,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           [comment.authorId]: authorCurrentScore + points,
         };
 
-        console.log('givePoints: awarding points', { commentId, points, authorId: comment.authorId, newScores });
 
         // Update comments and scores, but don't automatically set pointsGiven
         // The target will explicitly mark when they're done giving points
@@ -580,7 +589,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           scores: newScores,
         });
 
-        console.log('givePoints: updateDoc complete');
       }
     } catch (error: any) {
       console.error('Error giving points:', error);
@@ -599,7 +607,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw new Error('Only the target can finish giving points');
     }
 
-    console.log('finishGivingPoints called', { userId: user.uid, roundNumber: currentGame.currentRound.roundNumber });
 
     try {
       setLoading(true);
@@ -626,7 +633,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         'currentRound.pointsGiven': true,
       });
 
-      console.log('finishGivingPoints: updateDoc complete');
     } catch (error: any) {
       console.error('Error finishing giving points:', error);
       throw error;
@@ -644,7 +650,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw new Error('You already gave points to this target this round');
     }
 
-    console.log('givePointsToTarget called', { targetUserId, points, userId, roundNumber: currentGame.currentRound.roundNumber });
 
     // Keep previous state to rollback on failure
     const prevGame = currentGame;
@@ -688,14 +693,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         [targetUserId]: ((gameData.scores?.[targetUserId] ?? 0) + points),
       };
 
-      console.log('givePointsToTarget: persisting scores', { newTargetPoints, newScores });
       await updateDoc(gameRef, {
         'currentRound.targetPoints': newTargetPoints,
         'currentRound.targetPointsGivenBy': arrayUnion(userId),
         scores: newScores,
         playersWhoCompletedPostCommentPhase: arrayUnion(userId),
       });
-      console.log('givePointsToTarget: updateDoc complete');
       // onSnapshot will replace local state with authoritative server state
     } catch (err) {
       // Rollback on error
@@ -782,7 +785,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       });
 
       // Debug: log guess submission result
-      console.log('submitGuess: saved', { roundNumber, commentId, guessedAuthorId, correct });
 
       // Force a refresh in case onSnapshot hasn't propagated yet
       try {
@@ -894,7 +896,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
       if (availableParticipants.length === 0) {
         // All participants have been targets, game finished
-        console.log('startNextRound: finishing game, saving rounds', { roundsSaved: previousRounds.length });
         await updateDoc(gameRef, {
           status: 'finished',
           currentRound: null,
@@ -906,7 +907,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // Select random participant from available ones
       const randomIndex = Math.floor(Math.random() * availableParticipants.length);
       const target = availableParticipants[randomIndex];
-      console.log('startNextRound: selected next target', { targetUserId: target.userId, nextRoundNumber: previousRounds.length + 1 });
 
       const nextRound: Round = {
         roundNumber: previousRounds.length + 1,
@@ -1002,7 +1002,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           singleRoundTargetId: serverCurrentRound.targetUserId,
         };
 
-        console.log('startGuessingPhase: starting for single round', { roundNumber: serverCurrentRound.roundNumber, target: serverCurrentRound.targetUserId });
 
         await updateDoc(gameRef, {
           status: 'guessing_phase',
@@ -1033,7 +1032,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         allPlayersSubmitted: false,
       };
 
-      console.log('startGuessingPhase: starting for all completed rounds', { completedRoundsCount: completedRounds.length });
 
       await updateDoc(gameRef, {
         status: 'guessing_phase',
@@ -1053,35 +1051,41 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
   const markPlayerGuessesSubmitted = async (userIdParam?: string): Promise<void> => {
     if (!currentGame || !user) throw new Error('No active game or user');
+    // Only the admin may mark a player other than themselves as submitted.
+    if (userIdParam && userIdParam !== user.uid && user.uid !== currentGame.adminId) {
+      throw new Error('Only the admin can mark another player as submitted');
+    }
     const playerId = userIdParam ?? user.uid;
 
     try {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);
       const gameDoc = await getDoc(gameRef);
-      if (!gameDoc.exists()) throw new Error('Game not found');
+
+      if (!gameDoc.exists()) {
+        throw new Error('Game not found');
+      }
 
       const gameData = gameDoc.data() as Game;
       const playersAlready = gameData.guessingData?.playersWhoSubmittedGuesses || [];
-      console.log('markPlayerGuessesSubmitted called', { playerId, playersAlready, totalTargets: (gameData.participants?.length ?? 0) - 1 });
       if (playersAlready.includes(playerId)) {
-        console.log('markPlayerGuessesSubmitted: already marked, skipping', playerId);
         return; // already marked
       }
 
-      const newPlayersCount = playersAlready.length + 1;
-      const totalTargets = (gameData.participants?.length ?? 0) - 1; // exclude admin
-      const allSubmitted = newPlayersCount >= totalTargets;
+      const playersAlreadyArray = arrayUnion(playerId);
+      const totalTargets = (gameData.participants?.length ?? 0) - 1; // Exclude admin if they don't write comments
+      const allSubmitted = (playersAlready.length + 1) >= totalTargets;
 
       const updates: any = {
-        'guessingData.playersWhoSubmittedGuesses': arrayUnion(playerId),
+        'guessingData.playersWhoSubmittedGuesses': playersAlreadyArray,
         'guessingData.allPlayersSubmitted': allSubmitted,
       };
 
-      // If this is the target player submitting and all players have submitted, start post-guessing point phase
-      if (allSubmitted && gameData.guessingData?.singleRoundTargetId === playerId) {
+      // NEW LOGIC: Start post-guessing point phase when ALL players have submitted their guesses
+      if (allSubmitted) {
         updates.postGuessingPointPhase = true;
         updates.playersWhoAwardedPostGuessPoints = [];
+      } else {
       }
 
       await updateDoc(gameRef, updates);
@@ -1123,13 +1127,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // Determine whether this guessing phase was a per-round session (singleRoundTargetId set)
       const isPerRoundGuessing = !!gameData.guessingData?.singleRoundTargetId;
       
-      console.log('finalizeGuessingPhase: isPerRoundGuessing', isPerRoundGuessing);
-      console.log('finalizeGuessingPhase: singleRoundTargetId', gameData.guessingData?.singleRoundTargetId);
-      console.log('finalizeGuessingPhase: finalRounds', finalRounds.map(r => ({ 
-        roundNumber: r.roundNumber, 
-        targetUserId: r.targetUserId, 
-        guessesCount: r.guesses?.length || 0 
-      })));
       
       // Aggregate correct guesses per guesser
       const guessCounts: { [userId: string]: number } = {};
@@ -1137,26 +1134,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       if (isPerRoundGuessing) {
         // Only count guesses from the specific round that was just guessed
         const targetRound = finalRounds.find(r => r.targetUserId === gameData.guessingData?.singleRoundTargetId);
-        console.log('finalizeGuessingPhase: targetRound found', targetRound ? {
-          roundNumber: targetRound.roundNumber,
-          targetUserId: targetRound.targetUserId,
-          commentsCount: targetRound.comments?.length || 0,
-          guessesCount: targetRound.guesses?.length || 0,
-          guesses: targetRound.guesses?.map(g => ({ 
-            guesserId: g.guesserId, 
-            commentId: g.commentId,
-            guessedAuthorId: g.guessedAuthorId,
-            correct: g.correct 
-          }))
-        } : 'NOT FOUND');
         
         if (targetRound && targetRound.guesses) {
           for (const g of targetRound.guesses) {
-            console.log('finalizeGuessingPhase: processing guess', { 
-              guesserId: g.guesserId, 
-              correct: g.correct,
-              commentId: g.commentId 
-            });
             if (g.correct) {
               guessCounts[g.guesserId] = (guessCounts[g.guesserId] ?? 0) + 1;
             }
@@ -1178,11 +1158,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         }
       }
 
-      console.log('finalizeGuessingPhase: current scores before merging', gameData.scores);
-      console.log('finalizeGuessingPhase: existing guessResults', gameData.guessResults);
-      console.log('finalizeGuessingPhase: guessingData', gameData.guessingData);
-      console.log('finalizeGuessingPhase: finalRounds count', finalRounds.length);
-      console.log('finalizeGuessingPhase: guessCounts (new guesses only)', guessCounts);
 
       // Build guessResults - do NOT add guess points to scores
       // scores should only contain game points (from comments and target points)
@@ -1218,7 +1193,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           rounds: finalRounds,
           currentRound: null,
         });
-        console.log('finalizeGuessingPhase: finalized (game finished)', { guessResults: mergedGuessResults, newScores });
       } else {
         // This was a per-round guessing session; merge results and return to active state so admin can start next round
         await updateDoc(gameRef, {
@@ -1229,7 +1203,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           rounds: finalRounds,
           currentRound: null,
         });
-        console.log('finalizeGuessingPhase: finalized (per-round), returning to active', { guessResults: mergedGuessResults, newScores });
       }
     } catch (err) {
       console.error('Error finalizing guessing phase:', err);
@@ -1256,7 +1229,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         adminWritesComments,
       });
       
-      console.log('updateAdminWritesComments: updated setting', { adminWritesComments });
     } catch (err) {
       console.error('Error updating admin writes comments setting:', err);
       throw err;
@@ -1282,7 +1254,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         showSurnames,
       });
       
-      console.log('updateShowSurnames: updated setting', { showSurnames });
     } catch (err) {
       console.error('Error updating show surnames setting:', err);
       throw err;
@@ -1308,7 +1279,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         targetSelectionMode,
       });
       
-      console.log('updateTargetSelectionMode: updated setting', { targetSelectionMode });
     } catch (err) {
       console.error('Error updating target selection mode setting:', err);
       throw err;
@@ -1334,7 +1304,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         showGuessResults,
       });
       
-      console.log('updateShowGuessResults: updated setting', { showGuessResults });
     } catch (err) {
       console.error('Error updating show guess results setting:', err);
       throw err;
@@ -1356,7 +1325,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         playersWhoAwardedPostGuessPoints: [],
       });
       
-      console.log('startPostGuessingPointPhase: phase started');
     } catch (err) {
       console.error('Error starting post-guessing point phase:', err);
       throw err;
@@ -1409,7 +1377,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         });
       });
 
-      console.log('awardPointsToPlayers: awards processed', { userId, awards });
     } catch (err) {
       console.error('Error awarding points to players:', err);
       throw err;
@@ -1442,7 +1409,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         playersWhoCompletedPostCommentPhase: arrayUnion(userId),
       });
       
-      console.log('skipPostCommentPhase: user skipped phase', { userId });
     } catch (err) {
       console.error('Error skipping post-comment phase:', err);
       throw err;

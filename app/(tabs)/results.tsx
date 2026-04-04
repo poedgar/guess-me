@@ -1,46 +1,15 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import type { Comment, Round } from '@/contexts/GameContext';
 import { Participant, useGame } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n';
-import { Image as ExpoImage } from 'expo-image';
-import { Platform } from 'react-native';
-
-function HeaderLogo() {
-  const source =
-    Platform.OS === 'web'
-      ? require('../../assets/images/logo.svg')
-      : require('../../assets/images/icon.png');
-
-  return (
-    <View style={styles.headerLogoContainer}>
-      <ExpoImage 
-        source={source} 
-        style={styles.headerLogo} 
-        contentFit="contain" 
-      />
-    </View>
-  );
-}
 
 export default function TabTwoScreen() {
   const { currentGame } = useGame();
   const { locale } = useLanguage();
-
-  // Simple test to verify console logging works
-  console.log('=== RESULTS TAB RENDERING ===');
-  console.log('Current game exists:', !!currentGame);
-  
-  // Debug at component level - this will always run when component renders
-  console.log('Results Debug:', {
-    currentGame,
-    hasGame: !!currentGame,
-    gameStatus: currentGame?.status,
-    roundsCount: currentGame?.rounds?.length || 0,
-    scoresCount: currentGame?.scores ? Object.keys(currentGame.scores).length : 0
-  });
 
   const participantsByJoin = (currentGame?.participants || [])
     .slice()
@@ -55,9 +24,6 @@ export default function TabTwoScreen() {
     return { ...p, gamePoints, guessPoints, totalPoints: gamePoints + guessPoints };
   }).sort((a, b) => b.totalPoints - a.totalPoints);
 
-  console.log(currentGame);
-  
-  
   return (
     <ScrollView 
       style={styles.container}
@@ -167,17 +133,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 20,
     paddingBottom: 40,
-  },
-  headerLogoContainer: { 
-    height: 60, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: 20,
-    backgroundColor: 'transparent',
-  },
-  headerLogo: {
-    width: 40,
-    height: 40,
   },
   headerImage: {
     color: '#808080',

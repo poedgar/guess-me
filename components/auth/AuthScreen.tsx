@@ -1,6 +1,8 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { FancyAlert, FancyAlertButton } from '@/components/ui/FancyAlert';
+import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,14 +12,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import { GoogleSigninButton } from '@react-native-google-signin/google-signin';
 import * as Haptics from 'expo-haptics';
-import { Image as ExpoImage } from 'expo-image';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Modal,
   Platform,
-  Pressable,
   StyleSheet,
   TouchableOpacity,
   View
@@ -37,18 +36,16 @@ export const AuthScreen: React.FC = () => {
   const [fancyVisible, setFancyVisible] = useState(false);
   const [fancyTitle, setFancyTitle] = useState<string | null>(null);
   const [fancyMessage, setFancyMessage] = useState<string | null>(null);
-  const [fancyButtons, setFancyButtons] = useState<Array<{ text: string; onPress?: () => void; style?: any }>>([]);
+  const [fancyButtons, setFancyButtons] = useState<FancyAlertButton[]>([]);
 
-  const showFancyAlert = (title: string, message?: string | null, buttons?: Array<{ text: string; onPress?: () => void; style?: any }>) => {
+  const showFancyAlert = (title: string, message?: string | null, buttons?: FancyAlertButton[]) => {
     setFancyTitle(title);
     setFancyMessage(message ?? null);
-    setFancyButtons(buttons && buttons.length > 0 ? buttons : [{ text: 'ОК' }]);
+    setFancyButtons(buttons && buttons.length > 0 ? buttons : [{ text: t('common.ok', { locale }) }]);
     setFancyVisible(true);
   };
 
-  const closeFancyAlert = () => {
-    setFancyVisible(false);
-  };
+  const closeFancyAlert = () => setFancyVisible(false);
 
   const handleSignIn = async () => {
     try {
@@ -61,7 +58,7 @@ export const AuthScreen: React.FC = () => {
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка входу', error.message || 'Не вдалося увійти. Спробуйте ще раз.');
+      showFancyAlert(t('auth.signInErrorTitle', { locale }), error.message || t('auth.signInErrorMessage', { locale }));
     } finally {
       setIsSigningIn(false);
     }
@@ -84,59 +81,10 @@ export const AuthScreen: React.FC = () => {
         },
       ]);
     } catch (error: any) {
-      showFancyAlert('Помилка виходу', error.message || 'Не вдалося вийти. Спробуйте ще раз.');
+      showFancyAlert(t('auth.signOutErrorTitle', { locale }), error.message || t('auth.signOutErrorMessage', { locale }));
     }
   };
 
-  function HeaderLogo() {
-    const source =
-      Platform.OS === 'web'
-        ? require('../../assets/images/logo.svg')
-        : require('../../assets/images/icon.png');
-  
-    return (
-      <View style={styles.headerLogoContainer as any}>
-        <ExpoImage 
-          source={source} 
-          style={styles.headerLogo as any} 
-          contentFit="contain" 
-        />
-      </View>
-    );
-  }
-
-  // Render fancy alert modal (shared across all states)
-  const renderFancyAlert = () => (
-    fancyVisible && (
-      <Modal transparent animationType="fade" visible={fancyVisible} onRequestClose={closeFancyAlert}>
-        <View style={styles.fancyModalOverlay}>
-          <View style={styles.fancyModal}>
-            {fancyTitle ? <ThemedText type="title" style={styles.fancyTitle}>{fancyTitle}</ThemedText> : null}
-            {fancyMessage ? <ThemedText style={styles.fancyMessage}>{fancyMessage}</ThemedText> : null}
-            <View style={styles.fancyButtonsRow}>
-              {fancyButtons.map((b, i) => (
-                <Pressable
-                  key={i}
-                  style={[styles.fancyButton, b.style === 'destructive' ? styles.fancyDestructiveButton : null]}
-                  onPress={async () => {
-                    try {
-                      await playSound('click');
-                      if (b.onPress) await b.onPress();
-                    } catch (e) {
-                      console.error('fancy button onPress error', e);
-                    }
-                    closeFancyAlert();
-                  }}
-                >
-                  <ThemedText style={[styles.fancyButtonText, b.style === 'destructive' ? styles.fancyDestructiveButtonText : null]}>{b.text}</ThemedText>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </View>
-      </Modal>
-    )
-  );
 
   if (loading) {
     return (
@@ -148,7 +96,7 @@ export const AuthScreen: React.FC = () => {
           {/* <SoundToggle /> */}
           </View>
         </View>
-        {renderFancyAlert()}
+        <FancyAlert visible={fancyVisible} title={fancyTitle} message={fancyMessage} buttons={fancyButtons} onClose={closeFancyAlert} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator testID="loading-indicator" size="large" color={isDark ? Colors.dark.tint : Colors.light.tint} />
           <ThemedText type="subtitle" style={styles.loadingText}>
@@ -167,7 +115,7 @@ export const AuthScreen: React.FC = () => {
           <LanguageSelector />
           {/* <SoundToggle /> */}
         </View>
-        {renderFancyAlert()}
+        <FancyAlert visible={fancyVisible} title={fancyTitle} message={fancyMessage} buttons={fancyButtons} onClose={closeFancyAlert} />
         <View style={styles.profileContainer}>
           {/* Profile Picture */}
           <View style={[styles.avatarContainer, { shadowColor: isDark ? '#000' : '#000' }]}>
@@ -216,7 +164,7 @@ export const AuthScreen: React.FC = () => {
         <HeaderLogo/>
         <LanguageSelector />
       </View>
-      {renderFancyAlert()}
+      <FancyAlert visible={fancyVisible} title={fancyTitle} message={fancyMessage} buttons={fancyButtons} onClose={closeFancyAlert} />
       <View style={styles.signInContainer}>
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>

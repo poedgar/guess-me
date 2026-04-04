@@ -1,54 +1,10 @@
 import React from 'react';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import QRScanner from '../components/QRScanner';
-
-// Mock dependencies
-jest.mock('@/components/themed-text', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return ({ children, ...props }) => React.createElement(Text, props, children);
-});
-
-jest.mock('@/components/themed-view', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return ({ children, ...props }) => React.createElement(View, props, children);
-});
-
-jest.mock('@/components/ui/icon-symbol', () => 'Text');
-
-// Mock react-native-qrcode-scanner
-jest.mock('react-native-qrcode-scanner', () => ({
-  RNCamera: {
-    Constants: {
-      Aspect: { fill: 'fill' },
-      BarCodeType: { qr: 'QR_CODE' },
-      CaptureMode: { still: 'still' },
-      CaptureQuality: { high: 'high' },
-      CaptureTarget: { cameraRoll: 'cameraRoll' },
-      FlashMode: { on: 'on', off: 'off' },
-      Orientation: { auto: 'auto' },
-      TorchMode: { on: 'on', off: 'off' },
-      Type: { front: 'front', back: 'back' },
-    },
-  },
-}));
-
-jest.mock('@/contexts/AuthContext', () => ({
-  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
-  useAuth: () => ({
-    user: { uid: 'test-user-123', displayName: 'Test User' },
-    isSignedIn: true,
-    signIn: jest.fn(),
-    signOut: jest.fn(),
-  }),
-}));
 
 jest.mock('@/contexts/LanguageContext', () => ({
   LanguageProvider: ({ children }: { children: React.ReactNode }) => children,
-  useLanguage: () => ({
-    locale: 'en',
-    setLocale: jest.fn(),
-  }),
+  useLanguage: () => ({ locale: 'en', setLocale: jest.fn() }),
 }));
 
 jest.mock('@/i18n', () => ({
@@ -56,37 +12,41 @@ jest.mock('@/i18n', () => ({
 }));
 
 describe('QRScanner', () => {
-  it('can be imported', () => {
-    // Test that the component can be imported without errors
+  const defaultProps = {
+    visible: true,
+    onClose: jest.fn(),
+    onScanSuccess: jest.fn(),
+  };
+
+  it('is defined and is a function', () => {
     expect(QRScanner).toBeDefined();
     expect(typeof QRScanner).toBe('function');
   });
 
-  it('has correct props interface', () => {
-    // Test that we understand the component's props
-    const mockProps = {
+  it('renders without crashing when visible', () => {
+    const { root } = render(<QRScanner {...defaultProps} />);
+    expect(root).toBeTruthy();
+  });
+
+  it('calls onClose when close button is pressed', async () => {
+    const onClose = jest.fn();
+    const { getByText } = render(<QRScanner {...defaultProps} onClose={onClose} />);
+    fireEvent.press(getByText('✕'));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('does not render content when visible is false', () => {
+    const { queryByText } = render(<QRScanner {...defaultProps} visible={false} />);
+    expect(queryByText('✕')).toBeNull();
+  });
+
+  it('accepts required props', () => {
+    const props = {
       visible: true,
-      onClose: () => {},
-      onScanSuccess: (gameId: string) => {},
+      onClose: jest.fn(),
+      onScanSuccess: jest.fn(),
     };
-
-    expect(mockProps.visible).toBe(true);
-    expect(typeof mockProps.onClose).toBe('function');
-    expect(typeof mockProps.onScanSuccess).toBe('function');
-  });
-
-  it('handles platform-specific imports', () => {
-    // Test that the component can handle platform differences
-    expect(() => {
-      // This should not throw due to platform-specific code
-      const Platform = require('react-native').Platform;
-      expect(Platform.OS).toBeDefined();
-    }).not.toThrow();
-  });
-
-  it('has proper component structure', () => {
-    // Test component structure without rendering
-    expect(QRScanner).toBeDefined();
-    expect(QRScanner.name).toBe('QRScanner');
+    expect(typeof props.onClose).toBe('function');
+    expect(typeof props.onScanSuccess).toBe('function');
   });
 });

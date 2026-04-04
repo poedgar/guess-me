@@ -29,7 +29,11 @@
     "signInWithGoogle": "Sign in with Google",
     "userFallback": "User",
     "signOutConfirmTitle": "Sign out",
-    "signOutConfirmMessage": "Are you sure you want to sign out?"
+    "signOutConfirmMessage": "Are you sure you want to sign out?",
+    "signInErrorTitle": "Sign-in error",
+    "signInErrorMessage": "Could not sign in. Please try again.",
+    "signOutErrorTitle": "Sign-out error",
+    "signOutErrorMessage": "Could not sign out. Please try again."
   },
   "game": {
     "start": "Start game",
@@ -240,6 +244,8 @@
     "round": "Round",
     "target": "Target",
     "targetPoints": "Target points",
+    "comments": "Comments",
+    "noComments": "No comments",
     "noResultsTitle": "No Results Yet",
     "noResultsMessage": "Start playing to see results and leaderboard here!"
   },

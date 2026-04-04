@@ -29,7 +29,11 @@
     "signInWithGoogle": "Увійти через Google",
     "userFallback": "Користувач",
     "signOutConfirmTitle": "Вихід",
-    "signOutConfirmMessage": "Ви впевнені, що хочете вийти?"
+    "signOutConfirmMessage": "Ви впевнені, що хочете вийти?",
+    "signInErrorTitle": "Помилка входу",
+    "signInErrorMessage": "Не вдалося увійти. Спробуйте ще раз.",
+    "signOutErrorTitle": "Помилка виходу",
+    "signOutErrorMessage": "Не вдалося вийти. Спробуйте ще раз."
   },
   "game": {
     "start": "Почати гру",

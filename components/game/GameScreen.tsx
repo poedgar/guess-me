@@ -1,6 +1,8 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { FancyAlert, FancyAlertButton } from '@/components/ui/FancyAlert';
+import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +12,6 @@ import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import { Image as ExpoImage } from 'expo-image';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -24,23 +25,6 @@ import {
   View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-
-function HeaderLogo() {
-  const source =
-    Platform.OS === 'web'
-      ? require('../../assets/images/logo.svg')
-      : require('../../assets/images/icon.png');
-
-  return (
-    <View style={styles.headerLogoContainer as any}>
-      <ExpoImage 
-        source={source} 
-        style={styles.headerLogo as any} 
-        contentFit="contain" 
-      />
-    </View>
-  );
-}
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
@@ -152,33 +136,34 @@ export const GameScreen: React.FC = () => {
   const [fancyVisible, setFancyVisible] = useState(false);
   const [fancyTitle, setFancyTitle] = useState<string | null>(null);
   const [fancyMessage, setFancyMessage] = useState<string | null>(null);
-  const [fancyButtons, setFancyButtons] = useState<{ text: string; onPress?: () => void; style?: any }[]>([]);
+  const [fancyButtons, setFancyButtons] = useState<FancyAlertButton[]>([]);
 
-  const showFancyAlert = (title: string, message?: string | null, buttons?: { text: string; onPress?: () => void; style?: any }[]) => {
+  const showFancyAlert = (title: string, message?: string | null, buttons?: FancyAlertButton[]) => {
     setFancyTitle(title);
     setFancyMessage(message ?? null);
-    setFancyButtons(
-      buttons && buttons.length > 0
-        ? buttons
-        : [{ text: t('common.ok', { locale }) }]
-    );
+    setFancyButtons(buttons && buttons.length > 0 ? buttons : [{ text: t('common.ok', { locale }) }]);
     setFancyVisible(true);
   };
 
-  const closeFancyAlert = () => {
-    setFancyVisible(false);
-  };
+  const closeFancyAlert = () => setFancyVisible(false);
 
-  const handleToggleAdminComments = async () => {
+  // Factory for the four boolean/enum setting toggles.
+  // Each toggle: haptic + sound on attempt, success, or error.
+  const makeSettingToggler = <T,>(
+    getNewValue: () => T,
+    updater: (v: T) => Promise<void>,
+    getSuccessMessage?: (newValue: T) => string | undefined
+  ) => async () => {
     if (!currentGame) return;
-    
     try {
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const newValue = !currentGame.adminWritesComments;
-      await updateAdminWritesComments(newValue);
+      const newValue = getNewValue();
+      await updater(newValue);
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const msg = getSuccessMessage?.(newValue);
+      if (msg) showFancyAlert(t('common.success', { locale }), msg);
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -186,62 +171,29 @@ export const GameScreen: React.FC = () => {
     }
   };
 
-  const handleToggleShowSurnames = async () => {
-    if (!currentGame) return;
-    
-    try {
-      await playSound('click');
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const newValue = !currentGame.showSurnames;
-      await updateShowSurnames(newValue);
-      await playSound('success');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
-    }
-  };
+  const handleToggleAdminComments = makeSettingToggler(
+    () => !currentGame?.adminWritesComments,
+    updateAdminWritesComments
+  );
 
-  const handleToggleTargetSelectionMode = async () => {
-    if (!currentGame) return;
-    
-    try {
-      await playSound('click');
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const newValue = currentGame.targetSelectionMode === 'random' ? 'chronological' : 'random';
-      await updateTargetSelectionMode(newValue);
-      await playSound('success');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
-    }
-  };
+  const handleToggleShowSurnames = makeSettingToggler(
+    () => !currentGame?.showSurnames,
+    updateShowSurnames
+  );
 
-  const handleToggleShowGuessResults = async () => {
-    if (!currentGame) return;
-    
-    try {
-      await playSound('click');
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const newValue = !currentGame.showGuessResults;
-      await updateShowGuessResults(newValue);
-      await playSound('success');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert(
-        t('common.success', { locale }), 
-        newValue 
-          ? t('game.alerts.showGuessResultsEnabled', { locale })
-          : t('game.alerts.showGuessResultsDisabled', { locale })
-      );
-    } catch (error: any) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
-    }
-  };
+  const handleToggleTargetSelectionMode = makeSettingToggler(
+    () => (currentGame?.targetSelectionMode === 'random' ? 'chronological' : 'random') as 'random' | 'chronological',
+    updateTargetSelectionMode
+  );
+
+  const handleToggleShowGuessResults = makeSettingToggler(
+    () => !currentGame?.showGuessResults,
+    updateShowGuessResults,
+    (newValue) =>
+      newValue
+        ? t('game.alerts.showGuessResultsEnabled', { locale })
+        : t('game.alerts.showGuessResultsDisabled', { locale })
+  );
 
   const handleEnterGame = async () => {
     if (!isSignedIn) {
@@ -476,32 +428,19 @@ export const GameScreen: React.FC = () => {
     const targetUserId = currentGame.currentRound.targetUserId;
     const isTargetAdmin = targetUserId === currentGame.adminId;
     
-    console.log('DEBUG getRequiredComments:');
-    console.log('  - targetUserId:', targetUserId);
-    console.log('  - adminId:', currentGame.adminId);
-    console.log('  - isTargetAdmin:', isTargetAdmin);
-    console.log('  - adminWritesComments:', currentGame.adminWritesComments);
-    console.log('  - participants.length:', currentGame.participants.length);
-    
     // If admin doesn't write comments, exclude admin from comment writers
     if (!currentGame.adminWritesComments) {
       // Also exclude the target since they don't write comments about themselves
-      const result = currentGame.participants.length - 2;
-      console.log('  - admin not participating, exclude admin and target, required:', result);
-      return result;
+      return currentGame.participants.length - 2;
     }
-    
+
     // If target is admin and admin doesn't write comments, exclude admin from comment writers
     if (isTargetAdmin && !currentGame.adminWritesComments) {
-      const result = currentGame.participants.length - 1;
-      console.log('  - target is admin and admin not participating, required:', result);
-      return result;
+      return currentGame.participants.length - 1;
     }
-    
+
     // Otherwise, all participants except the target can write comments
-    const result = currentGame.participants.length - 1;
-    console.log('  - default case, required:', result);
-    return result;
+    return currentGame.participants.length - 1;
   };
   
   // Participants sorted by join time (ascending). Show a 1-based index next to each name.
@@ -553,6 +492,23 @@ export const GameScreen: React.FC = () => {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error?.message || 'Failed to skip phase');
+    }
+  };
+
+  const handleStartPostGuessingPointPhase = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await startPostGuessingPointPhase();
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showFancyAlert(t('common.success', { locale }), 'Post-guessing point phase started!');
+    } catch (error: any) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t('common.error', { locale }), error.message || 'Failed to start point phase');
     }
   };
 
@@ -1198,14 +1154,7 @@ export const GameScreen: React.FC = () => {
                               (currentGame.currentRound.comments?.length || 0) < 
                                 getRequiredComments() && styles.buttonDisabled,
                             ]}
-                            onPress={() => {
-                              console.log('DEBUG: Show Comments button clicked');
-                              console.log('DEBUG: Comments length:', currentGame.currentRound.comments?.length || 0);
-                              console.log('DEBUG: Required comments:', getRequiredComments());
-                              console.log('DEBUG: adminWritesComments:', currentGame.adminWritesComments);
-                              console.log('DEBUG: Participants length:', currentGame.participants.length);
-                              handleShowComments();
-                            }}
+                            onPress={handleShowComments}
                             disabled={(currentGame.currentRound.comments?.length || 0) < 
                               getRequiredComments()}
                             activeOpacity={0.8}
@@ -1402,8 +1351,8 @@ export const GameScreen: React.FC = () => {
                                   const hasCompletedPhase = currentGame.playersWhoCompletedPostCommentPhase?.includes(user?.uid || '') ?? false;
                                   return (
                                     <View style={{ marginTop: 16 }}>
-                                      <ThemedText style={{ textAlign: 'center', marginBottom: 8 }}>
-                                        {hasCompletedPhase || alreadyGaveTargetPoints ? 'Готово' : 'Тепер ви можете нарахувати бали для'} {currentGame.currentRound && joinIndexById[currentGame.currentRound.targetUserId] ? `${joinIndexById[currentGame.currentRound.targetUserId]}. ` : ''}{getDisplayName(currentGame.currentRound.targetUserName)}
+                                      <ThemedText style={{ width: 'fit-content', alignSelf: 'center', color: 'white', textAlign: 'center', marginBottom: 8, backgroundColor: '#4CAF50', padding: 8, borderRadius: 8 }}>
+                                      Готово
                                       </ThemedText>
                                       {/* Give points to target button */}
                                       {currentGame.currentRound.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
@@ -1661,8 +1610,38 @@ export const GameScreen: React.FC = () => {
                   )}
                 </View>
               )}
+              
+              {/* Admin Fallback: Manual Post-Guessing Point Phase Start */}
+              {isAdmin && (currentGame.status === 'guessing_phase' || currentGame.status === 'active') && currentGame.guessingData?.allPlayersSubmitted && !currentGame.postGuessingPointPhase && (
+                <View style={styles.gameFlowContainer}>
+                  <View style={styles.roundInfo}>
+                    <ThemedText type="subtitle" style={styles.roundTitle}>
+                      Admin: Start Point Awards
+                    </ThemedText>
+                    <ThemedText style={styles.targetText}>
+                      All players have submitted guesses. Start the point awarding phase manually.
+                    </ThemedText>
+                  </View>
+                  <View style={styles.adminControls}>
+                    <TouchableOpacity
+                      style={[
+                        styles.adminButton,
+                        {
+                          backgroundColor: '#FF9800',
+                          shadowColor: '#000',
+                        },
+                      ]}
+                      onPress={handleStartPostGuessingPointPhase}
+                      activeOpacity={0.8}
+                    >
+                      <IconSymbol name="star.fill" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+              
               {/* Post-Guessing Point Awards Phase */}
-              {currentGame.status === 'guessing_phase' && currentGame.postGuessingPointPhase && currentGame.currentRound?.pointsGiven && (
+              {((currentGame.status === 'guessing_phase' || currentGame.status === 'active') && currentGame.postGuessingPointPhase) && (
                 <View style={styles.gameFlowContainer}>
                   <View style={styles.roundInfo}>
                     <ThemedText type="subtitle" style={styles.roundTitle}>
@@ -1952,37 +1931,13 @@ export const GameScreen: React.FC = () => {
 
       </ScrollView>
 
-      {/* Fancy Alert Modal - Web Compatible */}
-      {fancyVisible && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ThemedText style={styles.modalTitle} lightColor="#000" darkColor="#000">{fancyTitle}</ThemedText>
-            {fancyMessage && (
-              <ThemedText style={styles.modalMessage} lightColor="#000" darkColor="#000">{fancyMessage}</ThemedText>
-            )}
-            <View style={styles.modalButtons}>
-              {fancyButtons.map((button, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.modalButton,
-                    button.style === 'destructive' && styles.modalButtonDestructive,
-                    button.style === 'cancel' && styles.modalButtonCancel,
-                  ]}
-                  onPress={async () => { await playSound('click'); if (button.onPress) { await button.onPress(); } closeFancyAlert(); }}
-                >
-                  <ThemedText style={[
-                    styles.modalButtonText,
-                    button.style === 'destructive' && styles.modalButtonTextDestructive,
-                  ]} lightColor="#007AFF" darkColor="#0A84FF">
-                    {button.text}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-      )}
+      <FancyAlert
+        visible={fancyVisible}
+        title={fancyTitle}
+        message={fancyMessage}
+        buttons={fancyButtons}
+        onClose={closeFancyAlert}
+      />
       
       {/* Guess Result Modal */}
       {guessResultModal && (
