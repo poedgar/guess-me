@@ -1,0 +1,182 @@
+import { LanguageSelector } from '@/components/LanguageSelector';
+import { ThemedText } from '@/components/themed-text';
+import { HeaderLogo } from '@/components/ui/HeaderLogo';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, Fonts } from '@/constants/theme';
+import { useGame } from '@/contexts/GameContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useSound } from '@/contexts/SoundContext';
+import { t } from '@/i18n';
+import * as Haptics from 'expo-haptics';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Clipboard,
+  Platform,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { ShowFancyAlertFn } from './GameHeader';
+
+interface Props {
+  isSignedIn: boolean;
+  isDark: boolean;
+  showFancyAlert: ShowFancyAlertFn;
+}
+
+export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert }) => {
+  const { locale } = useLanguage();
+  const { playSound } = useSound();
+  const { enterGame, loading } = useGame();
+  const [gameIdInput, setGameIdInput] = useState('');
+  const [isProcessingEnter, setIsProcessingEnter] = useState(false);
+
+  const handleEnterGame = async () => {
+    if (!isSignedIn) {
+      showFancyAlert(t('game.alerts.loginRequiredTitle', { locale }), t('game.alerts.loginRequiredMessage', { locale }));
+      return;
+    }
+
+    const input = gameIdInput.trim();
+    if (!input) {
+      showFancyAlert(t('game.alerts.invalidInputTitle', { locale }), t('game.alerts.invalidInputMessage', { locale }));
+      return;
+    }
+
+    try {
+      setIsProcessingEnter(true);
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      const result = await enterGame(input, false);
+
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      if (typeof result === 'string') {
+        const gameId = result;
+        setGameIdInput('');
+        showFancyAlert(
+          t('game.alerts.gameCreatedTitle', { locale }),
+          t('game.alerts.gameCreatedMessage', { locale, gameId }),
+          [
+            {
+              text: t('game.alerts.copyId', { locale }),
+              onPress: async () => {
+                await playSound('copy');
+                Clipboard.setString(gameId);
+                showFancyAlert(t('game.alerts.copiedTitle', { locale }), t('game.alerts.copiedMessage', { locale }));
+              },
+            },
+            { text: t('common.ok', { locale }) },
+          ]
+        );
+      } else {
+        setGameIdInput('');
+        showFancyAlert(t('common.success', { locale }), t('game.alerts.joinedGameMessage', { locale }));
+      }
+    } catch (error: any) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.enterGameFailed', { locale }));
+    } finally {
+      setIsProcessingEnter(false);
+    }
+  };
+
+  if (!isSignedIn) {
+    return (
+      <View style={styles.notSignedInContainer}>
+        <View style={styles.inlineLanguageToggle}>
+          <HeaderLogo />
+          <View style={{ marginTop: 12, display: 'flex', justifyContent: 'space-around', alignItems: 'center', gap: 12 }}>
+            <LanguageSelector />
+          </View>
+        </View>
+        <ThemedText type="title" style={styles.notSignedInText}>
+          {t('game.ui.pleaseSignIn', { locale })}
+        </ThemedText>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.actionContainer}>
+      <View style={styles.inlineLanguageToggle}>
+        <HeaderLogo />
+        <View style={{ marginTop: 12, display: 'flex', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', gap: 12 }}>
+          <LanguageSelector />
+          {/* <SoundToggle /> */}
+        </View>
+      </View>
+      <View style={styles.section}>
+        <ThemedText type="title" style={styles.sectionTitle}>
+          {t('game.ui.createOrJoin.title', { locale })}
+        </ThemedText>
+        <ThemedText style={styles.sectionDescription}>
+          {t('game.ui.createOrJoin.description', { locale })}
+        </ThemedText>
+
+        <TextInput
+          style={[
+            styles.input,
+            {
+              backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
+              color: isDark ? Colors.dark.text : Colors.light.text,
+              borderColor: isDark ? '#444' : '#ddd',
+            },
+          ]}
+          placeholder={t('game.ui.createOrJoin.inputPlaceholder', { locale })}
+          placeholderTextColor={isDark ? '#888' : '#999'}
+          value={gameIdInput}
+          onChangeText={setGameIdInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <TouchableOpacity
+          style={[
+            styles.joinButton,
+            {
+              backgroundColor: '#4CAF50',
+              shadowColor: '#000',
+            },
+            (isProcessingEnter || loading || !gameIdInput.trim()) && styles.buttonDisabled,
+          ]}
+          onPress={handleEnterGame}
+          disabled={isProcessingEnter || loading || !gameIdInput.trim()}
+          activeOpacity={0.8}
+        >
+          {isProcessingEnter ? (
+            <View style={styles.buttonLoading}>
+              <ActivityIndicator size="small" color="#fff" />
+            </View>
+          ) : (
+            <IconSymbol name="arrow.right.circle.fill" size={16} color="#fff" />
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  notSignedInContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  notSignedInText: { textAlign: 'center', opacity: 0.7 },
+  actionContainer: { flex: 1, justifyContent: 'center' },
+  inlineLanguageToggle: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 60,
+    marginBottom: 82,
+  },
+  section: { marginBottom: 32 },
+  sectionTitle: { marginBottom: 8 },
+  sectionDescription: { opacity: 0.7, marginBottom: 16, fontSize: 14, lineHeight: 20, fontFamily: Fonts.sans },
+  input: { height: 50, borderRadius: 8, paddingHorizontal: 16, fontSize: 16, marginBottom: 16, borderWidth: 1, fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  joinButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  buttonDisabled: { opacity: 0.6 },
+  buttonLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+});

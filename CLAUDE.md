@@ -46,9 +46,17 @@ in-the-mirror/
 │   │   └── rules.tsx       # Game rules
 │   └── modal.tsx
 ├── components/
-│   ├── auth/AuthScreen.tsx     # Sign-in / sign-out UI
-│   ├── game/GameScreen.tsx     # Main game UI (~2000 lines)
-│   └── ui/                     # Shared UI primitives
+│   ├── auth/AuthScreen.tsx         # Sign-in / sign-out UI
+│   ├── game/
+│   │   ├── GameScreen.tsx          # Orchestrator: shared state, routing (~140 lines)
+│   │   ├── GameHeader.tsx          # Logo, admin badge, status badge, game ID row
+│   │   ├── JoinScreen.tsx          # Sign-in prompt + game ID input/join form
+│   │   ├── WaitingPhase.tsx        # Admin toggles, participants, leaderboard, start button
+│   │   ├── ActivePhase.tsx         # Comment writing, target view, give-points UI
+│   │   ├── GuessingPhase.tsx       # Guess cards, submit, admin finalize, result modal
+│   │   ├── PostGuessingPointsPanel.tsx  # Shared: point awards (used by Active + Guessing)
+│   │   └── ResultsPhase.tsx        # Game over + final leaderboard
+│   └── ui/                         # Shared UI primitives
 ├── contexts/
 │   ├── AuthContext.tsx          # Firebase auth state
 │   ├── GameContext.tsx          # Game logic & Firestore (~1500 lines)
@@ -213,7 +221,8 @@ Full guide: [docs/deployment.md](docs/deployment.md)
 - **TypeScript strict mode** is enabled — no `any` without justification.
 - All interfaces defined in the same file as the context that owns them.
 - Components receive only what they need via hooks — no prop drilling.
-- `GameScreen.tsx` is large (~2000 lines) by design. It handles all game phase rendering. Refactor only if extracting a clearly self-contained sub-feature.
+- `GameScreen.tsx` is a thin orchestrator (~140 lines). Each game phase has its own component in `components/game/`. Add new phase UI to the relevant phase component, not to `GameScreen.tsx`.
+- When adding a new game phase or sub-feature, create a dedicated component in `components/game/` and wire it into `GameScreen.tsx`'s status-based routing.
 - Do not hardcode user-facing strings. Use `t()`.
 - Do not call Firestore from components. Use `GameContext` methods.
 - New Firebase fields must be added to **both** the TypeScript interface and handled for backward compatibility (older games may lack the field).

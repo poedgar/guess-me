@@ -88,20 +88,43 @@ export default function HomeScreen() {
 }
 ```
 
-### Feature Components (fat)
+### Feature Components
 
 Business logic lives in feature components under `components/`:
 
 - `components/auth/AuthScreen.tsx` — all auth UI and sign-in flow
-- `components/game/GameScreen.tsx` — all game phase rendering (~2000 lines)
+- `components/game/` — game UI split into phase-specific components (see below)
 
-These components are intentionally large. They consume context hooks directly and are the single source of truth for their feature's UI.
+### Game Component Architecture
+
+`GameScreen.tsx` is a thin orchestrator (~140 lines). It owns shared state (FancyAlert), computes shared derived values (`isAdmin`, `participantsByJoin`, `joinIndexById`, `getDisplayName`, `commentsForPlayer`), and routes to phase components based on `currentGame.status`:
+
+```
+components/game/
+├── GameScreen.tsx              — orchestrator: shared state, routing, leave button
+├── GameHeader.tsx              — logo, admin badge, status badge (shown while in game)
+├── JoinScreen.tsx              — sign-in prompt or game ID input/join form
+├── WaitingPhase.tsx            — admin toggles, participant list, mid-game leaderboard, start button
+├── ActivePhase.tsx             — comment writing, target view, revealed comments, give-points UI
+├── GuessingPhase.tsx           — guess cards, submit, admin finalize, guess result modal
+├── PostGuessingPointsPanel.tsx — shared sub-component used by ActivePhase and GuessingPhase
+└── ResultsPhase.tsx            — game over screen and final leaderboard
+```
+
+The `ShowFancyAlertFn` type is defined in `GameHeader.tsx` and imported by all phase components that need to trigger alerts.
+
+**Cross-cutting concerns:**
+- `FancyAlert` is rendered at the `GameScreen` root level; `showFancyAlert` is threaded down as a prop.
+- `PostGuessingPointsPanel` is rendered from both `ActivePhase` (when `game.postGuessingPointPhase` is true during `active` status) and `GuessingPhase` (always — it self-guards).
+- The guess result modal is owned by `GuessingPhase` and uses `position: absolute` with `zIndex: 1000`.
 
 ### UI Primitives
 
 Small, reusable, stateless components in `components/ui/`:
 
 - `ThemedText`, `ThemedView` — apply dark/light theme colors
+- `HeaderLogo` — app logo, platform-aware (SVG on web, PNG on native)
+- `FancyAlert` — cross-platform alert overlay (replaces `Alert.alert`)
 - `icon-symbol.tsx` / `icon-symbol.ios.tsx` — SF Symbols on iOS, fallback on Android
 - `collapsible.tsx` — animated expand/collapse
 - `haptic-tab.tsx` — wraps tab press with haptic feedback
