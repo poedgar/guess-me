@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
@@ -7,12 +8,12 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { ShowFancyAlertFn } from './GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
@@ -372,6 +373,14 @@ export const GuessingPhase: React.FC<Props> = ({
               {t('game.ui.waitingForAdminToStartGuessing', { locale })}
             </ThemedText>
           )
+        )}
+
+        {/* Admin Target Control */}
+        {isAdmin && (
+          <TargetControlPanel
+            locale={locale}
+            showFancyAlert={showFancyAlert}
+          />
         )}
 
         {isAdmin && (

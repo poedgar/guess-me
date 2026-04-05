@@ -7,12 +7,12 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { ShowFancyAlertFn } from './GameHeader';
 
@@ -106,6 +106,12 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
   if (isAdmin && game.currentRound?.targetUserId && game.guessingData?.playersWhoSubmittedGuesses?.includes(game.currentRound.targetUserId) && !game.postGuessingPointPhase) {
     return (
       <View style={styles.gameFlowContainer}>
+        {/* Admin Target Control */}
+        <TargetControlPanel
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+        />
+        
         <View style={styles.roundInfo}>
           <ThemedText type="subtitle" style={styles.roundTitle}>
             Admin: Start Point Awards

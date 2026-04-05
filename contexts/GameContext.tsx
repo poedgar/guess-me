@@ -35,6 +35,9 @@ export interface Game {
   showGuessResults?: boolean;
   // Target selection mode: 'random' or 'chronological' (default: 'random')
   targetSelectionMode?: 'random' | 'chronological';
+  // Admin target control preferences
+  adminNextTargetPreference?: string;
+  adminSkippedTargets?: string[];
 }
 
 export interface Participant {
@@ -117,6 +120,10 @@ interface GameContextType {
   updateShowSurnames: (showSurnames: boolean) => Promise<void>;
   updateTargetSelectionMode: (targetSelectionMode: 'random' | 'chronological') => Promise<void>;
   updateShowGuessResults: (showGuessResults: boolean) => Promise<void>;
+  // Admin target control functions
+  setNextRoundTarget: (targetUserId: string) => Promise<void>;
+  skipNextRoundTarget: (targetUserId: string) => Promise<void>;
+  resetTargetControls: () => Promise<void>;
   startPostGuessingPointPhase: () => Promise<void>;
   awardPointsToPlayers: (awards: { recipientId: string; points: number }[]) => Promise<void>;
   skipPostCommentPhase: () => Promise<void>;
@@ -900,6 +907,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       const usedTargets = previousRounds.map(r => r.targetUserId);
 
       // Get participants who haven't been targets yet (include admin if adminWritesComments is true)
+      const skippedTargets = gameData.adminSkippedTargets || [];
       const availableParticipants = (gameData.participants || []).filter(
         p => {
           // Always exclude admin if adminWritesComments is false
@@ -907,7 +915,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             return false;
           }
           // Exclude anyone who has already been a target
-          return !usedTargets.includes(p.userId);
+          if (usedTargets.includes(p.userId)) {
+            return false;
+          }
+          // Exclude anyone who has been skipped by admin
+          if (skippedTargets.includes(p.userId)) {
+            return false;
+          }
+          return true;
         }
       );
 
@@ -921,9 +936,22 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         return;
       }
 
-      // Select random participant from available ones
-      const randomIndex = Math.floor(Math.random() * availableParticipants.length);
-      const target = availableParticipants[randomIndex];
+      // Check if admin has a preferred target
+      let target: Participant;
+      if (gameData.adminNextTargetPreference && 
+          availableParticipants.some(p => p.userId === gameData.adminNextTargetPreference)) {
+        // Use admin's preferred target
+        target = availableParticipants.find(p => p.userId === gameData.adminNextTargetPreference)!;
+        
+        // Clear the preference after using it
+        await updateDoc(gameRef, {
+          adminNextTargetPreference: null,
+        });
+      } else {
+        // Select random participant from available ones
+        const randomIndex = Math.floor(Math.random() * availableParticipants.length);
+        target = availableParticipants[randomIndex];
+      }
 
       const nextRound: Round = {
         roundNumber: previousRounds.length + 1,
@@ -940,6 +968,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         rounds: previousRounds,
         postGuessingPointPhase: false,
         playersWhoAwardedPostGuessPoints: [],
+        // Reset admin target controls for new round
+        adminNextTargetPreference: null,
+        adminSkippedTargets: [],
         playersWhoCompletedPostCommentPhase: [],
         guessingData: null,
       });
@@ -1433,6 +1464,90 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const setNextRoundTarget = async (targetUserId: string) => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only admin can set next round target');
+    }
+    
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+
+      await runTransaction(db, async (transaction) => {
+        const gameSnap = await transaction.get(gameRef);
+        if (!gameSnap.exists()) throw new Error('Game not found');
+        const gameData = gameSnap.data() as Game;
+
+        // Check if user is a participant
+        const participant = gameData.participants.find(p => p.userId === targetUserId);
+        if (!participant) throw new Error('User is not a participant');
+
+        // Store admin target preference
+        await updateDoc(gameRef, {
+          adminNextTargetPreference: targetUserId,
+        });
+      });
+    } catch (err) {
+      console.error('Error setting next round target:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const skipNextRoundTarget = async (targetUserId: string) => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only admin can skip next round target');
+    }
+    
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+
+      await runTransaction(db, async (transaction) => {
+        const gameSnap = await transaction.get(gameRef);
+        if (!gameSnap.exists()) throw new Error('Game not found');
+        const gameData = gameSnap.data() as Game;
+
+        // Get current skipped targets or initialize empty array
+        const skippedTargets = gameData.adminSkippedTargets || [];
+        
+        // Add to skipped targets if not already there
+        if (!skippedTargets.includes(targetUserId)) {
+          await updateDoc(gameRef, {
+            adminSkippedTargets: [...skippedTargets, targetUserId],
+          });
+        }
+      });
+    } catch (err) {
+      console.error('Error skipping next round target:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetTargetControls = async () => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error('Only admin can reset target controls');
+    }
+    
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+
+      await updateDoc(gameRef, {
+        adminNextTargetPreference: null,
+        adminSkippedTargets: [],
+      });
+    } catch (err) {
+      console.error('Error resetting target controls:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: GameContextType = {
     currentGame,
     loading,
@@ -1459,6 +1574,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     startPostGuessingPointPhase,
     awardPointsToPlayers,
     skipPostCommentPhase,
+    setNextRoundTarget,
+    skipNextRoundTarget,
+    resetTargetControls,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

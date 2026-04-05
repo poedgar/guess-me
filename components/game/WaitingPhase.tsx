@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
@@ -307,6 +308,14 @@ export const WaitingPhase: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
         </>
+      )}
+
+      {/* Admin Target Control */}
+      {isAdmin && (
+        <TargetControlPanel
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+        />
       )}
 
       {/* Participants list */}
