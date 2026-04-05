@@ -72,7 +72,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
   };
 
   const handleAwardPointsToPlayers = async () => {
-    if (!game || !user) return;
+    if (!game || !user || !isAdmin) return;
     try {
       setIsAwardingPoints(true);
       await playSound('click');
@@ -136,6 +136,8 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
   // Post-Guessing Point Awards Phase
   if (!game.postGuessingPointPhase) return null;
 
+  if (!isAdmin) return null;
+
   return (
     <View style={styles.gameFlowContainer}>
       <View style={styles.roundInfo}>
@@ -147,7 +149,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
         </ThemedText>
       </View>
 
-      {game.playersWhoAwardedPostGuessPoints?.includes(user?.uid || '') ? (
+      {isAdmin && game.playersWhoAwardedPostGuessPoints?.includes(user?.uid || '') ? (
         <View style={styles.guessResultsContainer}>
           <ThemedText type="subtitle" style={styles.guessResultsTitle}>
             Points Already Awarded
@@ -161,7 +163,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
             </ThemedText>
           </View>
         </View>
-      ) : (
+      ) : isAdmin ? (
         <View style={styles.postGuessingPointsContainer}>
           <ThemedText style={styles.guessingInstructions}>
             Select any number of players and award them points. You can do this only once per round.
@@ -189,18 +191,20 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
                       </View>
 
                       <View style={styles.pointButtonsContainer}>
-                        {[1, 2, 3].map(points => (
+                        {[-3, -2, -1, 1, 2, 3].map(points => (
                           <TouchableOpacity
                             key={points}
                             style={[
                               styles.pointButton,
-                              isSelected && selectedPoints === points && styles.pointButtonSelected,
+                              points < 0 && styles.pointButtonNegative,
+                              isSelected && selectedPoints === points && (points < 0 ? styles.pointButtonNegativeSelected : styles.pointButtonSelected),
                             ]}
                             onPress={() => handlePlayerSelectForPoints(participant.userId, points)}
                             activeOpacity={0.8}
                           >
                             <ThemedText style={[
                               styles.pointButtonText,
+                              points < 0 && { color: '#dc2626' },
                               isSelected && selectedPoints === points && styles.pointButtonTextSelected,
                             ]}>
                               {points}
@@ -241,7 +245,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
             </TouchableOpacity>
           )}
         </View>
-      )}
+      ) : null}
     </View>
   );
 };
@@ -303,6 +307,14 @@ const styles = StyleSheet.create({
   pointButtonSelected: {
     backgroundColor: GameColors.green,
     borderColor: GameColors.green,
+  },
+  pointButtonNegative: {
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    borderColor: 'rgba(255, 0, 0, 0.3)',
+  },
+  pointButtonNegativeSelected: {
+    backgroundColor: '#dc2626',
+    borderColor: '#dc2626',
   },
   pointButtonText: {
     fontSize: 14,
