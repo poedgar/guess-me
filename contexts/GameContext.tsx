@@ -110,7 +110,7 @@ interface GameContextType {
   startGuessingPhase: () => Promise<void>;
   finalizeGuessingPhase: () => Promise<void>;
   submitGuess: (roundNumber: number, commentId: string, guessedAuthorId: string) => Promise<void>;
-  markPlayerGuessesSubmitted: (userId?: string) => Promise<void>;
+  markPlayerGuessesSubmitted: (userId?: string, correctGuesses?: number) => Promise<void>;
   updateAdminWritesComments: (adminWritesComments: boolean) => Promise<void>;
   updateShowSurnames: (showSurnames: boolean) => Promise<void>;
   updateTargetSelectionMode: (targetSelectionMode: 'random' | 'chronological') => Promise<void>;
@@ -819,9 +819,23 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             const playersAlready = serverGame.guessingData?.playersWhoSubmittedGuesses || [];
             const totalTargets = (serverGame.participants?.length ?? 0) - 1;
             const allSubmitted = (playersAlready.length + 1) >= totalTargets;
+
+            // Count correct guesses by this player across ALL rounds (sum from source data,
+            // not incrementally, so finalizeGuessingPhase can safely overwrite without double-counting)
+            let correctGuessCount = 0;
+            for (const r of serverRounds) {
+              if (r.guesses) {
+                correctGuessCount += r.guesses.filter((g: Guess) => g.guesserId === userId && g.correct).length;
+              }
+            }
+            if (serverGame.currentRound?.guesses) {
+              correctGuessCount += serverGame.currentRound.guesses.filter((g: Guess) => g.guesserId === userId && g.correct).length;
+            }
+
             await updateDoc(gameRef, {
               'guessingData.playersWhoSubmittedGuesses': arrayUnion(userId),
               'guessingData.allPlayersSubmitted': allSubmitted,
+              [`guessResults.${userId}`]: { correctGuesses: correctGuessCount },
             });
           }
           // Edge case: if player has zero comments, mark them submitted immediately
@@ -832,6 +846,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             await updateDoc(gameRef, {
               'guessingData.playersWhoSubmittedGuesses': arrayUnion(userId),
               'guessingData.allPlayersSubmitted': allSubmitted,
+              [`guessResults.${userId}`]: { correctGuesses: 0 },
             });
           }
         }
@@ -1049,7 +1064,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const markPlayerGuessesSubmitted = async (userIdParam?: string): Promise<void> => {
+  const markPlayerGuessesSubmitted = async (userIdParam?: string, precomputedCorrectGuesses?: number): Promise<void> => {
     if (!currentGame || !user) throw new Error('No active game or user');
     // Only the admin may mark a player other than themselves as submitted.
     if (userIdParam && userIdParam !== user.uid && user.uid !== currentGame.adminId) {
@@ -1068,24 +1083,39 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
       const gameData = gameDoc.data() as Game;
       const playersAlready = gameData.guessingData?.playersWhoSubmittedGuesses || [];
-      if (playersAlready.includes(playerId)) {
-        return; // already marked
-      }
-
       const playersAlreadyArray = arrayUnion(playerId);
-      const totalTargets = (gameData.participants?.length ?? 0) - 1; // Exclude admin if they don't write comments
+      const totalTargets = (gameData.participants?.length ?? 0) - 1;
       const allSubmitted = (playersAlready.length + 1) >= totalTargets;
+
+      // Use the caller-supplied count when available (computed locally in the component
+      // from selectedGuesses — avoids any Firestore read-after-write timing issues).
+      // Fall back to counting from rounds for admin-marking-other-player calls.
+      let correctGuessCount: number;
+      if (precomputedCorrectGuesses !== undefined) {
+        correctGuessCount = precomputedCorrectGuesses;
+      } else {
+        const allRounds = [
+          ...(gameData.rounds || []),
+          ...(gameData.currentRound ? [gameData.currentRound] : []),
+        ];
+        correctGuessCount = 0;
+        for (const r of allRounds) {
+          if (r.guesses) {
+            correctGuessCount += r.guesses.filter((g: Guess) => g.guesserId === playerId && g.correct).length;
+          }
+        }
+      }
 
       const updates: any = {
         'guessingData.playersWhoSubmittedGuesses': playersAlreadyArray,
         'guessingData.allPlayersSubmitted': allSubmitted,
+        [`guessResults.${playerId}`]: { correctGuesses: correctGuessCount },
       };
 
-      // NEW LOGIC: Start post-guessing point phase when ALL players have submitted their guesses
+      // Start post-guessing point phase when ALL players have submitted their guesses
       if (allSubmitted) {
         updates.postGuessingPointPhase = true;
         updates.playersWhoAwardedPostGuessPoints = [];
-      } else {
       }
 
       await updateDoc(gameRef, updates);
@@ -1131,57 +1161,28 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       // Aggregate correct guesses per guesser
       const guessCounts: { [userId: string]: number } = {};
       
-      if (isPerRoundGuessing) {
-        // Only count guesses from the specific round that was just guessed
-        const targetRound = finalRounds.find(r => r.targetUserId === gameData.guessingData?.singleRoundTargetId);
-        
-        if (targetRound && targetRound.guesses) {
-          for (const g of targetRound.guesses) {
-            if (g.correct) {
-              guessCounts[g.guesserId] = (guessCounts[g.guesserId] ?? 0) + 1;
-            }
-          }
-        } else if (!targetRound) {
-          console.error('finalizeGuessingPhase: ERROR - targetRound not found!');
-        } else if (!targetRound.guesses) {
-          console.error('finalizeGuessingPhase: ERROR - targetRound has no guesses array!');
-        }
-      } else {
-        // Count guesses from all rounds (final guessing phase)
-        for (const r of finalRounds) {
-          if (!r.guesses) continue;
-          for (const g of r.guesses) {
-            if (g.correct) {
-              guessCounts[g.guesserId] = (guessCounts[g.guesserId] ?? 0) + 1;
-            }
+      // Count correct guesses from all rounds (both per-round and final guessing paths use
+      // the same full-recompute approach so that early writes in submitGuess are idempotent)
+      for (const r of finalRounds) {
+        if (!r.guesses) continue;
+        for (const g of r.guesses) {
+          if (g.correct) {
+            guessCounts[g.guesserId] = (guessCounts[g.guesserId] ?? 0) + 1;
           }
         }
       }
 
-
       // Build guessResults - do NOT add guess points to scores
       // scores should only contain game points (from comments and target points)
       // guessResults contains guess points separately
-      const existingGuessResults = gameData.guessResults || {};
-      const mergedGuessResults: { [userId: string]: { correctGuesses: number } } = { ...existingGuessResults };
+      const mergedGuessResults: { [userId: string]: { correctGuesses: number } } = { ...(gameData.guessResults ?? {}) };
       // Keep scores as-is (only game points, no guess points)
       const newScores = { ...(gameData.scores ?? {}) };
 
-      if (isPerRoundGuessing) {
-        // For per-round guessing, guessCounts already contains only the new guesses
-        // Add these to the existing totals in guessResults only (not scores)
-        for (const [uid, count] of Object.entries(guessCounts)) {
-          const prev = (existingGuessResults[uid]?.correctGuesses) ?? 0;
-          const newTotal = prev + count;
-          // Do NOT add to scores - scores should only have game points
-          mergedGuessResults[uid] = { correctGuesses: newTotal };
-        }
-      } else {
-        // For final guessing, update guessResults
-        for (const [uid, count] of Object.entries(guessCounts)) {
-          // Do NOT add to scores - scores should only have game points
-          mergedGuessResults[uid] = { correctGuesses: count };
-        }
+      // Always overwrite with the freshly computed total (safe to overwrite because submitGuess
+      // may have already written partial results using the same full-recompute logic)
+      for (const [uid, count] of Object.entries(guessCounts)) {
+        mergedGuessResults[uid] = { correctGuesses: count };
       }
 
       if (!isPerRoundGuessing) {

@@ -2,7 +2,7 @@ import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors, Fonts, GameColors } from '@/constants/theme';
 import { useGame } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
@@ -123,13 +123,13 @@ export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert
           style={[
             styles.input,
             {
-              backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
+              backgroundColor: isDark ? GameColors.inputDark : GameColors.inputLight,
               color: isDark ? Colors.dark.text : Colors.light.text,
-              borderColor: isDark ? '#444' : '#ddd',
+              borderColor: isDark ? GameColors.inputBorderDark : GameColors.inputBorderLight,
             },
           ]}
           placeholder={t('game.ui.createOrJoin.inputPlaceholder', { locale })}
-          placeholderTextColor={isDark ? '#888' : '#999'}
+          placeholderTextColor={isDark ? GameColors.placeholderDark : GameColors.placeholderLight}
           value={gameIdInput}
           onChangeText={setGameIdInput}
           autoCapitalize="none"
@@ -139,7 +139,7 @@ export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert
           style={[
             styles.joinButton,
             {
-              backgroundColor: '#4CAF50',
+              backgroundColor: GameColors.green,
               shadowColor: '#000',
             },
             (isProcessingEnter || loading || !gameIdInput.trim()) && styles.buttonDisabled,

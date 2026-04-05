@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
@@ -165,9 +165,16 @@ export const GuessingPhase: React.FC<Props> = ({
       }
 
       try {
+        // Compute correct count locally — we have all the data right here and this
+        // avoids any Firestore read-after-write race in markPlayerGuessesSubmitted.
+        const correctGuessCount = commentsForPlayerLocal.filter(c => {
+          const guessedAuthorId = selectedGuesses[c.id];
+          return guessedAuthorId !== undefined && guessedAuthorId === c.authorId;
+        }).length;
+
         hasSubmittedGuessesRef.current = true;
         setHasSubmittedGuesses(true);
-        await markPlayerGuessesSubmitted();
+        await markPlayerGuessesSubmitted(undefined, correctGuessCount);
       } catch (err) {
         console.warn('Failed to mark player as submitted', err);
       }
@@ -237,7 +244,7 @@ export const GuessingPhase: React.FC<Props> = ({
       {/* Status badge */}
       <View style={styles.gameStatusContainer}>
         <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
-        <View style={[styles.statusBadge, { backgroundColor: '#9C27B0' }]}>
+        <View style={[styles.statusBadge, { backgroundColor: StatusColors.guessing_phase }]}>
           <ThemedText style={styles.statusText}>
             {t('game.ui.statusGuessing', { locale })}
           </ThemedText>
@@ -337,7 +344,7 @@ export const GuessingPhase: React.FC<Props> = ({
                 );
               })}
               {commentsForPlayer.length > 0 && !allCommentsHaveGuesses && (
-                <ThemedText style={{ textAlign: 'center', color: '#999', marginBottom: 8 }}>
+                <ThemedText style={{ textAlign: 'center', color: GameColors.placeholderLight, marginBottom: 8 }}>
                   {t('game.alerts.selectAuthorForEachCommentToEnableSubmit', { locale })}
                 </ThemedText>
               )}
@@ -345,7 +352,7 @@ export const GuessingPhase: React.FC<Props> = ({
                 <TouchableOpacity
                   style={[
                     styles.submitGuessButton,
-                    { backgroundColor: '#9C27B0', shadowColor: '#000' },
+                    { backgroundColor: GameColors.purple, shadowColor: '#000' },
                     (isSubmittingGuesses || !allCommentsHaveGuesses) && styles.buttonDisabled,
                   ]}
                   onPress={handleSubmitGuesses}
@@ -380,7 +387,7 @@ export const GuessingPhase: React.FC<Props> = ({
                   <TouchableOpacity
                     style={[
                       styles.adminButton,
-                      { backgroundColor: '#4CAF50', shadowColor: '#000' },
+                      { backgroundColor: GameColors.green, shadowColor: '#000' },
                       isFinalizingGuesses && styles.buttonDisabled,
                     ]}
                     onPress={handleFinalizeAndNextRound}
@@ -403,7 +410,7 @@ export const GuessingPhase: React.FC<Props> = ({
                   <TouchableOpacity
                     style={[
                       styles.adminButton,
-                      { backgroundColor: '#4CAF50', shadowColor: '#000' },
+                      { backgroundColor: GameColors.green, shadowColor: '#000' },
                       isFinalizingGuesses && styles.buttonDisabled,
                     ]}
                     onPress={handleFinalizeGuessingPhase}
@@ -449,8 +456,8 @@ export const GuessingPhase: React.FC<Props> = ({
                 <View
                   key={index}
                   style={{
-                    backgroundColor: result.correct ? '#E8F5E8' : '#FFEBEE',
-                    borderColor: result.correct ? '#34C759' : '#FF3B30',
+                    backgroundColor: result.correct ? GameColors.correctBg : GameColors.incorrectBg,
+                    borderColor: result.correct ? GameColors.correct : GameColors.incorrect,
                     borderWidth: 1,
                     borderRadius: 8,
                     padding: 16,
@@ -459,7 +466,7 @@ export const GuessingPhase: React.FC<Props> = ({
                 >
                   <ThemedText style={{
                     fontSize: 16, fontWeight: '600', marginBottom: 8, textAlign: 'center',
-                    color: result.correct ? '#34C759' : '#FF3B30',
+                    color: result.correct ? GameColors.correct : GameColors.incorrect,
                   }}>
                     {result.correct ? t('game.ui.correct', { locale }) : t('game.ui.incorrect', { locale })}
                   </ThemedText>
@@ -470,7 +477,7 @@ export const GuessingPhase: React.FC<Props> = ({
                     <ThemedText style={{ fontSize: 14, opacity: 0.7 }}>
                       {t('game.ui.actualAuthor', { locale })}:
                     </ThemedText>
-                    <ThemedText style={{ fontSize: 14, fontWeight: '600', color: result.correct ? '#34C759' : '#FF3B30' }}>
+                    <ThemedText style={{ fontSize: 14, fontWeight: '600', color: result.correct ? GameColors.correct : GameColors.incorrect }}>
                       {result.actualAuthorName}
                     </ThemedText>
                   </View>
@@ -487,7 +494,7 @@ export const GuessingPhase: React.FC<Props> = ({
             </ScrollView>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#34C759' }]}
+                style={[styles.modalButton, { backgroundColor: GameColors.correct }]}
                 onPress={() => setGuessResultModal(null)}
               >
                 <ThemedText style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>OK</ThemedText>
@@ -517,7 +524,7 @@ const styles = StyleSheet.create({
   guessPrompt: { fontSize: 14, fontWeight: '600', marginTop: 12, marginBottom: 8, color: '#555', fontFamily: Fonts.sans },
   authorOptionsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   authorOption: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.1)' },
-  selectedAuthorOption: { backgroundColor: '#4285F4', borderColor: '#4285F4' },
+  selectedAuthorOption: { backgroundColor: GameColors.blue, borderColor: GameColors.blue },
   authorName: { fontSize: 14, fontWeight: '500' },
   selectedAuthorName: { color: '#fff' },
   submitGuessButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
@@ -525,11 +532,11 @@ const styles = StyleSheet.create({
   guessResultsContainer: { marginTop: 16, alignItems: 'center' },
   guessResultsTitle: { marginBottom: 16, textAlign: 'center' },
   guessResultCard: { padding: 20, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', alignItems: 'center', width: '100%' },
-  guessResultText: { fontSize: 18, fontWeight: '600', textAlign: 'center', color: '#4CAF50', marginBottom: 8 },
+  guessResultText: { fontSize: 18, fontWeight: '600', textAlign: 'center', color: GameColors.green, marginBottom: 8 },
   guessResultDetail: { fontSize: 14, textAlign: 'center', opacity: 0.8 },
   guessResultContainer: { marginTop: 16, alignItems: 'center' },
-  guessResultCorrect: { color: '#4CAF50' },
-  guessResultIncorrect: { color: '#F44336' },
+  guessResultCorrect: { color: GameColors.correct },
+  guessResultIncorrect: { color: GameColors.incorrect },
   adminControls: { marginTop: 24 },
   adminButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12, paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   modalOverlay: { position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 },

@@ -1,3 +1,4 @@
+import { GameColors } from '@/constants/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: GameColors.green,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   manualButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: GameColors.blue,
   },
   buttonText: {
     color: '#fff',

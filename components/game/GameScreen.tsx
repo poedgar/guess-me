@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
+import { GameColors } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
@@ -146,7 +147,7 @@ export const GameScreen: React.FC = () => {
             )}
 
             <TouchableOpacity
-              style={[styles.leaveButton, { backgroundColor: '#ff3b30', shadowColor: '#000' }]}
+              style={[styles.leaveButton, { backgroundColor: GameColors.danger, shadowColor: '#000' }]}
               onPress={handleLeaveGame}
               activeOpacity={0.8}
             >

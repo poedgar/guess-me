@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors, Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
@@ -211,7 +211,7 @@ export const ActivePhase: React.FC<Props> = ({
       {/* Status badge */}
       <View style={styles.gameStatusContainer}>
         <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
-        <View style={[styles.statusBadge, { backgroundColor: '#4CAF50' }]}>
+        <View style={[styles.statusBadge, { backgroundColor: StatusColors.active }]}>
           <ThemedText style={styles.statusText}>
             {t('game.ui.statusActive', { locale })}
           </ThemedText>
@@ -237,7 +237,7 @@ export const ActivePhase: React.FC<Props> = ({
                   style={[
                     styles.adminButton,
                     {
-                      backgroundColor: '#FF9800',
+                      backgroundColor: GameColors.admin,
                       shadowColor: '#000',
                     },
                     (game.currentRound.comments?.length || 0) <
@@ -257,7 +257,7 @@ export const ActivePhase: React.FC<Props> = ({
                   style={[
                     styles.adminButton,
                     {
-                      backgroundColor: '#9C27B0',
+                      backgroundColor: GameColors.purple,
                       shadowColor: '#000',
                     },
                     loading && styles.buttonDisabled,
@@ -318,7 +318,7 @@ export const ActivePhase: React.FC<Props> = ({
                     style={[
                       styles.submitCommentButton,
                       {
-                        backgroundColor: '#9C27B0',
+                        backgroundColor: GameColors.purple,
                         shadowColor: '#000',
                       },
                       loading && styles.buttonDisabled,
@@ -372,13 +372,13 @@ export const ActivePhase: React.FC<Props> = ({
                       style={[
                         styles.commentInput,
                         {
-                          backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
+                          backgroundColor: isDark ? GameColors.inputDark : GameColors.inputLight,
                           color: isDark ? Colors.dark.text : Colors.light.text,
-                          borderColor: isDark ? '#444' : '#ddd',
+                          borderColor: isDark ? GameColors.inputBorderDark : GameColors.inputBorderLight,
                         },
                       ]}
                       placeholder={t('game.ui.commentPlaceholder', { locale })}
-                      placeholderTextColor={isDark ? '#888' : '#999'}
+                      placeholderTextColor={isDark ? GameColors.placeholderDark : GameColors.placeholderLight}
                       value={commentText}
                       onChangeText={setCommentText}
                       multiline
@@ -389,7 +389,7 @@ export const ActivePhase: React.FC<Props> = ({
                       style={[
                         styles.submitCommentButton,
                         {
-                          backgroundColor: '#4285F4',
+                          backgroundColor: GameColors.blue,
                           shadowColor: '#000',
                         },
                         (!commentText.trim() || isSubmittingComment) && styles.buttonDisabled,
@@ -441,7 +441,7 @@ export const ActivePhase: React.FC<Props> = ({
                         const hasCompletedPhase = game.playersWhoCompletedPostCommentPhase?.includes(user?.uid || '') ?? false;
                         return (
                           <View style={{ marginTop: 16 }}>
-                            <ThemedText style={{ width: 'fit-content', alignSelf: 'center', color: 'white', textAlign: 'center', marginBottom: 8, backgroundColor: '#4CAF50', padding: 8, borderRadius: 8 }}>
+                            <ThemedText style={{ width: 'fit-content', alignSelf: 'center', color: 'white', textAlign: 'center', marginBottom: 8, backgroundColor: GameColors.green, padding: 8, borderRadius: 8 }}>
                               Готово
                             </ThemedText>
                             {game.currentRound!.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
@@ -449,7 +449,7 @@ export const ActivePhase: React.FC<Props> = ({
                                 style={[
                                   styles.submitCommentButton,
                                   {
-                                    backgroundColor: '#4CAF50',
+                                    backgroundColor: GameColors.green,
                                     shadowColor: '#000',
                                   },
                                 ]}
@@ -473,7 +473,7 @@ export const ActivePhase: React.FC<Props> = ({
                                 style={[
                                   styles.submitCommentButton,
                                   {
-                                    backgroundColor: '#9E9E9E',
+                                    backgroundColor: GameColors.neutral,
                                     shadowColor: '#000',
                                     marginTop: 8,
                                   },
@@ -538,8 +538,8 @@ const styles = StyleSheet.create({
   commentsTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
   commentCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 12 },
   commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22, fontFamily: Fonts.sans },
-  pointsButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: '#4CAF50', paddingVertical: 8, paddingHorizontal: 12 },
-  pointsGivenText: { fontSize: 14, fontWeight: '600', color: '#4CAF50', marginTop: 8, fontFamily: Fonts.sans },
+  pointsButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: GameColors.green, paddingVertical: 8, paddingHorizontal: 12 },
+  pointsGivenText: { fontSize: 14, fontWeight: '600', color: GameColors.green, marginTop: 8, fontFamily: Fonts.sans },
   submitCommentButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },
   commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },

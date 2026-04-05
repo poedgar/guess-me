@@ -33,9 +33,16 @@ and insert SHA-1 into Firebase
 
 # TODO
 
-1. Buttons in a row
-2. Create apk
-3. Publish to Google Play
+Готово
+Жіночий рід
+
+Звуки на мобілі
+
+Анімація
+
+Звуки шо показують шо адмін може тиснути кніпку
+
+Publish to Google Play
 
 # Testing Documentation
 

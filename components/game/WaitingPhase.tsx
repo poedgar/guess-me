@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
@@ -170,7 +170,7 @@ export const WaitingPhase: React.FC<Props> = ({
                 value={game.id}
                 size={75}
                 color={isDark ? '#fff' : '#000'}
-                backgroundColor={isDark ? '#2a2a2a' : '#fff'}
+                backgroundColor={isDark ? GameColors.inputDark : '#fff'}
               />
             </View>
           </View>
@@ -180,7 +180,7 @@ export const WaitingPhase: React.FC<Props> = ({
       {/* Status */}
       <View style={styles.gameStatusContainer}>
         <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
-        <View style={[styles.statusBadge, { backgroundColor: '#FFA500' }]}>
+        <View style={[styles.statusBadge, { backgroundColor: StatusColors.waiting }]}>
           <ThemedText style={styles.statusText}>
             {t('game.ui.statusWaiting', { locale })}
           </ThemedText>
@@ -411,7 +411,7 @@ export const WaitingPhase: React.FC<Props> = ({
             style={[
               styles.startGameButton,
               {
-                backgroundColor: '#4CAF50',
+                backgroundColor: GameColors.green,
                 shadowColor: '#000',
               },
               (loading || game.participants.length < 2) && styles.buttonDisabled,
@@ -436,7 +436,7 @@ export const WaitingPhase: React.FC<Props> = ({
 const styles = StyleSheet.create({
   gameIdContainer: { marginBottom: 20 },
   gameIdLabel: { marginBottom: 8, opacity: 0.7 },
-  gameIdBox: { backgroundColor: 'rgba(76, 175, 80, 0.1)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(76, 175, 80, 0.3)' },
+  gameIdBox: { backgroundColor: 'rgba(52, 199, 89, 0.1)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(52, 199, 89, 0.3)' },
   gameIdText: { fontSize: 14, fontWeight: '700', fontFamily: 'monospace', marginBottom: 4 },
   copyHint: { fontSize: 10, opacity: 0.6 },
   qrCodeContainer: {
@@ -467,13 +467,13 @@ const styles = StyleSheet.create({
   toggleLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
   toggleDescription: { fontSize: 14, opacity: 0.7, lineHeight: 20, fontFamily: Fonts.sans },
   toggleButton: { width: 51, height: 31, borderRadius: 15.5, backgroundColor: '#767577', padding: 2, position: 'relative' },
-  toggleButtonActive: { backgroundColor: '#4CAF50' },
+  toggleButtonActive: { backgroundColor: GameColors.green },
   toggleThumb: { width: 27, height: 27, borderRadius: 13.5, backgroundColor: '#f4f3f4', position: 'absolute', top: 2, left: 2 },
   toggleThumbActive: { backgroundColor: '#fff' },
   participantsContainer: { marginBottom: 24 },
   participantsTitle: { marginBottom: 12, fontFamily: Fonts.sans },
   participantItem: { padding: 12, borderRadius: 8, marginBottom: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
-  adminParticipant: { backgroundColor: 'rgba(255, 165, 0, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 165, 0, 0.3)' },
+  adminParticipant: { backgroundColor: 'rgba(255, 149, 0, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 149, 0, 0.3)' },
   participantInfo: { flex: 1 },
   participantName: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
   participantEmail: { fontSize: 14, opacity: 0.7, fontFamily: Fonts.sans },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   leaderboard: { borderRadius: 8, overflow: 'hidden' },
   leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
   leaderboardFirst: { backgroundColor: 'rgba(255, 215, 0, 0.2)', borderWidth: 2, borderColor: 'rgba(255, 215, 0, 0.5)' },
-  leaderboardCurrentUser: { backgroundColor: 'rgba(66, 133, 244, 0.15)', borderWidth: 1, borderColor: 'rgba(66, 133, 244, 0.3)' },
+  leaderboardCurrentUser: { backgroundColor: 'rgba(0, 122, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(0, 122, 255, 0.3)' },
   leaderboardRank: { width: 40, alignItems: 'center', justifyContent: 'center' },
   rankEmoji: { fontSize: 24 },
   rankNumber: { fontSize: 14, fontWeight: '600', opacity: 0.6 },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   pointsRow: { marginTop: 4, flexDirection: 'row', flexWrap: 'wrap' },
   pointsDetail: { fontSize: 12, opacity: 0.8, marginRight: 8 },
   leaderboardPoints: { alignItems: 'flex-end' },
-  pointsValue: { fontSize: 20, fontWeight: '700', color: '#4CAF50' },
+  pointsValue: { fontSize: 20, fontWeight: '700', color: GameColors.green },
   pointsLabel: { fontSize: 12, opacity: 0.6, marginTop: 2 },
   leaderboardScroll: { maxHeight: 200, marginTop: 8 },
   gameFlowContainer: { marginTop: 24, marginBottom: 24 },

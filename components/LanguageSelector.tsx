@@ -49,8 +49,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.05)',
   },
   pillActive: {
-    backgroundColor: 'rgba(76, 175, 80, 0.25)',
-    borderColor: 'rgba(76, 175, 80, 0.6)',
+    backgroundColor: 'rgba(52, 199, 89, 0.25)',
+    borderColor: 'rgba(52, 199, 89, 0.6)',
   },
   pillText: {
     fontWeight: '700',

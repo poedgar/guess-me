@@ -1,7 +1,7 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
-import { Fonts } from '@/constants/theme';
+import { GameColors } from '@/constants/theme';
 import { Game } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n';
@@ -48,6 +48,6 @@ const styles = StyleSheet.create({
   gameHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   gameTitle: { flex: 1 },
   gameHeaderRight: { flexDirection: 'row', alignItems: 'center' },
-  adminBadge: { height: 'max-content', backgroundColor: '#FFA500', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 12 },
+  adminBadge: { height: 'max-content', backgroundColor: GameColors.waiting, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 12 },
   adminBadgeText: { color: '#fff', fontSize: 8, fontWeight: '700' },
 });

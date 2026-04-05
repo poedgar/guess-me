@@ -27,6 +27,52 @@ export const Colors = {
   },
 };
 
+/** Semantic game colors — iOS HIG system palette. Use these instead of hardcoded hex values. */
+export const GameColors = {
+  /** Primary action / success / points awarded — iOS green */
+  green: '#34C759',
+  /** Admin controls / show comments — iOS orange */
+  admin: '#FF9500',
+  /** Guessing phase / start guessing button — iOS purple */
+  purple: '#AF52DE',
+  /** Comment submit / Google auth — iOS blue */
+  blue: '#007AFF',
+  /** Destructive actions / leave / error — iOS red */
+  danger: '#FF3B30',
+  /** Waiting status badge — iOS orange (same as admin) */
+  waiting: '#FF9500',
+  /** Correct guess / positive feedback — iOS green */
+  correct: '#34C759',
+  /** Incorrect guess / negative feedback — iOS red */
+  incorrect: '#FF3B30',
+  /** Correct guess result background */
+  correctBg: '#E6F9EC',
+  /** Incorrect guess result background */
+  incorrectBg: '#FFEBE9',
+  /** Neutral / grey / skipped — iOS gray */
+  neutral: '#8E8E93',
+  /** Dark-mode input background — iOS grouped secondary */
+  inputDark: '#2C2C2E',
+  /** Light-mode input background — iOS grouped secondary */
+  inputLight: '#F2F2F7',
+  /** Dark-mode input border — iOS separator dark */
+  inputBorderDark: '#3A3A3C',
+  /** Light-mode input border — iOS separator light */
+  inputBorderLight: '#C6C6C8',
+  /** Placeholder text in dark mode — iOS gray */
+  placeholderDark: '#8E8E93',
+  /** Placeholder text in light mode — iOS gray */
+  placeholderLight: '#8E8E93',
+};
+
+/** Status badge background colors, keyed by game status string. */
+export const StatusColors: Record<string, string> = {
+  waiting: '#FF9500',
+  active: '#34C759',
+  guessing_phase: '#AF52DE',
+  finished: '#8E8E93',
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

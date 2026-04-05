@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { GameColors } from '@/constants/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
@@ -34,7 +35,7 @@ export default function RulesScreen() {
       contentContainerStyle={styles.contentContainer}
     >      
       {/* Game Overview */}
-      <View style={[styles.section, { backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
         <View style={styles.sectionHeader}>
       <HeaderLogo />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -47,16 +48,16 @@ export default function RulesScreen() {
       </View>
 
       {/* How to Play */}
-      <View style={[styles.section, { backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
         <View style={styles.sectionHeader}>
-          <IconSymbol name="play.fill" size={24} color="#4285F4" />
+          <IconSymbol name="play.fill" size={24} color={GameColors.blue} />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t('rules.howToPlay.title', { locale })}
           </ThemedText>
         </View>
         <View style={styles.stepList}>
           <View style={styles.step}>
-            <View style={[styles.stepNumber, { backgroundColor: '#4CAF50' }]}>
+            <View style={[styles.stepNumber, { backgroundColor: GameColors.green }]}>
               <ThemedText style={styles.stepNumberText}>1</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
@@ -66,7 +67,7 @@ export default function RulesScreen() {
           </View>
           
           <View style={styles.step}>
-            <View style={[styles.stepNumber, { backgroundColor: '#2196F3' }]}>
+            <View style={[styles.stepNumber, { backgroundColor: GameColors.blue }]}>
               <ThemedText style={styles.stepNumberText}>2</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
@@ -76,7 +77,7 @@ export default function RulesScreen() {
           </View>
           
           <View style={styles.step}>
-            <View style={[styles.stepNumber, { backgroundColor: '#FF9800' }]}>
+            <View style={[styles.stepNumber, { backgroundColor: GameColors.admin }]}>
               <ThemedText style={styles.stepNumberText}>3</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
@@ -86,7 +87,7 @@ export default function RulesScreen() {
           </View>
           
           <View style={styles.step}>
-            <View style={[styles.stepNumber, { backgroundColor: '#9C27B0' }]}>
+            <View style={[styles.stepNumber, { backgroundColor: GameColors.purple }]}>
               <ThemedText style={styles.stepNumberText}>4</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
@@ -96,7 +97,7 @@ export default function RulesScreen() {
           </View>
           
           <View style={styles.step}>
-            <View style={[styles.stepNumber, { backgroundColor: '#F44336' }]}>
+            <View style={[styles.stepNumber, { backgroundColor: GameColors.danger }]}>
               <ThemedText style={styles.stepNumberText}>5</ThemedText>
             </View>
             <ThemedText style={styles.stepText}>
@@ -108,7 +109,7 @@ export default function RulesScreen() {
       </View>
 
       {/* Scoring System */}
-      <View style={[styles.section, { backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
         <View style={styles.sectionHeader}>
           <IconSymbol name="trophy.fill" size={24} color="#FFD700" />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -117,7 +118,7 @@ export default function RulesScreen() {
         </View>
         <View style={styles.scoringList}>
           <View style={styles.scoringItem}>
-            <View style={[styles.scoringBadge, { backgroundColor: '#4CAF50' }]}>
+            <View style={[styles.scoringBadge, { backgroundColor: GameColors.green }]}>
               <ThemedText style={styles.scoringBadgeText}>{t('rules.scoring.comments.badge', { locale })}</ThemedText>
             </View>
             <ThemedText style={styles.scoringText}>
@@ -127,7 +128,7 @@ export default function RulesScreen() {
           </View>
           
           <View style={styles.scoringItem}>
-            <View style={[styles.scoringBadge, { backgroundColor: '#2196F3' }]}>
+            <View style={[styles.scoringBadge, { backgroundColor: GameColors.blue }]}>
               <ThemedText style={styles.scoringBadgeText}>{t('rules.scoring.target.badge', { locale })}</ThemedText>
             </View>
             <ThemedText style={styles.scoringText}>
@@ -137,7 +138,7 @@ export default function RulesScreen() {
           </View>
           
           <View style={styles.scoringItem}>
-            <View style={[styles.scoringBadge, { backgroundColor: '#FF9800' }]}>
+            <View style={[styles.scoringBadge, { backgroundColor: GameColors.admin }]}>
               <ThemedText style={styles.scoringBadgeText}>{t('rules.scoring.guessing.badge', { locale })}</ThemedText>
             </View>
             <ThemedText style={styles.scoringText}>
@@ -149,34 +150,34 @@ export default function RulesScreen() {
       </View>
 
       {/* Admin Features */}
-      <View style={[styles.section, { backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
         <View style={styles.sectionHeader}>
-          <IconSymbol name="crown.fill" size={24} color="#FFA500" />
+          <IconSymbol name="crown.fill" size={24} color={GameColors.waiting} />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t('rules.admin.title', { locale })}
           </ThemedText>
         </View>
         <View style={styles.featureList}>
           <View style={styles.feature}>
-            <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
+            <IconSymbol name="checkmark.circle.fill" size={20} color={GameColors.green} />
             <ThemedText style={styles.featureText}>
               {t('rules.admin.feature1', { locale })}
             </ThemedText>
           </View>
           <View style={styles.feature}>
-            <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
+            <IconSymbol name="checkmark.circle.fill" size={20} color={GameColors.green} />
             <ThemedText style={styles.featureText}>
               {t('rules.admin.feature2', { locale })}
             </ThemedText>
           </View>
           <View style={styles.feature}>
-            <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
+            <IconSymbol name="checkmark.circle.fill" size={20} color={GameColors.green} />
             <ThemedText style={styles.featureText}>
               {t('rules.admin.feature3', { locale })}
             </ThemedText>
           </View>
           <View style={styles.feature}>
-            <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
+            <IconSymbol name="checkmark.circle.fill" size={20} color={GameColors.green} />
             <ThemedText style={styles.featureText}>
               {t('rules.admin.feature4', { locale })}
             </ThemedText>
@@ -185,7 +186,7 @@ export default function RulesScreen() {
       </View>
 
       {/* Tips */}
-      <View style={[styles.section, { backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
         <View style={styles.sectionHeader}>
           <IconSymbol name="lightbulb.fill" size={24} color="#FFD700" />
           <ThemedText type="subtitle" style={styles.sectionTitle}>

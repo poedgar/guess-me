@@ -1,3 +1,4 @@
+import { GameColors } from '@/constants/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
@@ -46,7 +47,7 @@ export default function QRCodeGenerator({ gameId, visible, onClose }: QRCodeGene
               value={gameId}
               size={200}
               color={isDark ? '#fff' : '#000'}
-              backgroundColor={isDark ? '#2a2a2a' : '#fff'}
+              backgroundColor={isDark ? GameColors.inputDark : '#fff'}
             />
           </View>
           
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   containerDark: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: GameColors.inputDark,
   },
   header: {
     flexDirection: 'row',
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   shareButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: GameColors.green,
   },
   closeButtonAction: {
     backgroundColor: '#666',

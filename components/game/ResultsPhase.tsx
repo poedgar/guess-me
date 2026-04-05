@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { Fonts } from '@/constants/theme';
+import { Fonts, GameColors } from '@/constants/theme';
 import { Game } from '@/contexts/GameContext';
 import { t } from '@/i18n';
 import React from 'react';
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   leaderboard: { borderRadius: 8, overflow: 'hidden' },
   leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
   leaderboardFirst: { backgroundColor: 'rgba(255, 215, 0, 0.2)', borderWidth: 2, borderColor: 'rgba(255, 215, 0, 0.5)' },
-  leaderboardCurrentUser: { backgroundColor: 'rgba(66, 133, 244, 0.15)', borderWidth: 1, borderColor: 'rgba(66, 133, 244, 0.3)' },
+  leaderboardCurrentUser: { backgroundColor: 'rgba(0, 122, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(0, 122, 255, 0.3)' },
   leaderboardRank: { width: 40, alignItems: 'center', justifyContent: 'center' },
   rankEmoji: { fontSize: 24 },
   rankNumber: { fontSize: 14, fontWeight: '600', opacity: 0.6 },
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   pointsRow: { marginTop: 4, flexDirection: 'row', flexWrap: 'wrap' },
   pointsDetail: { fontSize: 12, opacity: 0.8, marginRight: 8 },
   leaderboardPoints: { alignItems: 'flex-end' },
-  pointsValue: { fontSize: 20, fontWeight: '700', color: '#4CAF50' },
+  pointsValue: { fontSize: 20, fontWeight: '700', color: GameColors.green },
   pointsLabel: { fontSize: 12, opacity: 0.6, marginTop: 2 },
   leaderboardScroll: { maxHeight: 200, marginTop: 8 },
 });

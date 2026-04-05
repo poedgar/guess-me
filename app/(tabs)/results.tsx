@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
+import { GameColors } from '@/constants/theme';
 import type { Comment, Round } from '@/contexts/GameContext';
 import { Participant, useGame } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   button: {
-    backgroundColor: '#4285F4',
+    backgroundColor: GameColors.blue,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
   leaderboardScroll: { maxHeight: 260 },
   leaderboardRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
   leaderboardName: { fontSize: 16, fontWeight: '600' },
-  points: { fontSize: 16, fontWeight: '700', color: '#4CAF50' },
+  points: { fontSize: 16, fontWeight: '700', color: GameColors.green },
   // Round History styles
   roundHistoryContainer: { marginBottom: 24, marginTop: 8 },
   roundHistoryTitle: { marginBottom: 16, textAlign: 'center' },
@@ -175,13 +176,13 @@ const styles = StyleSheet.create({
   roundHistoryHeader: { marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(0, 0, 0, 0.1)' },
   roundHistoryRoundNumber: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
   roundHistoryTarget: { fontSize: 16, opacity: 0.7 },
-  roundHistoryTargetPoints: { marginTop: 6, fontSize: 14, fontWeight: '700', color: '#4CAF50' },
+  roundHistoryTargetPoints: { marginTop: 6, fontSize: 14, fontWeight: '700', color: GameColors.green },
   roundHistoryComments: { marginTop: 8 },
   roundHistoryCommentsTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8, opacity: 0.8 },
   roundHistoryComment: { padding: 12, marginBottom: 8, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.5)' },
   roundHistoryCommentText: { fontSize: 14, lineHeight: 20, marginBottom: 8, fontStyle: 'italic' },
   roundHistoryCommentPoints: { alignSelf: 'flex-end' },
-  roundHistoryPointsValue: { fontSize: 14, fontWeight: '600', color: '#4CAF50' },
+  roundHistoryPointsValue: { fontSize: 14, fontWeight: '600', color: GameColors.green },
   noCommentsText: { textAlign: 'center', opacity: 0.5, fontSize: 14, fontStyle: 'italic', padding: 8 },
   // No results styles
   noResultsContainer: { 
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     textAlign: 'center', 
     lineHeight: 24,
-    color: '#888',
+    color: GameColors.neutral,
     maxWidth: 300
   },
 });

@@ -1,6 +1,6 @@
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Colors, GameColors } from '@/constants/theme';
 import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React from 'react';
@@ -14,7 +14,7 @@ export const SoundToggle: React.FC = () => {
   return (
     <TouchableOpacity
       onPress={toggleSound}
-      style={[styles.container, { borderColor: isDark ? '#444' : '#ddd' }]}
+      style={[styles.container, { borderColor: isDark ? GameColors.inputBorderDark : GameColors.inputBorderLight }]}
       accessibilityLabel={isSoundEnabled ? 'Disable sound' : 'Enable sound'}
       accessibilityRole="button"
     >

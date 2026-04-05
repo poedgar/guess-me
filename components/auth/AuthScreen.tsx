@@ -4,7 +4,7 @@ import { ThemedView } from '@/components/themed-view';
 import { FancyAlert, FancyAlertButton } from '@/components/ui/FancyAlert';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Fonts } from '@/constants/theme';
+import { Colors, Fonts, GameColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
@@ -143,7 +143,7 @@ export const AuthScreen: React.FC = () => {
             style={[
               styles.signOutButton,
               {
-                backgroundColor: isDark ? '#ff3b30' : '#ff3b30',
+                backgroundColor: GameColors.danger,
                 shadowColor: '#000',
               },
             ]}
@@ -188,7 +188,7 @@ export const AuthScreen: React.FC = () => {
               style={[
                 styles.webGoogleButton,
                 {
-                  backgroundColor: '#4285F4',
+                  backgroundColor: GameColors.blue,
                   shadowColor: '#000',
                 },
               ]}
@@ -198,7 +198,7 @@ export const AuthScreen: React.FC = () => {
             >
               <View style={styles.webGoogleButtonContent}>
                 <View style={styles.webGoogleIcon}>
-                  <IconSymbol name="lock.shield" size={20} color="#4285F4" />
+                  <IconSymbol name="lock.shield" size={20} color={GameColors.blue} />
                 </View>
                 <ThemedText style={styles.webGoogleButtonText}>
                   {t('auth.signInWithGoogle', { locale })}
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   webGoogleIconText: {
-    color: '#4285F4',
+    color: GameColors.blue,
     fontSize: 14,
     fontWeight: 'bold',
     fontFamily: Fonts.sans,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4285F4',
+    backgroundColor: GameColors.blue,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 8,

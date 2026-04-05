@@ -1,6 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { Fonts, GameColors } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
@@ -119,7 +119,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
             style={[
               styles.adminButton,
               {
-                backgroundColor: '#FF9800',
+                backgroundColor: GameColors.admin,
                 shadowColor: '#000',
               },
             ]}
@@ -219,7 +219,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
               style={[
                 styles.submitGuessButton,
                 {
-                  backgroundColor: '#4CAF50',
+                  backgroundColor: GameColors.green,
                   shadowColor: '#000',
                 },
                 isAwardingPoints && styles.buttonDisabled,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   guessResultsContainer: { marginTop: 16, alignItems: 'center' },
   guessResultsTitle: { marginBottom: 16, textAlign: 'center' },
   guessResultCard: { padding: 20, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', alignItems: 'center', width: '100%' },
-  guessResultText: { fontSize: 18, fontWeight: '600', textAlign: 'center', color: '#4CAF50', marginBottom: 8 },
+  guessResultText: { fontSize: 18, fontWeight: '600', textAlign: 'center', color: GameColors.green, marginBottom: 8 },
   guessResultDetail: { fontSize: 14, textAlign: 'center', opacity: 0.8 },
   postGuessingPointsContainer: { marginTop: 16 },
   guessingInstructions: { fontSize: 16, marginBottom: 20, lineHeight: 24, fontFamily: Fonts.sans },
@@ -301,8 +301,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pointButtonSelected: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: GameColors.green,
+    borderColor: GameColors.green,
   },
   pointButtonText: {
     fontSize: 14,
