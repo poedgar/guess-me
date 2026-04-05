@@ -1,4 +1,5 @@
 import { ThemedView } from '@/components/themed-view';
+import { FaceMessage } from '@/components/ui/FaceMessage';
 import { FancyAlert, FancyAlertButton } from '@/components/ui/FancyAlert';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { GameColors } from '@/constants/theme';
@@ -32,6 +33,21 @@ export const GameScreen: React.FC = () => {
   const [fancyMessage, setFancyMessage] = useState<string | null>(null);
   const [fancyButtons, setFancyButtons] = useState<FancyAlertButton[]>([]);
   const [fancyCustomContent, setFancyCustomContent] = useState<React.ReactNode>();
+
+  const [faceMessage, setFaceMessage] = useState<{ visible: boolean; message: string; face?: string }>({
+    visible: false,
+    message: '',
+    face: '😊',
+  });
+
+  // Add function after showFancyAlert
+  const showFaceMessage = (message: string, face?: React.ReactNode) => {
+    setFaceMessage({ visible: true, message, face });
+  };
+  
+  const closeFaceMessage = () => {
+    setFaceMessage(prev => ({ ...prev, visible: false }));
+  };
 
   const showFancyAlert = (title: string, message?: string | null, buttons?: FancyAlertButton[], customContent?: React.ReactNode) => {
     setFancyTitle(title);
@@ -109,6 +125,7 @@ export const GameScreen: React.FC = () => {
     joinIndexById,
     getDisplayName,
     showFancyAlert,
+    showFaceMessage,
     locale,
     isDark,
   };
@@ -117,7 +134,7 @@ export const GameScreen: React.FC = () => {
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {!isSignedIn || !currentGame ? (
-          <JoinScreen isSignedIn={isSignedIn} isDark={isDark} showFancyAlert={showFancyAlert} />
+          <JoinScreen isSignedIn={isSignedIn} isDark={isDark} showFancyAlert={showFancyAlert} showFaceMessage={showFaceMessage} />
         ) : (
           <>
             <GameHeader
@@ -166,6 +183,13 @@ export const GameScreen: React.FC = () => {
         buttons={fancyButtons}
         onClose={closeFancyAlert}
         customContent={fancyCustomContent}
+      />
+
+      <FaceMessage
+        visible={faceMessage.visible}
+        message={faceMessage.message}
+        face={faceMessage.face}
+        onComplete={() => setFaceMessage(prev => ({ ...prev, visible: false }))}
       />
     </ThemedView>
   );

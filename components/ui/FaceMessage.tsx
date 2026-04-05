@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { useSound } from '@/contexts/SoundContext';
 import * as Haptics from 'expo-haptics';
+import React, { useEffect, useState } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 
 interface Props {
   visible: boolean;
   message: string;
-  face?: string;
+  face?: React.ReactNode;
   duration?: number;
   onComplete?: () => void;
 }
@@ -83,7 +83,12 @@ export function FaceMessage({
           },
         ]}
       >
-        <ThemedText style={styles.face}>{face}</ThemedText>
+        {typeof face === 'string' ? (
+          <ThemedText style={styles.face}>{face}</ThemedText>
+        ) : (
+          <View style={styles.customContent}>{face}</View>
+        )}
+        
         <ThemedText style={styles.message}>{message}</ThemedText>
       </Animated.View>
     </View>

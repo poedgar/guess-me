@@ -1,8 +1,8 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
-import { SuccessAnimation } from '@/components/ui/SuccessAnimation';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SuccessAnimation } from '@/components/ui/SuccessAnimation';
 import { Colors, Fonts, GameColors } from '@/constants/theme';
 import { useGame } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,9 +25,10 @@ interface Props {
   isSignedIn: boolean;
   isDark: boolean;
   showFancyAlert: ShowFancyAlertFn;
+  showFaceMessage: (message: string, face?: string) => void; 
 }
 
-export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert }) => {
+export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert, showFaceMessage }) => {
   const { locale } = useLanguage();
   const { playSound } = useSound();
   const { enterGame, loading } = useGame();
@@ -79,12 +80,21 @@ export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert
         );
       } else {
         setGameIdInput('');
-        showFancyAlert(t('common.success', { locale }), t('game.alerts.joinedGameMessage', { locale }));
+        //showFancyAlert(t('common.success', { locale }), t('game.alerts.joinedGameMessage', { locale }));
+        showFaceMessage(
+          t('game.alerts.joinedGameMessage', { locale }), 
+          <View style={{ padding: 16 }}><SuccessAnimation /></View>
+        );      
       }
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.enterGameFailed', { locale }));
+      // showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.enterGameFailed', { locale }));
+      // setFaceMessage({
+      //     visible: true,
+      //     message: t('common.error', { locale }), error.message || t('game.alerts.enterGameFailed', { locale }),
+      //     face: '🎉',
+      //   });
     } finally {
       setIsProcessingEnter(false);
     }
@@ -107,6 +117,7 @@ export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert
   }
 
   return (
+    <>
     <View style={styles.actionContainer}>
       <View style={styles.inlineLanguageToggle}>
         <HeaderLogo />
@@ -162,6 +173,7 @@ export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert
         </TouchableOpacity>
       </View>
     </View>
+    </>
   );
 };
 
