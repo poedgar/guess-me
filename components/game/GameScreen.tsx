@@ -1,13 +1,13 @@
 import { ThemedView } from '@/components/themed-view';
 import { FancyAlert, FancyAlertButton } from '@/components/ui/FancyAlert';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { GameColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGame } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
-import { GameColors } from '@/constants/theme';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
@@ -31,11 +31,13 @@ export const GameScreen: React.FC = () => {
   const [fancyTitle, setFancyTitle] = useState<string | null>(null);
   const [fancyMessage, setFancyMessage] = useState<string | null>(null);
   const [fancyButtons, setFancyButtons] = useState<FancyAlertButton[]>([]);
+  const [fancyCustomContent, setFancyCustomContent] = useState<React.ReactNode>();
 
-  const showFancyAlert = (title: string, message?: string | null, buttons?: FancyAlertButton[]) => {
+  const showFancyAlert = (title: string, message?: string | null, buttons?: FancyAlertButton[], customContent?: React.ReactNode) => {
     setFancyTitle(title);
     setFancyMessage(message ?? null);
     setFancyButtons(buttons && buttons.length > 0 ? buttons : [{ text: t('common.ok', { locale }) }]);
+    setFancyCustomContent(customContent);
     setFancyVisible(true);
   };
 
@@ -163,6 +165,7 @@ export const GameScreen: React.FC = () => {
         message={fancyMessage}
         buttons={fancyButtons}
         onClose={closeFancyAlert}
+        customContent={fancyCustomContent}
       />
     </ThemedView>
   );

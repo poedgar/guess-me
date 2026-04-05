@@ -12,7 +12,8 @@ import { StyleSheet, View } from 'react-native';
 export type ShowFancyAlertFn = (
   title: string,
   message?: string | null,
-  buttons?: FancyAlertButton[]
+  buttons?: FancyAlertButton[],
+  customContent?: React.ReactNode
 ) => void;
 
 interface Props {

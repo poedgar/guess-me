@@ -1,6 +1,7 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
+import { SuccessAnimation } from '@/components/ui/SuccessAnimation';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts, GameColors } from '@/constants/theme';
 import { useGame } from '@/contexts/GameContext';
@@ -71,7 +72,10 @@ export const JoinScreen: React.FC<Props> = ({ isSignedIn, isDark, showFancyAlert
               },
             },
             { text: t('common.ok', { locale }) },
-          ]
+          ],
+          <View style={{ padding: 16 }}>
+            <SuccessAnimation />
+          </View>
         );
       } else {
         setGameIdInput('');

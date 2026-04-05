@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { useSound } from '@/contexts/SoundContext';
+import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export interface FancyAlertButton {
@@ -14,9 +15,10 @@ interface Props {
   message?: string | null;
   buttons: FancyAlertButton[];
   onClose: () => void;
+  customContent?: React.ReactNode;
 }
 
-export function FancyAlert({ visible, title, message, buttons, onClose }: Props) {
+export function FancyAlert({ visible, title, message, buttons, onClose, customContent }: Props) {
   const { playSound } = useSound();
 
   if (!visible) return null;
@@ -24,6 +26,7 @@ export function FancyAlert({ visible, title, message, buttons, onClose }: Props)
   return (
     <View style={styles.overlay}>
       <View style={styles.content}>
+        {customContent}
         {title ? (
           <ThemedText style={styles.title} lightColor="#000" darkColor="#000">
             {title}
