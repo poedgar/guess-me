@@ -2,7 +2,6 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
@@ -180,10 +179,12 @@ export const WaitingPhase: React.FC<Props> = ({
       {/* Status */}
       <View style={styles.gameStatusContainer}>
         <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
-        <View style={[styles.statusBadge, { backgroundColor: StatusColors.waiting }]}>
+        <View style={[styles.statusBadge, { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, }]}>
           <ThemedText style={styles.statusText}>
             {t('game.ui.statusWaiting', { locale })}
           </ThemedText>
+
+          {/* <LiquidLoaderAnimation /> */}
         </View>
       </View>
 
@@ -460,8 +461,8 @@ const styles = StyleSheet.create({
   },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  statusText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  statusBadge: {  },
+  statusText: { backgroundColor: StatusColors.waiting, paddingHorizontal: 12, paddingVertical: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, color: '#fff', fontSize: 12, fontWeight: '700' },
   toggleContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: 16, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: 8 },
   toggleInfo: { flex: 1, marginRight: 16 },
   toggleLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },

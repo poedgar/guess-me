@@ -1,4 +1,4 @@
-import { Image as ExpoImage } from 'expo-image';
+import { OwlsAnimation } from '@/components/ui/OwlsAnimation';
 import { Platform, StyleSheet, View } from 'react-native';
 
 export function HeaderLogo() {
@@ -9,7 +9,7 @@ export function HeaderLogo() {
 
   return (
     <View style={styles.container}>
-      <ExpoImage source={source} style={styles.logo} contentFit="contain" />
+      <OwlsAnimation />
     </View>
   );
 }
@@ -19,10 +19,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
     backgroundColor: 'transparent',
-    marginTop: -60,
+    marginTop: -140,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 140,
+    height: 140,
   },
 });

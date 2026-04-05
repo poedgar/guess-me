@@ -1,8 +1,8 @@
 import { ThemedText } from '@/components/themed-text';
+import { FaceMessage } from '@/components/ui/FaceMessage';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
@@ -57,6 +57,12 @@ export const ActivePhase: React.FC<Props> = ({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
   const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
+  const [selectedPoints, setSelectedPoints] = useState(1);
+  const [faceMessage, setFaceMessage] = useState<{ visible: boolean; message: string; face?: string }>({
+    visible: false,
+    message: '',
+    face: '😊',
+  });
 
   const getRequiredComments = () => {
     if (!game.currentRound) return 0;
@@ -67,11 +73,16 @@ export const ActivePhase: React.FC<Props> = ({
       return game.participants.length - 2;
     }
 
-    if (isTargetAdmin && !game.adminWritesComments) {
+    if (isTargetAdmin) {
       return game.participants.length - 1;
     }
 
-    return game.participants.length - 1;
+    return game.participants.length - 2;
+  };
+
+  const getMaxPoints = () => {
+    // Maximum points is participants count minus 1 (excluding the target themselves)
+    return Math.max(1, game.participants.length - 1);
   };
 
   const handleSubmitComment = async () => {
@@ -159,9 +170,13 @@ export const ActivePhase: React.FC<Props> = ({
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePointsToTarget(game.currentRound.targetUserId, points);
-      await playSound('points');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert(t('common.success', { locale }), t('game.alerts.targetPointsAwarded', { locale }));
+      
+      // Show face message instead of fancy alert
+      setFaceMessage({
+        visible: true,
+        message: points > 0 ? `Ти дав ${points} бал(ів) цільовому гравцю!` : 'Ти пропустив фазу!',
+        face: points > 0 ? '' : '',
+      });
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -180,8 +195,13 @@ export const ActivePhase: React.FC<Props> = ({
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await skipPostCommentPhase();
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert(t('common.success', { locale }), 'You skipped the post-comment phase');
+      
+      // Show face message instead of fancy alert
+      setFaceMessage({
+        visible: true,
+        message: 'Ти пропустив фазу коментарів!',
+        face: '🤷‍♂️',
+      });
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -441,32 +461,56 @@ export const ActivePhase: React.FC<Props> = ({
                         const hasCompletedPhase = game.playersWhoCompletedPostCommentPhase?.includes(user?.uid || '') ?? false;
                         return (
                           <View style={{ marginTop: 16 }}>
-                            <ThemedText style={{ width: 'fit-content', alignSelf: 'center', color: 'white', textAlign: 'center', marginBottom: 8, backgroundColor: GameColors.green, padding: 8, borderRadius: 8 }}>
-                              Готово
-                            </ThemedText>
                             {game.currentRound!.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
-                              <TouchableOpacity
-                                style={[
-                                  styles.submitCommentButton,
-                                  {
-                                    backgroundColor: GameColors.green,
-                                    shadowColor: '#000',
-                                  },
-                                ]}
-                                onPress={() => handleGivePointsToTarget(1)}
-                                disabled={alreadyGaveTargetPoints || givingPointsToTarget}
-                                activeOpacity={0.8}
-                              >
-                                {givingPointsToTarget ? (
-                                  <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                  <ThemedText style={styles.buttonText}>
-                                    {alreadyGaveTargetPoints
-                                      ? 'Бали нараховано'
-                                      : 'Дати 1 бал цільовому гравцю'}
-                                  </ThemedText>
-                                )}
-                              </TouchableOpacity>
+                              <View>
+                                {/* Points Selection */}
+                                <ThemedText style={styles.pointsSelectionTitle}>
+                                  Оберіть кількість балів:
+                                </ThemedText>
+                                <View style={styles.pointsButtonsContainer}>
+                                  {Array.from({ length: getMaxPoints() }, (_, i) => i + 1).map((points) => (
+                                    <TouchableOpacity
+                                      key={points}
+                                      style={[
+                                        styles.pointsButton,
+                                        selectedPoints === points && styles.pointsButtonSelected,
+                                      ]}
+                                      onPress={() => setSelectedPoints(points)}
+                                      activeOpacity={0.8}
+                                    >
+                                      <ThemedText style={[
+                                        styles.pointsButtonText,
+                                        selectedPoints === points && styles.pointsButtonTextSelected
+                                      ]}>
+                                        {points}
+                                      </ThemedText>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                                
+                                {/* Give Points Button */}
+                                <TouchableOpacity
+                                  style={[
+                                    styles.submitCommentButton,
+                                    {
+                                      backgroundColor: GameColors.green,
+                                      shadowColor: '#000',
+                                      marginTop: 12,
+                                    },
+                                  ]}
+                                  onPress={() => handleGivePointsToTarget(selectedPoints)}
+                                  disabled={alreadyGaveTargetPoints || givingPointsToTarget}
+                                  activeOpacity={0.8}
+                                >
+                                  {givingPointsToTarget ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                  ) : (
+                                    <ThemedText style={styles.buttonText}>
+                                      {`Дати ${selectedPoints} бал${selectedPoints > 1 ? 'и' : ''} цільовому гравцю`}
+                                    </ThemedText>
+                                  )}
+                                </TouchableOpacity>
+                              </View>
                             )}
                             {game.currentRound!.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
                               <TouchableOpacity
@@ -513,34 +557,65 @@ export const ActivePhase: React.FC<Props> = ({
           locale={locale}
         />
       )}
+      
+      <FaceMessage
+        visible={faceMessage.visible}
+        message={faceMessage.message}
+        face={faceMessage.face}
+        onComplete={() => setFaceMessage(prev => ({ ...prev, visible: false }))}
+      />
     </>
   );
 };
 
 const styles = StyleSheet.create({
-  gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  statusText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  gameFlowContainer: { marginTop: 24, marginBottom: 24 },
-  roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
-  roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
-  targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600', fontFamily: Fonts.sans },
-  adminControls: { marginTop: 24 },
-  adminButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
-  adminButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12, paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 8 },
-  targetView: { marginBottom: 20 },
-  commentView: { marginBottom: 20 },
-  waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
-  commentsView: { marginTop: 16 },
-  commentsTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
-  commentCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 12 },
-  commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22, fontFamily: Fonts.sans },
-  pointsButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: GameColors.green, paddingVertical: 8, paddingHorizontal: 12 },
-  pointsGivenText: { fontSize: 14, fontWeight: '600', color: GameColors.green, marginTop: 8, fontFamily: Fonts.sans },
-  submitCommentButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
+statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+statusText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+gameFlowContainer: { marginTop: 24, marginBottom: 24 },
+roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
+targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600', fontFamily: Fonts.sans },
+adminControls: { marginTop: 24 },
+adminButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
+adminButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12, paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+buttonDisabled: { opacity: 0.6 },
+buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+targetView: { marginBottom: 20 },
+commentView: { marginBottom: 20 },
+waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
+commentsView: { marginTop: 16 },
+commentsTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
+commentCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 12 },
+commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22, fontFamily: Fonts.sans },
+pointsGivenText: { fontSize: 14, fontWeight: '600', color: GameColors.green, marginTop: 8, fontFamily: Fonts.sans },
+submitCommentButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  pointsSelectionTitle: { textAlign: 'center', fontSize: 16, fontWeight: '600', marginBottom: 12, fontFamily: Fonts.sans },
+  pointsButtonsContainer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  pointsButton: { 
+    width: 50, 
+    height: 50, 
+    borderRadius: 25, 
+    backgroundColor: '#f0f0f0', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ddd',
+  },
+  pointsButtonSelected: { 
+    backgroundColor: GameColors.green, 
+    borderColor: GameColors.green,
+  },
+  pointsButtonText: { 
+    fontSize: 18, 
+    fontWeight: '600', 
+    color: '#333',
+    fontFamily: Fonts.sans,
+  },
+  pointsButtonTextSelected: { 
+    color: '#fff',
+  },
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },
   commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
 });

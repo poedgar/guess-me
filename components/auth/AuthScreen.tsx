@@ -4,6 +4,7 @@ import { ThemedView } from '@/components/themed-view';
 import { FancyAlert, FancyAlertButton } from '@/components/ui/FancyAlert';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { LoginAnimation } from '@/components/ui/LoginAnimation';
 import { Colors, Fonts, GameColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -168,6 +169,7 @@ export const AuthScreen: React.FC = () => {
       <View style={styles.signInContainer}>
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
+          <LoginAnimation />
           <ThemedText type="title" style={styles.welcomeTitle}>
             {t('auth.welcome', { locale })}!
           </ThemedText>

@@ -1,13 +1,13 @@
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemedText } from '@/components/themed-text';
+import { FancyAlertButton } from '@/components/ui/FancyAlert';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { GameColors } from '@/constants/theme';
 import { Game } from '@/contexts/GameContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { FancyAlertButton } from '@/components/ui/FancyAlert';
+import { StyleSheet, View } from 'react-native';
 
 export type ShowFancyAlertFn = (
   title: string,
@@ -46,7 +46,7 @@ export const GameHeader: React.FC<Props> = ({ game, isAdmin, onCopyGameId }) => 
 
 const styles = StyleSheet.create({
   gameHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
-  gameTitle: { flex: 1 },
+  gameTitle: { flex: 1, marginTop: 80 },
   gameHeaderRight: { flexDirection: 'row', alignItems: 'center' },
   adminBadge: { height: 'max-content', backgroundColor: GameColors.waiting, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 12 },
   adminBadgeText: { color: '#fff', fontSize: 8, fontWeight: '700' },
