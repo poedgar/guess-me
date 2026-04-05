@@ -121,11 +121,7 @@ export const WaitingPhase: React.FC<Props> = ({
 
   const handleToggleShowGuessResults = makeSettingToggler(
     () => !game.showGuessResults,
-    updateShowGuessResults,
-    (newValue) =>
-      newValue
-        ? t('game.alerts.showGuessResultsEnabled', { locale })
-        : t('game.alerts.showGuessResultsDisabled', { locale })
+    updateShowGuessResults
   );
 
   const handleStartGame = async () => {
