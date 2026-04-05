@@ -102,8 +102,8 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
     }
   };
 
-  // Admin fallback: show "Start Point Awards" button when all players submitted but phase not started
-  if (isAdmin && game.guessingData?.allPlayersSubmitted && !game.postGuessingPointPhase) {
+  // Admin fallback: show "Start Point Awards" button when target submitted guesses but phase not started
+  if (isAdmin && game.currentRound?.targetUserId && game.guessingData?.playersWhoSubmittedGuesses?.includes(game.currentRound.targetUserId) && !game.postGuessingPointPhase) {
     return (
       <View style={styles.gameFlowContainer}>
         <View style={styles.roundInfo}>
@@ -111,7 +111,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
             Admin: Start Point Awards
           </ThemedText>
           <ThemedText style={styles.targetText}>
-            All players have submitted guesses. Start the point awarding phase manually.
+            Target has submitted guesses. Start the point awarding phase to award points.
           </ThemedText>
         </View>
         <View style={styles.adminControls}>
@@ -149,7 +149,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
         </ThemedText>
       </View>
 
-      {isAdmin && game.playersWhoAwardedPostGuessPoints?.includes(user?.uid || '') ? (
+      {game.playersWhoAwardedPostGuessPoints?.includes(user?.uid || '') ? (
         <View style={styles.guessResultsContainer}>
           <ThemedText type="subtitle" style={styles.guessResultsTitle}>
             Points Already Awarded
@@ -163,7 +163,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
             </ThemedText>
           </View>
         </View>
-      ) : isAdmin ? (
+      ) : (
         <View style={styles.postGuessingPointsContainer}>
           <ThemedText style={styles.guessingInstructions}>
             Select any number of players and award them points. You can do this only once per round.
@@ -245,7 +245,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
             </TouchableOpacity>
           )}
         </View>
-      ) : null}
+      )}
     </View>
   );
 };

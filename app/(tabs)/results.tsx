@@ -105,8 +105,11 @@ export default function TabTwoScreen() {
                             </ThemedText>
                             {comment.points !== undefined && (
                               <View style={styles.roundHistoryCommentPoints}>
-                                <ThemedText style={styles.roundHistoryPointsValue}>
-                                  +{comment.points} pts
+                                <ThemedText style={[
+                                  styles.roundHistoryPointsValue,
+                                  comment.points < 0 && styles.roundHistoryPointsValueNegative
+                                ]}>
+                                  {comment.points > 0 ? '+' : ''}{comment.points} pts
                                 </ThemedText>
                               </View>
                             )}
@@ -115,6 +118,41 @@ export default function TabTwoScreen() {
                       ) : (
                         <ThemedText style={styles.noCommentsText}>{t('results.noComments', { locale })}</ThemedText>
                       )}
+
+                      {/* Admin Awards Section */}
+                      {currentGame?.adminAwards && Object.keys(currentGame.adminAwards).length > 0 && (() => {
+                        const allAdminAwards = Object.entries(currentGame.adminAwards)
+                          .flatMap(([awarderId, awards]) => 
+                            awards.map(award => ({ ...award, awarderName: participantsByJoin.find(p => p.userId === awarderId)?.userName || 'Unknown' }))
+                          );
+                        
+                        const roundAwards = allAdminAwards.filter(award => {
+                          // Check if this award was given during this round (approximate by checking if award time is after round started)
+                          return round.startedAt && award.awardedAt && 
+                                 new Date(award.awardedAt.toDate?.() || award.awardedAt) >= new Date(round.startedAt.toDate?.() || round.startedAt);
+                        });
+                        
+                        return roundAwards.length > 0 ? (
+                          <View style={styles.adminAwardsSection}>
+                            <ThemedText style={styles.adminAwardsTitle}>
+                              👑 Admin Awards ({roundAwards.length}):
+                            </ThemedText>
+                            {roundAwards.map((award, index) => (
+                              <View key={index} style={styles.adminAwardItem}>
+                                <ThemedText style={styles.adminAwardText}>
+                                  {award.awarderName} awarded {participantsByJoin.find(p => p.userId === award.recipientId)?.userName || 'Unknown'} 
+                                  <ThemedText style={[
+                                    styles.adminAwardPoints,
+                                    award.points < 0 && styles.adminAwardPointsNegative
+                                  ]}>
+                                    {' '}{award.points > 0 ? '+' : ''}{award.points} pts
+                                  </ThemedText>
+                                </ThemedText>
+                              </View>
+                            ))}
+                          </View>
+                        ) : null;
+                      })()}
                     </View>
                   </View>
                 ))}
@@ -183,6 +221,14 @@ const styles = StyleSheet.create({
   roundHistoryCommentText: { fontSize: 14, lineHeight: 20, marginBottom: 8, fontStyle: 'italic' },
   roundHistoryCommentPoints: { alignSelf: 'flex-end' },
   roundHistoryPointsValue: { fontSize: 14, fontWeight: '600', color: GameColors.green },
+  roundHistoryPointsValueNegative: { color: '#dc2626' },
+  // Admin Awards styles
+  adminAwardsSection: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(0, 0, 0, 0.1)' },
+  adminAwardsTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8, opacity: 0.8 },
+  adminAwardItem: { padding: 8, marginBottom: 4, borderRadius: 4, backgroundColor: 'rgba(255, 215, 0, 0.1)' },
+  adminAwardText: { fontSize: 13, lineHeight: 18 },
+  adminAwardPoints: { fontSize: 13, fontWeight: '700', color: GameColors.green },
+  adminAwardPointsNegative: { color: '#dc2626' },
   noCommentsText: { textAlign: 'center', opacity: 0.5, fontSize: 14, fontStyle: 'italic', padding: 8 },
   // No results styles
   noResultsContainer: { 

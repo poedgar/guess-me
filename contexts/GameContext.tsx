@@ -16,6 +16,8 @@ export interface Game {
   postGuessingPointPhase?: boolean;
   // Track which players have already awarded points in post-guessing phase
   playersWhoAwardedPostGuessPoints?: string[];
+  // Track admin awards in post-guessing phase: { [userId: string]: { recipientId: string; points: number; awardedBy: string; awardedAt: any }[] }
+  adminAwards?: { [userId: string]: { recipientId: string; points: number; awardedBy: string; awardedAt: any }[] };
   // Track which players have completed the post-comment point phase (either gave target points or skipped)
   playersWhoCompletedPostCommentPhase?: string[];
   // If set, indicates the admin left the game and it cannot continue
@@ -1350,10 +1352,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (awards.some(a => a.recipientId === userId)) {
       throw new Error('You cannot award points to yourself');
     }
-    if (awards.some(a => a.points <= 0)) {
-      throw new Error('Points must be positive');
-    }
-
+    
     try {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);
@@ -1371,10 +1370,26 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           newScores[award.recipientId] = (newScores[award.recipientId] || 0) + award.points;
         });
 
+        // Store admin awards for history tracking
+        const adminAwards = gameData.adminAwards || {};
+        const currentAwards = adminAwards[userId] || [];
+        const newAdminAwards = {
+          ...adminAwards,
+          [userId]: [
+            ...currentAwards,
+            ...awards.map(award => ({
+              ...award,
+              awardedBy: userId,
+              awardedAt: new Date(),
+            })),
+          ],
+        };
+
         // Update game state
         transaction.update(gameRef, {
           scores: newScores,
           playersWhoAwardedPostGuessPoints: arrayUnion(userId),
+          adminAwards: newAdminAwards,
         });
       });
 
