@@ -60,7 +60,6 @@ export const ActivePhase: React.FC<Props> = ({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
   const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
-  const [selectedPoints, setSelectedPoints] = useState(1);
   const [faceMessage, setFaceMessage] = useState<{ visible: boolean; message: string; face?: string }>({
     visible: false,
     message: '',
@@ -168,7 +167,27 @@ export const ActivePhase: React.FC<Props> = ({
     }
   };
 
-  const handleGivePointsToTarget = async (points: number = 1) => {
+  const handleGivePointsToTargetWithConfirm = (points: number) => {
+    const message = points === 0 
+      ? 'Ви впевнені, що хочете пропустити?' 
+      : `Ви впевнені, що хочете надати ${points} бал${points > 1 ? 'и' : ''}?`;
+    
+    showFancyAlert(
+      'Підтвердження',
+      message,
+      [
+        { text: 'Скасувати', style: 'cancel' },
+        { 
+          text: 'Підтвердити', 
+          onPress: async () => {
+            await handleGivePointsToTarget(points);
+          }
+        },
+      ]
+    );
+  };
+
+  const handleGivePointsToTarget = async (points: number) => {
     if (!game.currentRound) return;
     if (!givePointsToTarget) {
       showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
@@ -469,75 +488,28 @@ export const ActivePhase: React.FC<Props> = ({
                         return (
                           <View style={{ marginTop: 16 }}>
                             {game.currentRound!.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
-                              <View>
-                                {/* Points Selection */}
-                                <ThemedText style={styles.pointsSelectionTitle}>
-                                  Оберіть кількість балів:
-                                </ThemedText>
                                 <View style={styles.pointsButtonsContainer}>
-                                  {Array.from({ length: getMaxPoints() }, (_, i) => i + 1).map((points) => (
+                                  {Array.from({ length: getMaxPoints() + 1 }, (_, i) => i).map((points) => (
                                     <TouchableOpacity
                                       key={points}
                                       style={[
                                         styles.pointsButton,
-                                        selectedPoints === points && styles.pointsButtonSelected,
+                                        givingPointsToTarget && styles.buttonDisabled,
                                       ]}
-                                      onPress={() => setSelectedPoints(points)}
+                                      onPress={() => handleGivePointsToTargetWithConfirm(points)}
+                                      disabled={givingPointsToTarget}
                                       activeOpacity={0.8}
                                     >
-                                      <ThemedText style={[
-                                        styles.pointsButtonText,
-                                        selectedPoints === points && styles.pointsButtonTextSelected
-                                      ]}>
-                                        {points}
-                                      </ThemedText>
+                                      {givingPointsToTarget ? (
+                                        <ActivityIndicator size="small" color="#333" />
+                                      ) : (
+                                        <ThemedText style={styles.pointsButtonText}>
+                                          {points}
+                                        </ThemedText>
+                                      )}
                                     </TouchableOpacity>
                                   ))}
                                 </View>
-                                
-                                {/* Give Points Button */}
-                                <TouchableOpacity
-                                  style={[
-                                    styles.submitCommentButton,
-                                    {
-                                      backgroundColor: GameColors.green,
-                                      shadowColor: '#000',
-                                      marginTop: 12,
-                                    },
-                                  ]}
-                                  onPress={() => handleGivePointsToTarget(selectedPoints)}
-                                  disabled={alreadyGaveTargetPoints || givingPointsToTarget}
-                                  activeOpacity={0.8}
-                                >
-                                  {givingPointsToTarget ? (
-                                    <ActivityIndicator size="small" color="#fff" />
-                                  ) : (
-                                    <ThemedText style={styles.buttonText}>
-                                      {`Дати ${selectedPoints} бал${selectedPoints > 1 ? 'и' : ''} цільовому гравцю`}
-                                    </ThemedText>
-                                  )}
-                                </TouchableOpacity>
-                              </View>
-                            )}
-                            {game.currentRound!.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
-                              <TouchableOpacity
-                                style={[
-                                  styles.submitCommentButton,
-                                  {
-                                    backgroundColor: GameColors.neutral,
-                                    shadowColor: '#000',
-                                    marginTop: 8,
-                                  },
-                                ]}
-                                onPress={handleSkipPostCommentPhase}
-                                activeOpacity={0.8}
-                              >
-                                <ThemedText style={styles.buttonText}>
-                                  {game.playersWhoCompletedPostCommentPhase?.includes(user?.uid || '')
-                                    ? 'Пропущено'
-                                    : 'Пропустити'}
-                                </ThemedText>
-                              </TouchableOpacity>
                             )}
                           </View>
                         );
@@ -610,18 +582,11 @@ submitCommentButton: { borderRadius: 999, alignItems: 'center', justifyContent: 
     borderWidth: 2,
     borderColor: '#ddd',
   },
-  pointsButtonSelected: { 
-    backgroundColor: GameColors.green, 
-    borderColor: GameColors.green,
-  },
   pointsButtonText: { 
     fontSize: 18, 
     fontWeight: '600', 
     color: '#333',
     fontFamily: Fonts.sans,
-  },
-  pointsButtonTextSelected: { 
-    color: '#fff',
   },
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },
   commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
