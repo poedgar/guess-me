@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SuccessAnimation } from '@/components/ui/SuccessAnimation';
 import { Fonts, GameColors } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
@@ -7,12 +8,12 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { ShowFancyAlertFn } from './GameHeader';
 
@@ -24,6 +25,7 @@ interface Props {
   joinIndexById: Record<string, number>;
   getDisplayName: (name: string) => string;
   showFancyAlert: ShowFancyAlertFn;
+  showFaceMessage: (message: string, face?: string) => void;
   locale: string;
 }
 
@@ -35,6 +37,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
   joinIndexById,
   getDisplayName,
   showFancyAlert,
+  showFaceMessage,
   locale,
 }) => {
   const { playSound } = useSound();
@@ -51,7 +54,10 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
       await startPostGuessingPointPhase();
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert(t('common.success', { locale }), 'Post-guessing point phase started!');
+      showFaceMessage(
+        'Post-guessing point phase started!', 
+        <View style={{ padding: 16 }}><SuccessAnimation /></View>
+      );
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -91,7 +97,10 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
       await awardPointsToPlayers(awards);
       await playSound('points');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert(t('common.success', { locale }), 'Points awarded successfully!');
+      showFaceMessage(
+        'Points awarded successfully!',
+        <View style={{ padding: 16 }}><SuccessAnimation /></View>
+      );
       setSelectedPlayersForPoints({});
     } catch (error: any) {
       await playSound('error');

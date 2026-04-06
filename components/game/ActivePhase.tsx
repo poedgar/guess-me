@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { FaceMessage } from '@/components/ui/FaceMessage';
+import { SuccessAnimation } from '@/components/ui/SuccessAnimation';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
@@ -26,6 +27,7 @@ interface Props {
   joinIndexById: Record<string, number>;
   getDisplayName: (name: string) => string;
   showFancyAlert: ShowFancyAlertFn;
+  showFaceMessage: (message: string, face?: string) => void; 
   locale: string;
   isDark: boolean;
 }
@@ -38,6 +40,7 @@ export const ActivePhase: React.FC<Props> = ({
   joinIndexById,
   getDisplayName,
   showFancyAlert,
+  showFaceMessage,
   locale,
   isDark,
 }) => {
@@ -133,7 +136,10 @@ export const ActivePhase: React.FC<Props> = ({
       await givePoints(commentId, points);
       await playSound('points');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert(t('common.success', { locale }), t('game.alerts.pointsAwarded', { locale }));
+      showFaceMessage(
+        t('game.alerts.pointsAwarded', { locale }), 
+        <View style={{ padding: 16 }}><SuccessAnimation /></View>
+      ); 
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -152,7 +158,10 @@ export const ActivePhase: React.FC<Props> = ({
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finishGivingPoints();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert(t('common.success', { locale }), t('game.alerts.finishPointsSuccess', { locale }));
+      showFaceMessage(
+        t('game.alerts.finishPointsSuccess', { locale }), 
+        <View style={{ padding: 16 }}><SuccessAnimation /></View>
+      ); 
     } catch (error: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.finishPointsFailed', { locale }));
@@ -170,13 +179,11 @@ export const ActivePhase: React.FC<Props> = ({
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await givePointsToTarget(game.currentRound.targetUserId, points);
-      
-      // Show face message instead of fancy alert
-      setFaceMessage({
-        visible: true,
-        message: points > 0 ? `Ти дав ${points} бал(ів) цільовому гравцю!` : 'Ти пропустив фазу!',
-        face: points > 0 ? '' : '',
-      });
+
+      showFaceMessage(
+        points > 0 ? `Ви надали ${points} бал(ів) цільовому гравцю!` : 'Ви пропустили фазу!', 
+        <View style={{ padding: 16 }}><SuccessAnimation /></View>
+      );    
     } catch (error: any) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
