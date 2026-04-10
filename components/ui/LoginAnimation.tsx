@@ -8,7 +8,7 @@ export const LoginAnimation: React.FC = () => {
       <LottieAnimation
         source={require('../../assets/animations/Login.json')}
         autoPlay={true}
-        loop={true}
+        loop={false}
         style={styles.animation}
       />
     </View>
@@ -17,7 +17,6 @@ export const LoginAnimation: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
