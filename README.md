@@ -7,6 +7,11 @@ eas build:configure --platform android
 eas build --platform android --profile production
 eas build --platform android --profile preview
 
+or
+
+npx eas build --platform android --profile preview
+
+
 # Scheme change
 eas build:configure --platform android
 

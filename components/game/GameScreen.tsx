@@ -11,6 +11,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { ActivePhase } from './ActivePhase';
 import { GameHeader } from './GameHeader';
@@ -26,6 +27,7 @@ export const GameScreen: React.FC = () => {
   const { currentGame, leaveGame } = useGame();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   // Fancy alert state
   const [fancyVisible, setFancyVisible] = useState(false);
@@ -132,7 +134,7 @@ export const GameScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]} showsVerticalScrollIndicator={false}>
         {!isSignedIn || !currentGame ? (
           <JoinScreen isSignedIn={isSignedIn} isDark={isDark} showFancyAlert={showFancyAlert} showFaceMessage={showFaceMessage} />
         ) : (

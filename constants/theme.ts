@@ -73,6 +73,46 @@ export const StatusColors: Record<string, string> = {
   finished: '#8E8E93',
 };
 
+/** Shared modal styles for FancyAlert and FaceMessage */
+export const ModalStyles = {
+  overlay: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    padding: 20,
+    zIndex: 1000,
+  },
+  container: {
+    width: '85%' as const,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center' as const,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    marginBottom: 8,
+    textAlign: 'center' as const,
+    color: '#000',
+  },
+  message: {
+    fontSize: 15,
+    textAlign: 'center' as const,
+    color: '#333',
+  },
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

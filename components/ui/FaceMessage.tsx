@@ -1,4 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
+import { ModalStyles } from '@/constants/theme';
 import { useSound } from '@/contexts/SoundContext';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
@@ -98,34 +99,22 @@ export function FaceMessage({
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
+    bottom: 40,
+    left: 20,
+    right: 20,
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     zIndex: 1000,
   },
   container: {
-    backgroundColor: 'white',
-    borderRadius: 20,
+    ...ModalStyles.container,
     padding: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
   },
   face: {
     fontSize: 60,
     marginBottom: 15,
   },
-  message: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    color: '#333',
+  customContent: {
+    marginBottom: 15,
   },
+  message: ModalStyles.message,
 });

@@ -1,4 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
+import { ModalStyles } from '@/constants/theme';
 import { useSound } from '@/contexts/SoundContext';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -44,7 +45,7 @@ export function FancyAlert({ visible, title, message, buttons, onClose, customCo
               style={[
                 styles.button,
                 button.style === 'destructive' && styles.buttonDestructive,
-                button.style === 'cancel' && styles.buttonCancel,
+                button.style === 'cancel',
               ]}
               onPress={async () => {
                 try {
@@ -75,35 +76,19 @@ export function FancyAlert({ visible, title, message, buttons, onClose, customCo
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    zIndex: 1000,
-  },
+  overlay: ModalStyles.overlay,
   content: {
-    width: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 10,
+    ...ModalStyles.container,
+    alignItems: 'stretch' as const,
   },
-  title: { fontSize: 18, fontWeight: '600', marginBottom: 8, textAlign: 'center' },
-  message: { fontSize: 15, marginBottom: 16, textAlign: 'center' },
-  buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  title: ModalStyles.title,
+  message: {
+    ...ModalStyles.message,
+    marginBottom: 16,
+  },
+  buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   button: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, minWidth: 80, alignItems: 'center' },
   buttonDestructive: { backgroundColor: '#ff3b30' },
-  buttonCancel: { backgroundColor: '#8e8e93' },
   buttonText: { fontSize: 16, fontWeight: '600' },
   buttonTextDestructive: { color: '#fff' },
 });

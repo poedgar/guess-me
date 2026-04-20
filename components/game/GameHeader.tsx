@@ -47,7 +47,7 @@ export const GameHeader: React.FC<Props> = ({ game, isAdmin, onCopyGameId }) => 
 
 const styles = StyleSheet.create({
   gameHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
-  gameTitle: { flex: 1, marginTop: 80 },
+  gameTitle: { flex: 1 },
   gameHeaderRight: { flexDirection: 'row', alignItems: 'center' },
   adminBadge: { height: 'max-content', backgroundColor: GameColors.waiting, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, marginLeft: 12 },
   adminBadgeText: { color: '#fff', fontSize: 8, fontWeight: '700' },
