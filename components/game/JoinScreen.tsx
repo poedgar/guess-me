@@ -1,4 +1,5 @@
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { SoundToggle } from "@/components/SoundToggle";
 import { ThemedText } from "@/components/themed-text";
 import { HeaderLogo } from "@/components/ui/HeaderLogo";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -119,17 +120,9 @@ export const JoinScreen: React.FC<Props> = ({
   if (!isSignedIn) {
     return (
       <View style={styles.notSignedInContainer}>
-        <View style={styles.inlineLanguageToggle}>
+        <View style={styles.logoBlock}>
           <HeaderLogo />
-          <View
-            style={{
-              marginTop: 12,
-              display: "flex",
-              justifyContent: "space-around",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
+          <View style={styles.controls}>
             <LanguageSelector />
           </View>
         </View>
@@ -142,23 +135,14 @@ export const JoinScreen: React.FC<Props> = ({
 
   return (
     <>
-      <View style={styles.actionContainer}>
-        <View style={styles.inlineLanguageToggle}>
-          <HeaderLogo />
-          <View
-            style={{
-              marginTop: 12,
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "space-around",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            <LanguageSelector />
-            {/* <SoundToggle /> */}
-          </View>
+      <View style={styles.logoBlock}>
+        <HeaderLogo />
+        <View style={styles.controls}>
+          <LanguageSelector />
+          <SoundToggle />
         </View>
+      </View>
+      <View style={styles.actionContainer}>
         <View style={styles.section}>
           <ThemedText type="title" style={styles.sectionTitle}>
             {t("game.ui.createOrJoin.title", { locale })}
@@ -194,7 +178,7 @@ export const JoinScreen: React.FC<Props> = ({
               styles.joinButton,
               {
                 backgroundColor: GameColors.green,
-                shadowColor: "#000",
+                shadowColor: GameColors.shadow,
               },
               (isProcessingEnter || loading || !gameIdInput.trim()) &&
                 styles.buttonDisabled,
@@ -205,13 +189,13 @@ export const JoinScreen: React.FC<Props> = ({
           >
             {isProcessingEnter ? (
               <View style={styles.buttonLoading}>
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={GameColors.white} />
               </View>
             ) : (
               <IconSymbol
                 name="arrow.right.circle.fill"
                 size={16}
-                color="#fff"
+                color={GameColors.white}
               />
             )}
           </TouchableOpacity>
@@ -228,13 +212,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   notSignedInText: { textAlign: "center", opacity: 0.7 },
-  actionContainer: { flex: 1, justifyContent: "center" },
-  inlineLanguageToggle: {
-    display: "flex",
+  actionContainer: { marginTop: 16 },
+  logoBlock: {
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  controls: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 80,
-    marginBottom: 82,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: -50,
+    marginBottom: 30,
   },
   section: { marginBottom: 32 },
   sectionTitle: { marginBottom: 8 },

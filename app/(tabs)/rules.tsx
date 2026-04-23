@@ -35,7 +35,7 @@ export default function RulesScreen() {
       contentContainerStyle={styles.contentContainer}
     >      
       {/* Game Overview */}
-      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : GameColors.lightPageBg }]}>
         <View style={styles.sectionHeader}>
       <HeaderLogo />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -48,7 +48,7 @@ export default function RulesScreen() {
       </View>
 
       {/* How to Play */}
-      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : GameColors.lightPageBg }]}>
         <View style={styles.sectionHeader}>
           <IconSymbol name="play.fill" size={24} color={GameColors.blue} />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -109,9 +109,9 @@ export default function RulesScreen() {
       </View>
 
       {/* Scoring System */}
-      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : GameColors.lightPageBg }]}>
         <View style={styles.sectionHeader}>
-          <IconSymbol name="trophy.fill" size={24} color="#FFD700" />
+          <IconSymbol name="trophy.fill" size={24} color={GameColors.gold} />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t('rules.scoring.title', { locale })}
           </ThemedText>
@@ -150,7 +150,7 @@ export default function RulesScreen() {
       </View>
 
       {/* Admin Features */}
-      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : GameColors.lightPageBg }]}>
         <View style={styles.sectionHeader}>
           <IconSymbol name="crown.fill" size={24} color={GameColors.waiting} />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -186,9 +186,9 @@ export default function RulesScreen() {
       </View>
 
       {/* Tips */}
-      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : '#f8f9fa' }]}>
+      <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : GameColors.lightPageBg }]}>
         <View style={styles.sectionHeader}>
-          <IconSymbol name="lightbulb.fill" size={24} color="#FFD700" />
+          <IconSymbol name="lightbulb.fill" size={24} color={GameColors.gold} />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t('rules.tips.title', { locale })}
           </ThemedText>
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -302,14 +302,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
   stepNumberText: {
-    color: '#fff',
+    color: GameColors.white,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -336,14 +336,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
   scoringBadgeText: {
-    color: '#fff',
+    color: GameColors.white,
     fontSize: 12,
     fontWeight: '700',
   },

@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { ModalStyles } from '@/constants/theme';
+import { GameColors } from '@/constants/theme';
 import { useSound } from '@/contexts/SoundContext';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
@@ -106,8 +106,16 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   container: {
-    ...ModalStyles.container,
+    width: '85%' as const,
+    backgroundColor: GameColors.white,
+    borderRadius: 16,
     padding: 30,
+    alignItems: 'center' as const,
+    shadowColor: GameColors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
   },
   face: {
     fontSize: 60,
@@ -116,5 +124,5 @@ const styles = StyleSheet.create({
   customContent: {
     marginBottom: 15,
   },
-  message: ModalStyles.message,
+  message: { fontSize: 15, textAlign: 'center' as const, color: GameColors.textDark },
 });

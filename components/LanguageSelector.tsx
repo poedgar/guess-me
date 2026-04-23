@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { GameColors } from '@/constants/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 
@@ -46,11 +47,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.15)',
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: GameColors.cardBg,
   },
   pillActive: {
-    backgroundColor: 'rgba(52, 199, 89, 0.25)',
-    borderColor: 'rgba(52, 199, 89, 0.6)',
+    backgroundColor: GameColors.greenTint,
+    borderColor: GameColors.greenTint,
   },
   pillText: {
     fontWeight: '700',

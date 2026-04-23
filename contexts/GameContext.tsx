@@ -1,4 +1,4 @@
-import { db } from '@/config/firebase';
+import { auth, db } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateGameId } from '@/utils/gameIdGenerator';
 import { arrayUnion, doc, getDoc, onSnapshot, runTransaction, serverTimestamp, setDoc, Unsubscribe, updateDoc } from 'firebase/firestore';
@@ -321,7 +321,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const enterGame = async (input: string, adminWritesComments?: boolean): Promise<string | void> => {
-    if (!user) {
+    if (!auth.currentUser) {
       throw new Error('You must be signed in to enter a game');
     }
 
@@ -346,7 +346,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const leaveGame = async (): Promise<void> => {
-    if (!user) {
+    if (!auth.currentUser) {
       throw new Error('You must be signed in to leave a game');
     }
     if (!currentGame) {
@@ -418,7 +418,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const startGame = async (): Promise<void> => {
-    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+    if (!auth.currentUser) throw new Error('You must be signed in');
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
       throw new Error('Only the admin can start the game');
     }
 
@@ -462,11 +463,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const submitComment = async (commentText: string): Promise<void> => {
-    if (!currentGame || !user || !currentGame.currentRound) {
+    if (!auth.currentUser) throw new Error('You must be signed in');
+    if (!currentGame || !currentGame.currentRound) {
       throw new Error('No active round');
     }
 
-    if (user.uid === currentGame.currentRound.targetUserId) {
+    if (auth.currentUser.uid === currentGame.currentRound.targetUserId) {
       throw new Error('You cannot comment about yourself');
     }
 
@@ -491,14 +493,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
 
       // Check if user already submitted a comment
-      const existingComment = currentRound.comments?.find(c => c.authorId === user.uid);
+      const liveUid = auth.currentUser!.uid;
+      const existingComment = currentRound.comments?.find(c => c.authorId === liveUid);
       if (existingComment) {
         throw new Error('You have already submitted a comment for this round');
       }
 
       const newComment: Comment = {
-        id: `${Date.now()}-${user.uid}`,
-        authorId: user.uid,
+        id: `${Date.now()}-${liveUid}`,
+        authorId: liveUid,
         text: commentText.trim(),
         submittedAt: new Date(),
       };
@@ -544,11 +547,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const givePoints = async (commentId: string, points: number): Promise<void> => {
-    if (!currentGame || !user || !currentGame.currentRound) {
+    if (!auth.currentUser) throw new Error('You must be signed in');
+    if (!currentGame || !currentGame.currentRound) {
       throw new Error('No active round');
     }
 
-    if (user.uid !== currentGame.currentRound.targetUserId) {
+    if (auth.currentUser.uid !== currentGame.currentRound.targetUserId) {
       throw new Error('Only the target person can give points');
     }
 

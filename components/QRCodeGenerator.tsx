@@ -46,8 +46,8 @@ export default function QRCodeGenerator({ gameId, visible, onClose }: QRCodeGene
             <QRCode
               value={gameId}
               size={200}
-              color={isDark ? '#fff' : '#000'}
-              backgroundColor={isDark ? GameColors.inputDark : '#fff'}
+              color={isDark ? GameColors.white : GameColors.shadow}
+              backgroundColor={isDark ? GameColors.inputDark : GameColors.white}
             />
           </View>
           
@@ -83,19 +83,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: GameColors.overlayBg,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
   },
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: GameColors.white,
     borderRadius: 16,
     padding: 24,
     margin: 20,
     maxWidth: 320,
     width: '100%',
-    shadowColor: '#000',
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -127,15 +127,15 @@ const styles = StyleSheet.create({
   qrBox: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
+    backgroundColor: GameColors.white,
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   qrBoxDark: {
-    backgroundColor: '#333',
+    backgroundColor: GameColors.textDark,
   },
   gameIdText: {
     marginTop: 16,
@@ -159,10 +159,10 @@ const styles = StyleSheet.create({
     backgroundColor: GameColors.green,
   },
   closeButtonAction: {
-    backgroundColor: '#666',
+    backgroundColor: GameColors.textMedium,
   },
   buttonText: {
-    color: '#fff',
+    color: GameColors.white,
     fontSize: 16,
     fontWeight: '600',
   },

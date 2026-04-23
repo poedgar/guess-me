@@ -16,13 +16,13 @@ export function HeaderLogo() {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: -50,
     justifyContent: "center",
-    alignItems: "flex-start",
+    alignItems: "center",
     backgroundColor: "transparent",
-    marginTop: -130,
   },
   logo: {
-    width: 140,
-    height: 140,
+    width: 220,
+    height: 220,
   },
 });

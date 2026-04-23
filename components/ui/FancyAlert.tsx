@@ -1,5 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
-import { ModalStyles } from '@/constants/theme';
+import { GameColors, ModalStyles } from '@/constants/theme';
 import { useSound } from '@/contexts/SoundContext';
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -29,12 +29,12 @@ export function FancyAlert({ visible, title, message, buttons, onClose, customCo
       <View style={styles.content}>
         {customContent}
         {title ? (
-          <ThemedText style={styles.title} lightColor="#000" darkColor="#000">
+          <ThemedText style={styles.title} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
             {title}
           </ThemedText>
         ) : null}
         {message ? (
-          <ThemedText style={styles.message} lightColor="#000" darkColor="#000">
+          <ThemedText style={styles.message} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
             {message}
           </ThemedText>
         ) : null}
@@ -62,8 +62,8 @@ export function FancyAlert({ visible, title, message, buttons, onClose, customCo
                   styles.buttonText,
                   button.style === 'destructive' && styles.buttonTextDestructive,
                 ]}
-                lightColor="#007AFF"
-                darkColor="#0A84FF"
+                lightColor={GameColors.blue}
+                darkColor={GameColors.blueDark}
               >
                 {button.text}
               </ThemedText>
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
   buttons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
   button: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, minWidth: 80, alignItems: 'center' },
-  buttonDestructive: { backgroundColor: '#ff3b30' },
+  buttonDestructive: { backgroundColor: GameColors.danger },
   buttonText: { fontSize: 16, fontWeight: '600' },
-  buttonTextDestructive: { color: '#fff' },
+  buttonTextDestructive: { color: GameColors.white },
 });

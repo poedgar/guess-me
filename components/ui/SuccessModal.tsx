@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
+import { GameColors } from '@/constants/theme';
 import { SuccessAnimation } from './SuccessAnimation';
 import { useSound } from '@/contexts/SoundContext';
 import * as Haptics from 'expo-haptics';
@@ -33,22 +34,22 @@ export function SuccessModal({ visible, title, message, onClose, buttonText = 'O
       <View style={styles.content}>
         <SuccessAnimation />
         
-        <ThemedText style={styles.title} lightColor="#000" darkColor="#000">
+        <ThemedText style={styles.title} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
           {title}
         </ThemedText>
-        
+
         {message && (
-          <ThemedText style={styles.message} lightColor="#000" darkColor="#000">
+          <ThemedText style={styles.message} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
             {message}
           </ThemedText>
         )}
-        
+
         <TouchableOpacity
           style={styles.button}
           onPress={handleClose}
           activeOpacity={0.8}
         >
-          <ThemedText style={styles.buttonText} lightColor="#fff" darkColor="#fff">
+          <ThemedText style={styles.buttonText} lightColor={GameColors.white} darkColor={GameColors.white}>
             {buttonText}
           </ThemedText>
         </TouchableOpacity>
@@ -64,17 +65,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: GameColors.overlayBg,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
   },
   content: {
-    backgroundColor: 'white',
+    backgroundColor: GameColors.white,
     borderRadius: 20,
     padding: 30,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -86,22 +87,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 16,
-    color: '#333',
+    color: GameColors.textDark,
   },
   message: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 24,
-    color: '#666',
+    color: GameColors.textMedium,
     lineHeight: 22,
   },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: GameColors.green,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 32,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -110,6 +111,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: GameColors.white,
   },
 });

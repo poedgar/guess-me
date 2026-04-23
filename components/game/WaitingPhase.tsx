@@ -8,10 +8,10 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef } from 'react';
 import {
-  Animated,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -46,42 +46,15 @@ export const WaitingPhase: React.FC<Props> = ({
   const { playSound } = useSound();
   const { loading, startGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults } = useGame();
 
-  const toggleAnimation = useRef(new Animated.Value(0)).current;
-  const surnamesToggleAnimation = useRef(new Animated.Value(0)).current;
-  const targetSelectionModeAnimation = useRef(new Animated.Value(0)).current;
-  const showGuessResultsAnimation = useRef(new Animated.Value(0)).current;
-
+  const prevParticipantCount = useRef(game.participants.length);
   useEffect(() => {
-    Animated.timing(toggleAnimation, {
-      toValue: game.adminWritesComments ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [game.adminWritesComments]);
-
-  useEffect(() => {
-    Animated.timing(surnamesToggleAnimation, {
-      toValue: game.showSurnames ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [game.showSurnames]);
-
-  useEffect(() => {
-    Animated.timing(targetSelectionModeAnimation, {
-      toValue: game.targetSelectionMode === 'chronological' ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [game.targetSelectionMode]);
-
-  useEffect(() => {
-    Animated.timing(showGuessResultsAnimation, {
-      toValue: game.showGuessResults ? 1 : 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  }, [game.showGuessResults]);
+    const prev = prevParticipantCount.current;
+    prevParticipantCount.current = game.participants.length;
+    if (isAdmin && prev < 2 && game.participants.length >= 2) {
+      playSound('notification');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [game.participants.length]);
 
   const makeSettingToggler = <T,>(
     getNewValue: () => T,
@@ -141,7 +114,7 @@ export const WaitingPhase: React.FC<Props> = ({
   const totalTargets = game.participants?.filter(p => p.userId !== game.adminId).length ?? 0;
 
   return (
-    <>
+    <View style={styles.phaseWrapper}>
       {/* Game ID + QR */}
       <View style={{ display: 'flex', flexDirection: 'row' }}>
         <View style={styles.gameIdContainer}>
@@ -165,8 +138,8 @@ export const WaitingPhase: React.FC<Props> = ({
               <QRCode
                 value={game.id}
                 size={75}
-                color={isDark ? '#fff' : '#000'}
-                backgroundColor={isDark ? GameColors.inputDark : '#fff'}
+                color={isDark ? GameColors.white : GameColors.shadow}
+                backgroundColor={isDark ? GameColors.inputDark : GameColors.white}
               />
             </View>
           </View>
@@ -197,24 +170,13 @@ export const WaitingPhase: React.FC<Props> = ({
                 {t('game.ui.adminWritesCommentsDescription', { locale })}
               </ThemedText>
             </View>
-            <TouchableOpacity
-              style={[styles.toggleButton, game.adminWritesComments && styles.toggleButtonActive]}
-              onPress={handleToggleAdminComments}
-              activeOpacity={0.8}
-            >
-              <Animated.View style={[
-                styles.toggleThumb,
-                game.adminWritesComments ? styles.toggleThumbActive : {},
-                {
-                  transform: [{
-                    translateX: toggleAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 20],
-                    })
-                  }]
-                }
-              ] as any} />
-            </TouchableOpacity>
+            <Switch
+              value={game.adminWritesComments}
+              onValueChange={handleToggleAdminComments}
+              trackColor={{ false: GameColors.neutral, true: GameColors.green }}
+              thumbColor={GameColors.white}
+              ios_backgroundColor={GameColors.neutral}
+            />
           </View>
 
           <View style={styles.toggleContainer}>
@@ -226,24 +188,13 @@ export const WaitingPhase: React.FC<Props> = ({
                 {t('game.ui.showSurnamesDescription', { locale })}
               </ThemedText>
             </View>
-            <TouchableOpacity
-              style={[styles.toggleButton, game.showSurnames && styles.toggleButtonActive]}
-              onPress={handleToggleShowSurnames}
-              activeOpacity={0.8}
-            >
-              <Animated.View style={[
-                styles.toggleThumb,
-                game.showSurnames ? styles.toggleThumbActive : {},
-                {
-                  transform: [{
-                    translateX: surnamesToggleAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 20],
-                    })
-                  }]
-                }
-              ] as any} />
-            </TouchableOpacity>
+            <Switch
+              value={game.showSurnames}
+              onValueChange={handleToggleShowSurnames}
+              trackColor={{ false: GameColors.neutral, true: GameColors.green }}
+              thumbColor={GameColors.white}
+              ios_backgroundColor={GameColors.neutral}
+            />
           </View>
 
           <View style={styles.toggleContainer}>
@@ -255,24 +206,13 @@ export const WaitingPhase: React.FC<Props> = ({
                 {t('game.ui.targetSelectionModeDescription', { locale })}
               </ThemedText>
             </View>
-            <TouchableOpacity
-              style={[styles.toggleButton, game.targetSelectionMode === 'chronological' && styles.toggleButtonActive]}
-              onPress={handleToggleTargetSelectionMode}
-              activeOpacity={0.8}
-            >
-              <Animated.View style={[
-                styles.toggleThumb,
-                game.targetSelectionMode === 'chronological' ? styles.toggleThumbActive : {},
-                {
-                  transform: [{
-                    translateX: targetSelectionModeAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 20],
-                    })
-                  }]
-                }
-              ] as any} />
-            </TouchableOpacity>
+            <Switch
+              value={game.targetSelectionMode === 'chronological'}
+              onValueChange={handleToggleTargetSelectionMode}
+              trackColor={{ false: GameColors.neutral, true: GameColors.green }}
+              thumbColor={GameColors.white}
+              ios_backgroundColor={GameColors.neutral}
+            />
           </View>
 
           <View style={styles.toggleContainer}>
@@ -284,24 +224,13 @@ export const WaitingPhase: React.FC<Props> = ({
                 {t('game.ui.showGuessResultsDescription', { locale })}
               </ThemedText>
             </View>
-            <TouchableOpacity
-              style={[styles.toggleButton, game.showGuessResults && styles.toggleButtonActive]}
-              onPress={handleToggleShowGuessResults}
-              activeOpacity={0.8}
-            >
-              <Animated.View style={[
-                styles.toggleThumb,
-                game.showGuessResults ? styles.toggleThumbActive : {},
-                {
-                  transform: [{
-                    translateX: showGuessResultsAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 20],
-                    })
-                  }]
-                }
-              ] as any} />
-            </TouchableOpacity>
+            <Switch
+              value={game.showGuessResults}
+              onValueChange={handleToggleShowGuessResults}
+              trackColor={{ false: GameColors.neutral, true: GameColors.green }}
+              thumbColor={GameColors.white}
+              ios_backgroundColor={GameColors.neutral}
+            />
           </View>
         </>
       )}
@@ -413,21 +342,24 @@ export const WaitingPhase: React.FC<Props> = ({
       {/* Start Game / Waiting */}
       <View style={styles.gameFlowContainer}>
         {isAdmin && (
-          <TouchableOpacity
-            style={[
-              styles.startGameButton,
-              {
-                backgroundColor: GameColors.green,
-                shadowColor: '#000',
-              },
-              (loading || game.participants.length < 2) && styles.buttonDisabled,
-            ]}
-            onPress={handleStartGame}
-            disabled={loading || game.participants.length < 2}
-            activeOpacity={0.8}
-          >
-            <IconSymbol name="arrow.right.circle.fill" size={16} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.buttonWrapper}>
+            <TouchableOpacity
+              style={[
+                styles.startGameButton,
+                {
+                  backgroundColor: GameColors.green,
+                  shadowColor: GameColors.shadow,
+                },
+                (loading || game.participants.length < 2) && styles.buttonDisabled,
+              ]}
+              onPress={handleStartGame}
+              disabled={loading || game.participants.length < 2}
+              activeOpacity={0.8}
+            >
+              <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />
+            </TouchableOpacity>
+            <ThemedText style={styles.buttonLabel}>{t('game.ui.startGame', { locale })}</ThemedText>
+          </View>
         )}
         {!isAdmin && (
           <ThemedText style={styles.waitingText}>
@@ -435,14 +367,15 @@ export const WaitingPhase: React.FC<Props> = ({
           </ThemedText>
         )}
       </View>
-    </>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  gameIdContainer: { marginBottom: 20 },
+  phaseWrapper: { backgroundColor: GameColors.waitingTint, borderWidth: 1, borderColor: GameColors.waitingTintBorder, borderRadius: 16, padding: 16, marginBottom: 8 },
+  gameIdContainer: { marginBottom: 20, width: '50%' },
   gameIdLabel: { marginBottom: 8, opacity: 0.7 },
-  gameIdBox: { backgroundColor: 'rgba(52, 199, 89, 0.1)', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(52, 199, 89, 0.3)' },
+  gameIdBox: { backgroundColor: GameColors.greenTint, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: GameColors.greenTint },
   gameIdText: { fontSize: 14, fontWeight: '700', fontFamily: 'monospace', marginBottom: 4 },
   copyHint: { fontSize: 10, opacity: 0.6 },
   qrCodeContainer: {
@@ -454,31 +387,27 @@ const styles = StyleSheet.create({
   qrCodeBox: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
+    backgroundColor: GameColors.white,
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   qrCodeBoxDark: {
-    backgroundColor: '#333',
+    backgroundColor: GameColors.textDark,
   },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
   statusBadge: {  },
-  statusText: { backgroundColor: StatusColors.waiting, paddingHorizontal: 12, paddingVertical: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, color: '#fff', fontSize: 12, fontWeight: '700' },
-  toggleContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: 16, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderRadius: 8 },
+  statusText: { backgroundColor: StatusColors.waiting, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, color: GameColors.white, fontSize: 12, fontWeight: '700' },
+  toggleContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: 16, backgroundColor: GameColors.cardBg, borderRadius: 8 },
   toggleInfo: { flex: 1, marginRight: 16 },
   toggleLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
   toggleDescription: { fontSize: 14, opacity: 0.7, lineHeight: 20, fontFamily: Fonts.sans },
-  toggleButton: { width: 51, height: 31, borderRadius: 15.5, backgroundColor: '#767577', padding: 2, position: 'relative' },
-  toggleButtonActive: { backgroundColor: GameColors.green },
-  toggleThumb: { width: 27, height: 27, borderRadius: 13.5, backgroundColor: '#f4f3f4', position: 'absolute', top: 2, left: 2 },
-  toggleThumbActive: { backgroundColor: '#fff' },
   participantsContainer: { marginBottom: 24 },
   participantsTitle: { marginBottom: 12, fontFamily: Fonts.sans },
-  participantItem: { padding: 12, borderRadius: 8, marginBottom: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+  participantItem: { padding: 12, borderRadius: 8, marginBottom: 8, backgroundColor: GameColors.cardBg },
   adminParticipant: { backgroundColor: 'rgba(255, 149, 0, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 149, 0, 0.3)' },
   participantInfo: { flex: 1 },
   participantName: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
@@ -487,9 +416,9 @@ const styles = StyleSheet.create({
   scoresContainer: { marginBottom: 24, marginTop: 8 },
   scoresTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
   leaderboard: { borderRadius: 8, overflow: 'hidden' },
-  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
-  leaderboardFirst: { backgroundColor: 'rgba(255, 215, 0, 0.2)', borderWidth: 2, borderColor: 'rgba(255, 215, 0, 0.5)' },
-  leaderboardCurrentUser: { backgroundColor: 'rgba(0, 122, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(0, 122, 255, 0.3)' },
+  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: GameColors.cardBg },
+  leaderboardFirst: { backgroundColor: GameColors.goldTint, borderWidth: 2, borderColor: GameColors.goldTintBorder },
+  leaderboardCurrentUser: { backgroundColor: GameColors.blueTint, borderWidth: 1, borderColor: GameColors.blueTintBorder },
   leaderboardRank: { width: 40, alignItems: 'center', justifyContent: 'center' },
   rankEmoji: { fontSize: 24 },
   rankNumber: { fontSize: 14, fontWeight: '600', opacity: 0.6 },
@@ -502,7 +431,9 @@ const styles = StyleSheet.create({
   pointsLabel: { fontSize: 12, opacity: 0.6, marginTop: 2 },
   leaderboardScroll: { maxHeight: 200, marginTop: 8 },
   gameFlowContainer: { marginTop: 24, marginBottom: 24 },
+  buttonWrapper: { alignItems: 'center', gap: 6 },
   startGameButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  buttonLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
   buttonDisabled: { opacity: 0.6 },
   waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
 });

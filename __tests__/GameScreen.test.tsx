@@ -150,6 +150,16 @@ describe('GameScreen — game waiting', () => {
     const { getByText } = renderScreen();
     expect(getByText('game-abc')).toBeTruthy();
   });
+
+  it('shows start game button label for admin', () => {
+    const { getByText } = renderScreen();
+    expect(getByText('game.ui.startGame')).toBeTruthy();
+  });
+
+  it('shows leave game button label', () => {
+    const { getByText } = renderScreen();
+    expect(getByText('game.ui.leaveGame')).toBeTruthy();
+  });
 });
 
 // ── active game in active (comment) phase ─────────────────────────────────────
@@ -206,5 +216,55 @@ describe('GameScreen — game active phase', () => {
     const { getByText } = renderScreen();
     // Target is rendered as "game.ui.target: Bob" in a single text node
     expect(getByText(/Bob/)).toBeTruthy();
+  });
+
+  it('shows leave game button label', () => {
+    const { getByText } = renderScreen();
+    expect(getByText('game.ui.leaveGame')).toBeTruthy();
+  });
+});
+
+// ── active game in guessing phase ─────────────────────────────────────────────
+describe('GameScreen — guessing phase (admin)', () => {
+  beforeEach(() => {
+    mockIsSignedIn = true;
+    mockUser = { uid: 'u1', displayName: 'Alice', email: 'alice@test.com' };
+    mockCurrentGame = {
+      id: 'game-abc',
+      adminId: 'u1',
+      adminName: 'Alice',
+      adminEmail: 'alice@test.com',
+      status: 'guessing_phase',
+      participants: [
+        { userId: 'u1', userName: 'Alice', userEmail: 'alice@test.com', joinedAt: new Date() },
+        { userId: 'u2', userName: 'Bob', userEmail: 'bob@test.com', joinedAt: new Date() },
+      ],
+      rounds: [],
+      scores: {},
+      guessingData: {
+        commentsByTarget: { u1: [] },
+        possibleAuthors: [],
+        allPlayersSubmitted: true,
+        playersWhoSubmittedGuesses: ['u1', 'u2'],
+        singleRoundTargetId: null,
+      },
+      guessResults: {},
+      createdAt: new Date(),
+      currentRound: null,
+      adminWritesComments: false,
+      showSurnames: false,
+      showGuessResults: false,
+      targetSelectionMode: 'random',
+    };
+  });
+
+  it('shows finalize button label when all players submitted', () => {
+    const { getByText } = renderScreen();
+    expect(getByText('game.ui.finalize')).toBeTruthy();
+  });
+
+  it('shows leave game button label', () => {
+    const { getByText } = renderScreen();
+    expect(getByText('game.ui.leaveGame')).toBeTruthy();
   });
 });

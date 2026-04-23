@@ -1,3 +1,4 @@
+import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { FaceMessage } from '@/components/ui/FaceMessage';
 import { FancyAlert, FancyAlertButton } from '@/components/ui/FancyAlert';
@@ -10,9 +11,9 @@ import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ActivePhase } from './ActivePhase';
 import { GameHeader } from './GameHeader';
 import { GuessingPhase } from './GuessingPhase';
@@ -28,6 +29,21 @@ export const GameScreen: React.FC = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
+
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const prevStatus = useRef(currentGame?.status);
+  useEffect(() => {
+    if (prevStatus.current !== currentGame?.status) {
+      prevStatus.current = currentGame?.status;
+      fadeAnim.setValue(0);
+      slideAnim.setValue(24);
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [currentGame?.status]);
 
   // Fancy alert state
   const [fancyVisible, setFancyVisible] = useState(false);
@@ -145,35 +161,40 @@ export const GameScreen: React.FC = () => {
               onCopyGameId={handleCopyGameId}
             />
 
-            {currentGame.status === 'waiting' && (
-              <WaitingPhase {...sharedProps} onCopyGameId={handleCopyGameId} />
-            )}
+            <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+              {currentGame.status === 'waiting' && (
+                <WaitingPhase {...sharedProps} onCopyGameId={handleCopyGameId} />
+              )}
 
-            {currentGame.status === 'active' && currentGame.currentRound && (
-              <ActivePhase {...sharedProps} />
-            )}
+              {currentGame.status === 'active' && currentGame.currentRound && (
+                <ActivePhase {...sharedProps} />
+              )}
 
-            {currentGame.status === 'guessing_phase' && (
-              <GuessingPhase {...sharedProps} commentsForPlayer={commentsForPlayer} />
-            )}
+              {currentGame.status === 'guessing_phase' && (
+                <GuessingPhase {...sharedProps} commentsForPlayer={commentsForPlayer} />
+              )}
 
-            {currentGame.status === 'finished' && (
-              <ResultsPhase
-                game={currentGame}
-                user={user}
-                joinIndexById={joinIndexById}
-                getDisplayName={getDisplayName}
-                locale={locale}
-              />
-            )}
+              {currentGame.status === 'finished' && (
+                <ResultsPhase
+                  game={currentGame}
+                  user={user}
+                  joinIndexById={joinIndexById}
+                  getDisplayName={getDisplayName}
+                  locale={locale}
+                />
+              )}
+            </Animated.View>
 
-            <TouchableOpacity
-              style={[styles.leaveButton, { backgroundColor: GameColors.danger, shadowColor: '#000' }]}
-              onPress={handleLeaveGame}
-              activeOpacity={0.8}
-            >
-              <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
-            </TouchableOpacity>
+            <View style={styles.leaveButtonWrapper}>
+              <TouchableOpacity
+                style={[styles.leaveButton, { backgroundColor: GameColors.danger, shadowColor: GameColors.shadow }]}
+                onPress={handleLeaveGame}
+                activeOpacity={0.8}
+              >
+                <IconSymbol name="door.left.hand.open" size={16} color={GameColors.white} />
+              </TouchableOpacity>
+              <ThemedText style={styles.leaveButtonLabel}>{t('game.ui.leaveGame', { locale })}</ThemedText>
+            </View>
           </>
         )}
       </ScrollView>
@@ -200,5 +221,7 @@ export const GameScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, position: 'relative' as const },
   scrollContent: { padding: 20, paddingBottom: 40 },
-  leaveButton: { borderRadius: 999, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  leaveButtonWrapper: { alignItems: 'center', gap: 6, marginTop: 16 },
+  leaveButton: { borderRadius: 999, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  leaveButtonLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
 });

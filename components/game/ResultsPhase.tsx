@@ -15,7 +15,7 @@ interface Props {
 
 export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDisplayName, locale }) => {
   return (
-    <View style={styles.gameFlowContainer}>
+    <View style={[styles.gameFlowContainer, styles.phaseWrapper]}>
       {game.adminLeft ? (
         <>
           <ThemedText type="title" style={styles.finishedTitle}>
@@ -95,14 +95,15 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
 
 const styles = StyleSheet.create({
   gameFlowContainer: { marginTop: 24, marginBottom: 24 },
+  phaseWrapper: { backgroundColor: GameColors.resultsTint, borderWidth: 1, borderColor: GameColors.resultsTintBorder, borderRadius: 16, padding: 16, marginBottom: 8 },
   finishedTitle: { textAlign: 'center', marginBottom: 12, fontFamily: Fonts.sans },
   finishedText: { textAlign: 'center', opacity: 0.7, fontSize: 16, fontFamily: Fonts.sans },
   scoresContainer: { marginBottom: 24, marginTop: 8 },
   scoresTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
   leaderboard: { borderRadius: 8, overflow: 'hidden' },
-  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
-  leaderboardFirst: { backgroundColor: 'rgba(255, 215, 0, 0.2)', borderWidth: 2, borderColor: 'rgba(255, 215, 0, 0.5)' },
-  leaderboardCurrentUser: { backgroundColor: 'rgba(0, 122, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(0, 122, 255, 0.3)' },
+  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: GameColors.cardBg },
+  leaderboardFirst: { backgroundColor: GameColors.goldTint, borderWidth: 2, borderColor: GameColors.goldTintBorder },
+  leaderboardCurrentUser: { backgroundColor: GameColors.blueTint, borderWidth: 1, borderColor: GameColors.blueTintBorder },
   leaderboardRank: { width: 40, alignItems: 'center', justifyContent: 'center' },
   rankEmoji: { fontSize: 24 },
   rankNumber: { fontSize: 14, fontWeight: '600', opacity: 0.6 },

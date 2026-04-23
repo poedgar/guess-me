@@ -253,7 +253,7 @@ export const ActivePhase: React.FC<Props> = ({
   if (!game.currentRound) return null;
 
   return (
-    <>
+    <View style={styles.phaseWrapper}>
       {/* Status badge */}
       <View style={styles.gameStatusContainer}>
         <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
@@ -284,7 +284,7 @@ export const ActivePhase: React.FC<Props> = ({
                     styles.adminButton,
                     {
                       backgroundColor: GameColors.admin,
-                      shadowColor: '#000',
+                      shadowColor: GameColors.shadow,
                     },
                     (game.currentRound.comments?.length || 0) <
                       getRequiredComments() && styles.buttonDisabled,
@@ -294,7 +294,7 @@ export const ActivePhase: React.FC<Props> = ({
                     getRequiredComments()}
                   activeOpacity={0.8}
                 >
-                  <IconSymbol name="eye.fill" size={16} color="#fff" />
+                  <IconSymbol name="eye.fill" size={16} color={GameColors.white} />
                 </TouchableOpacity>
               )}
               {game.currentRound.commentsVisible &&
@@ -304,7 +304,7 @@ export const ActivePhase: React.FC<Props> = ({
                     styles.adminButton,
                     {
                       backgroundColor: GameColors.purple,
-                      shadowColor: '#000',
+                      shadowColor: GameColors.shadow,
                     },
                     loading && styles.buttonDisabled,
                   ]}
@@ -313,7 +313,7 @@ export const ActivePhase: React.FC<Props> = ({
                   activeOpacity={0.8}
                 >
                   <>
-                    <IconSymbol name="brain.head.profile" size={16} color="#fff" />
+                    <IconSymbol name="brain.head.profile" size={16} color={GameColors.white} />
                     <ThemedText style={styles.buttonText}>
                       {loading ? 'Завантаження...' : ''}
                     </ThemedText>
@@ -346,9 +346,9 @@ export const ActivePhase: React.FC<Props> = ({
                         disabled={!!givingPoints[comment.id]}
                       >
                         {givingPoints[comment.id] ? (
-                          <ActivityIndicator size="small" color="#fff" />
+                          <ActivityIndicator size="small" color={GameColors.white} />
                         ) : (
-                          <IconSymbol name="plus.circle.fill" size={14} color="#fff" />
+                          <IconSymbol name="plus.circle.fill" size={14} color={GameColors.white} />
                         )}
                       </TouchableOpacity>
                     )}
@@ -365,7 +365,7 @@ export const ActivePhase: React.FC<Props> = ({
                       styles.submitCommentButton,
                       {
                         backgroundColor: GameColors.purple,
-                        shadowColor: '#000',
+                        shadowColor: GameColors.shadow,
                       },
                       loading && styles.buttonDisabled,
                     ]}
@@ -374,9 +374,9 @@ export const ActivePhase: React.FC<Props> = ({
                     activeOpacity={0.8}
                   >
                     {loading ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={GameColors.white} />
                     ) : (
-                      <IconSymbol name="checkmark.circle.fill" size={16} color="#fff" />
+                      <IconSymbol name="checkmark.circle.fill" size={16} color={GameColors.white} />
                     )}
                   </TouchableOpacity>
                 )}
@@ -436,7 +436,7 @@ export const ActivePhase: React.FC<Props> = ({
                         styles.submitCommentButton,
                         {
                           backgroundColor: GameColors.blue,
-                          shadowColor: '#000',
+                          shadowColor: GameColors.shadow,
                         },
                         (!commentText.trim() || isSubmittingComment) && styles.buttonDisabled,
                       ]}
@@ -445,9 +445,9 @@ export const ActivePhase: React.FC<Props> = ({
                       activeOpacity={0.8}
                     >
                       {isSubmittingComment ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator size="small" color={GameColors.white} />
                       ) : (
-                        <IconSymbol name="paperplane.fill" size={16} color="#fff" />
+                        <IconSymbol name="paperplane.fill" size={16} color={GameColors.white} />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -501,7 +501,7 @@ export const ActivePhase: React.FC<Props> = ({
                                       activeOpacity={0.8}
                                     >
                                       {givingPointsToTarget ? (
-                                        <ActivityIndicator size="small" color="#333" />
+                                        <ActivityIndicator size="small" color={GameColors.textDark} />
                                       ) : (
                                         <ThemedText style={styles.pointsButtonText}>
                                           {points}
@@ -543,49 +543,51 @@ export const ActivePhase: React.FC<Props> = ({
         face={faceMessage.face}
         onComplete={() => setFaceMessage(prev => ({ ...prev, visible: false }))}
       />
-    </>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  phaseWrapper: { backgroundColor: GameColors.activeTint, borderWidth: 1, borderColor: GameColors.activeTintBorder, borderRadius: 16, padding: 16, marginBottom: 8 },
 gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
 statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
 statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-statusText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+statusText: { color: GameColors.white, fontSize: 12, fontWeight: '700' },
+
 gameFlowContainer: { marginTop: 24, marginBottom: 24 },
-roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)' },
+roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: GameColors.cardBg },
 roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
 targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600', fontFamily: Fonts.sans },
 adminControls: { marginTop: 24 },
 adminButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
 adminButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12, paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
 buttonDisabled: { opacity: 0.6 },
-buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+buttonText: { color: GameColors.white, fontSize: 16, fontWeight: '600', marginLeft: 8 },
 targetView: { marginBottom: 20 },
 commentView: { marginBottom: 20 },
 waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
 commentsView: { marginTop: 16 },
 commentsTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
-commentCard: { padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', marginBottom: 12 },
+commentCard: { padding: 16, borderRadius: 8, backgroundColor: GameColors.cardBg, marginBottom: 12 },
 commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22, fontFamily: Fonts.sans },
 pointsGivenText: { fontSize: 14, fontWeight: '600', color: GameColors.green, marginTop: 8, fontFamily: Fonts.sans },
 submitCommentButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   pointsSelectionTitle: { textAlign: 'center', fontSize: 16, fontWeight: '600', marginBottom: 12, fontFamily: Fonts.sans },
   pointsButtonsContainer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  pointsButton: { 
-    width: 50, 
-    height: 50, 
-    borderRadius: 25, 
-    backgroundColor: '#f0f0f0', 
-    justifyContent: 'center', 
+  pointsButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: GameColors.lightPageBg,
+    justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#ddd',
+    borderColor: GameColors.cardBorder,
   },
-  pointsButtonText: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    color: '#333',
+  pointsButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: GameColors.textDark,
     fontFamily: Fonts.sans,
   },
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },

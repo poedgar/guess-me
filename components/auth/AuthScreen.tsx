@@ -1,4 +1,5 @@
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { SoundToggle } from "@/components/SoundToggle";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { FancyAlert, FancyAlertButton } from "@/components/ui/FancyAlert";
@@ -109,11 +110,11 @@ export const AuthScreen: React.FC = () => {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
-        <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
+        <View style={[styles.logoBlock, { top: insets.top + 12 }]}>
           <HeaderLogo />
-          <View>
+          <View style={styles.controls}>
             <LanguageSelector />
-            {/* <SoundToggle /> */}
+            <SoundToggle />
           </View>
         </View>
         <FancyAlert
@@ -140,10 +141,12 @@ export const AuthScreen: React.FC = () => {
   if (isSignedIn && user) {
     return (
       <ThemedView style={styles.container}>
-        <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
+        <View style={[styles.logoBlock, { top: insets.top + 12 }]}>
           <HeaderLogo />
-          <LanguageSelector />
-          {/* <SoundToggle /> */}
+          <View style={styles.controls}>
+            <LanguageSelector />
+            <SoundToggle />
+          </View>
         </View>
         <FancyAlert
           visible={fancyVisible}
@@ -155,10 +158,7 @@ export const AuthScreen: React.FC = () => {
         <View style={styles.profileContainer}>
           {/* Profile Picture */}
           <View
-            style={[
-              styles.avatarContainer,
-              { shadowColor: isDark ? "#000" : "#000" },
-            ]}
+            style={[styles.avatarContainer, { shadowColor: GameColors.shadow }]}
           >
             {user.photoURL ? (
               <Image source={{ uri: user.photoURL }} style={styles.avatar} />
@@ -192,13 +192,17 @@ export const AuthScreen: React.FC = () => {
               styles.signOutButton,
               {
                 backgroundColor: GameColors.danger,
-                shadowColor: "#000",
+                shadowColor: GameColors.shadow,
               },
             ]}
             onPress={handleSignOut}
             activeOpacity={0.8}
           >
-            <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
+            <IconSymbol
+              name="door.left.hand.open"
+              size={16}
+              color={GameColors.white}
+            />
             <ThemedText style={styles.signOutButtonText}>
               {t("auth.signOut", { locale })}
             </ThemedText>
@@ -210,9 +214,11 @@ export const AuthScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={[styles.languageToggle, { top: insets.top + 12 }]}>
+      <View style={[styles.logoBlock, { top: insets.top + 12 }]}>
         <HeaderLogo />
-        <LanguageSelector />
+        <View style={styles.controls}>
+          <LanguageSelector />
+        </View>
       </View>
       <FancyAlert
         visible={fancyVisible}
@@ -237,11 +243,11 @@ export const AuthScreen: React.FC = () => {
         <View style={styles.buttonContainer}>
           {isSigningIn ? (
             <View style={styles.loadingButton}>
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={GameColors.white} />
               <IconSymbol
                 name="hourglass"
                 size={16}
-                color="#fff"
+                color={GameColors.white}
                 style={{ marginLeft: 8 }}
               />
             </View>
@@ -251,7 +257,7 @@ export const AuthScreen: React.FC = () => {
                 styles.webGoogleButton,
                 {
                   backgroundColor: GameColors.blue,
-                  shadowColor: "#000",
+                  shadowColor: GameColors.shadow,
                 },
               ]}
               onPress={handleSignIn}
@@ -293,16 +299,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
-  languageToggle: {
+  logoBlock: {
     position: "absolute",
     width: "100%",
-    display: "flex",
+    alignItems: "center",
+    zIndex: 50,
+  },
+  controls: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingInline: 12,
-    zIndex: 50,
-    marginTop: 70,
+    justifyContent: "center",
+    gap: 12,
+    marginTop: -70,
   },
   loadingContainer: {
     alignItems: "center",
@@ -317,6 +325,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
     alignItems: "center",
+    marginTop: 80,
   },
   welcomeSection: {
     alignItems: "center",
@@ -368,7 +377,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     marginRight: 12,
-    backgroundColor: "#fff",
+    backgroundColor: GameColors.white,
     borderRadius: 2,
     justifyContent: "center",
     alignItems: "center",
@@ -380,7 +389,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
   },
   webGoogleButtonText: {
-    color: "#fff",
+    color: GameColors.white,
     fontSize: 16,
     fontWeight: "500",
     fontFamily: Fonts.sans,
@@ -397,7 +406,7 @@ const styles = StyleSheet.create({
     height: 50,
   },
   loadingButtonText: {
-    color: "#fff",
+    color: GameColors.white,
     marginLeft: 12,
     fontSize: 16,
     fontWeight: "600",
@@ -426,7 +435,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: "#fff",
+    borderColor: GameColors.white,
   },
   avatarPlaceholder: {
     width: 120,
@@ -435,10 +444,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 4,
-    borderColor: "#fff",
+    borderColor: GameColors.white,
   },
   avatarText: {
-    color: "#fff",
+    color: GameColors.white,
     fontSize: 48,
     fontFamily: Fonts.sans,
   },
@@ -474,7 +483,7 @@ const styles = StyleSheet.create({
     }),
   },
   signOutButtonText: {
-    color: "#fff",
+    color: GameColors.white,
     fontSize: 16,
     fontWeight: "600",
     fontFamily: Fonts.sans,
@@ -488,21 +497,21 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: GameColors.overlayBg,
   },
   fancyModal: {
     width: "85%",
-    backgroundColor: "#fff",
+    backgroundColor: GameColors.white,
     borderRadius: 12,
     padding: 20,
-    shadowColor: "#000",
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 10,
   },
   fancyTitle: {
-    color: "black",
+    color: GameColors.shadow,
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 8,
@@ -510,7 +519,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
   },
   fancyMessage: {
-    color: "black",
+    color: GameColors.shadow,
     fontSize: 15,
     opacity: 0.9,
     marginBottom: 16,
@@ -529,13 +538,13 @@ const styles = StyleSheet.create({
   },
   fancyButtonText: {
     fontSize: 15,
-    color: "#007AFF",
+    color: GameColors.blue,
     fontWeight: "700",
     fontFamily: Fonts.sans,
   },
   fancyDestructiveButton: {},
   fancyDestructiveButtonText: {
-    color: "#D9534F",
+    color: GameColors.danger,
   },
   headerLogoContainer: {
     justifyContent: "center",

@@ -116,9 +116,9 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
         activeOpacity={0.8}
       >
         {isResetting ? (
-          <IconSymbol name="hourglass" size={16} color="#fff" />
+          <IconSymbol name="hourglass" size={16} color={GameColors.white} />
         ) : (
-          <IconSymbol name="arrow.up.circle.fill" size={16} color="#fff" />
+          <IconSymbol name="arrow.up.circle.fill" size={16} color={GameColors.white} />
         )}
         <ThemedText style={styles.resetButtonText}>Скинути</ThemedText>
       </TouchableOpacity>
@@ -164,9 +164,9 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
                   activeOpacity={0.8}
                 >
                   {settingTarget === participant.userId ? (
-                    <IconSymbol name="hourglass" size={16} color="#fff" />
+                    <IconSymbol name="hourglass" size={16} color={GameColors.white} />
                   ) : (
-                    <IconSymbol name="star.fill" size={16} color="#fff" />
+                    <IconSymbol name="star.fill" size={16} color={GameColors.white} />
                   )}
                 </TouchableOpacity>
                 
@@ -182,9 +182,9 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
                   activeOpacity={0.8}
                 >
                   {skippingTarget === participant.userId ? (
-                    <IconSymbol name="hourglass" size={16} color="#fff" />
+                    <IconSymbol name="hourglass" size={16} color={GameColors.white} />
                   ) : (
-                    <IconSymbol name="door.left.hand.open" size={16} color="#fff" />
+                    <IconSymbol name="door.left.hand.open" size={16} color={GameColors.white} />
                   )}
                 </TouchableOpacity>
               </View>
@@ -198,7 +198,7 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: GameColors.cardBg,
     borderRadius: 12,
     padding: 16,
     marginVertical: 16,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: GameColors.white,
     marginBottom: 8,
     ...Platform.select({
       ios: {
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     backgroundColor: GameColors.danger,
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: GameColors.cardBorder,
     opacity: 0.6,
   },
   resetButton: {
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     }),
   },
   resetButtonText: {
-    color: '#fff',
+    color: GameColors.white,
     fontSize: 14,
     fontWeight: '600',
     fontFamily: Fonts.sans,

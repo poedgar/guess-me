@@ -86,7 +86,7 @@ export default function QRScanner({ visible, onClose, onScanSuccess }: QRScanner
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: GameColors.shadow,
   },
   header: {
     flexDirection: 'row',
@@ -95,18 +95,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: GameColors.overlayBgDark,
   },
   closeButton: {
     padding: 8,
   },
   closeText: {
-    color: '#fff',
+    color: GameColors.white,
     fontSize: 24,
     fontWeight: 'bold',
   },
   title: {
-    color: '#fff',
+    color: GameColors.white,
     fontSize: 20,
     fontWeight: '600',
   },
@@ -124,11 +124,11 @@ const styles = StyleSheet.create({
     height: 250,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: GameColors.white,
     marginBottom: 20,
   },
   message: {
-    color: '#fff',
+    color: GameColors.white,
     textAlign: 'center',
     fontSize: 16,
     marginBottom: 20,
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: GameColors.green,
-    shadowColor: '#000',
+    shadowColor: GameColors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     backgroundColor: GameColors.blue,
   },
   buttonText: {
-    color: '#fff',
+    color: GameColors.white,
     fontSize: 14,
     fontWeight: '600',
   },

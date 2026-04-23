@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   headerImage: {
-    color: '#808080',
+    color: GameColors.neutral,
     bottom: -90,
     left: -35,
     position: 'absolute',
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: GameColors.lightPageBg,
   },
   button: {
     backgroundColor: GameColors.blue,
@@ -197,21 +197,21 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   buttonText: {
-    color: '#fff',
+    color: GameColors.white,
     fontWeight: 'bold',
   },
   participantsScroll: { maxHeight: 260 },
-  participantRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
+  participantRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: GameColors.cardBg },
   participantName: { fontSize: 16, fontWeight: '600' },
   leaderboardScroll: { maxHeight: 260 },
-  leaderboardRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
+  leaderboardRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: GameColors.cardBg },
   leaderboardName: { fontSize: 16, fontWeight: '600' },
   points: { fontSize: 16, fontWeight: '700', color: GameColors.green },
   // Round History styles
   roundHistoryContainer: { marginBottom: 24, marginTop: 8 },
   roundHistoryTitle: { marginBottom: 16, textAlign: 'center' },
-  roundHistoryItem: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: 'rgba(0, 0, 0, 0.05)', borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.1)' },
-  roundHistoryHeader: { marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(0, 0, 0, 0.1)' },
+  roundHistoryItem: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: GameColors.cardBg, borderWidth: 1, borderColor: GameColors.cardBorder },
+  roundHistoryHeader: { marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: GameColors.cardBorder },
   roundHistoryRoundNumber: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
   roundHistoryTarget: { fontSize: 16, opacity: 0.7 },
   roundHistoryTargetPoints: { marginTop: 6, fontSize: 14, fontWeight: '700', color: GameColors.green },
@@ -221,14 +221,14 @@ const styles = StyleSheet.create({
   roundHistoryCommentText: { fontSize: 14, lineHeight: 20, marginBottom: 8, fontStyle: 'italic' },
   roundHistoryCommentPoints: { alignSelf: 'flex-end' },
   roundHistoryPointsValue: { fontSize: 14, fontWeight: '600', color: GameColors.green },
-  roundHistoryPointsValueNegative: { color: '#dc2626' },
+  roundHistoryPointsValueNegative: { color: GameColors.negative },
   // Admin Awards styles
-  adminAwardsSection: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(0, 0, 0, 0.1)' },
+  adminAwardsSection: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: GameColors.cardBorder },
   adminAwardsTitle: { fontSize: 14, fontWeight: '600', marginBottom: 8, opacity: 0.8 },
-  adminAwardItem: { padding: 8, marginBottom: 4, borderRadius: 4, backgroundColor: 'rgba(255, 215, 0, 0.1)' },
+  adminAwardItem: { padding: 8, marginBottom: 4, borderRadius: 4, backgroundColor: GameColors.goldTint },
   adminAwardText: { fontSize: 13, lineHeight: 18 },
   adminAwardPoints: { fontSize: 13, fontWeight: '700', color: GameColors.green },
-  adminAwardPointsNegative: { color: '#dc2626' },
+  adminAwardPointsNegative: { color: GameColors.negative },
   noCommentsText: { textAlign: 'center', opacity: 0.5, fontSize: 14, fontStyle: 'italic', padding: 8 },
   // No results styles
   noResultsContainer: { 
@@ -238,14 +238,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.02)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)'
+    borderColor: GameColors.cardBorder
   },
-  noResultsTitle: { 
-    fontSize: 24, 
-    fontWeight: '700', 
+  noResultsTitle: {
+    fontSize: 24,
+    fontWeight: '700',
     marginBottom: 12,
     textAlign: 'center',
-    color: '#666'
+    color: GameColors.textMedium
   },
   noResultsMessage: { 
     fontSize: 16, 

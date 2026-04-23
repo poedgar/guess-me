@@ -38,44 +38,13 @@ and insert SHA-1 into Firebase
 
 # TODO
 
-Готово
-
-Ад хок черговість
-
-Можливість додати більше балів ніж один за комент цілі
-
-Жіночий рід
-
-Звуки на мобілі
-
-Анімація
-
-Звуки шо показують шо адмін може тиснути кніпку
+Soundtoggler beyond screen
 
 Publish to Google Play
 
 Here's a list of graphic design improvements, from highest to lowest visual impact:
 
-1. Unify the color system
-The palette mixes Android Material colors (#4CAF50, #9C27B0) with iOS-native colors (#34C759, #FF3B30). They clash on screen — the greens especially read as two different hues. Pick one system (ideally the iOS palette, since the game targets mobile-first) and align everything to it.
-2. Phase-specific visual identity
-All four game phases render with the same neutral card style. Each phase could carry a distinct mood — a warm amber tint in waiting, energized blue-green in active, deep purple+blur in guessing, gold celebration in results. Even a subtle background tint per phase would make transitions feel intentional.
-3. Icon-only primary buttons are unlearnable
-The main action buttons (start game, leave, submit guesses, finalize round) are all icon-only pill buttons with no label. A first-time user has no idea what the checkered flag does, or the door icon. Add a text label, at least for first-time screens.
-4. Game ID display needs more presence
-The game ID is the single most-shared element (people send it to friends), but it sits in a small green box with tiny monospace text. It should be the hero of the waiting screen — large, bold, with a big obvious "Copy" button and the QR code prominently alongside it, not buried.
-5. Cards are visually identical
-Comment cards, player cards, score rows, toggle settings, and guess cards all use rgba(0,0,0,0.05) with the same borderRadius: 8. They're visually indistinguishable at a glance. Different card types should have distinct shapes, borders, or accent colors to create scannable hierarchy.
-6. The leaderboard lacks drama
-Top-3 ranks use medal emojis in plain text rows. A podium layout for 1st/2nd/3rd (larger card, distinct treatment) with the rest as a compact list below would make results feel rewarding and worth anticipating.
-7. The brand palette doesn't match the concept
-"In The Mirror" is a psychological, introspective game. The current palette is generic Material Design. A brand-appropriate palette — deep indigo/slate for primary, warm gold for points, soft rose for feedback — would make the app feel distinct and purposeful instead of like a generic quiz app.
-8. Dark mode contrast issues
-inputDark (#2a2a2a) on the dark background (#151718) is ~1.3:1 contrast — effectively invisible. The input fields and card backgrounds in dark mode need more separation, either through a slightly lighter fill or a visible border.
-9. No phase transition animation
-The app snaps between phases (waiting → active → guessing → results) with no animation. A short fade or slide-up transition when the game status changes would make the experience feel more dynamic and signal to players that something significant just happened.
-10. Toggle switches feel like developer UI
-The custom toggles use #767577 (cold gray) when off, clashing with the warmer palette. They're also slightly undersized at 51×31px. Using the OS native Switch component, or a redesigned toggle that matches the brand palette, would feel more polished.
+
 
 
 
