@@ -1,7 +1,9 @@
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
 import { SuccessAnimation } from "@/components/ui/SuccessAnimation";
 import { Fonts, GameColors } from "@/constants/theme";
+import { gameStyles } from './gameStyles';
 import { Game, Participant, useGame } from "@/contexts/GameContext";
 import { useSound } from "@/contexts/SoundContext";
 import { t } from "@/i18n";
@@ -47,28 +49,32 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
     Record<string, number>
   >({});
   const [isAwardingPoints, setIsAwardingPoints] = useState(false);
+  const [isStartingPhase, setIsStartingPhase] = useState(false);
 
   const handleStartPostGuessingPointPhase = async () => {
     if (!isAdmin) return;
     try {
+      setIsStartingPhase(true);
       await playSound("click");
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await startPostGuessingPointPhase();
       await playSound("success");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFaceMessage(
-        "Post-guessing point phase started!",
+        t("game.alerts.postGuessingStarted", { locale }),
         <View style={{ padding: 16 }}>
           <SuccessAnimation />
         </View>,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound("error");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(
         t("common.error", { locale }),
-        error.message || "Failed to start point phase",
+        (error instanceof Error && error.message) || t("game.alerts.postGuessingStartFailed", { locale }),
       );
+    } finally {
+      setIsStartingPhase(false);
     }
   };
 
@@ -101,7 +107,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
       if (awards.length === 0) {
         showFancyAlert(
           t("common.error", { locale }),
-          "Please select at least one player to award points to",
+          t("game.alerts.selectAtLeastOnePlayer", { locale }),
         );
         return;
       }
@@ -110,18 +116,18 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
       await playSound("points");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFaceMessage(
-        "Points awarded successfully!",
+        t("game.alerts.pointsAwardedSuccessfully", { locale }),
         <View style={{ padding: 16 }}>
           <SuccessAnimation />
         </View>,
       );
       setSelectedPlayersForPoints({});
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound("error");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(
         t("common.error", { locale }),
-        error?.message || "Failed to award points",
+        (error instanceof Error && error.message) || t("game.alerts.awardPointsFailed", { locale }),
       );
     } finally {
       setIsAwardingPoints(false);
@@ -138,17 +144,16 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
     !game.postGuessingPointPhase
   ) {
     return (
-      <View style={styles.gameFlowContainer}>
+      <View style={gameStyles.gameFlowContainer}>
         {/* Admin Target Control */}
         <TargetControlPanel locale={locale} showFancyAlert={showFancyAlert} />
 
         <View style={styles.roundInfo}>
           <ThemedText type="subtitle" style={styles.roundTitle}>
-            Admin: Start Point Awards
+            {t("game.ui.postGuessing.startPhaseTitle", { locale })}
           </ThemedText>
           <ThemedText style={styles.targetText}>
-            Target has submitted guesses. Start the point awarding phase to
-            award points.
+            {t("game.ui.postGuessing.startPhaseDesc", { locale })}
           </ThemedText>
         </View>
         <View style={styles.adminControls}>
@@ -159,11 +164,19 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
                 backgroundColor: GameColors.admin,
                 shadowColor: GameColors.shadow,
               },
+              isStartingPhase && gameStyles.buttonDisabled,
             ]}
             onPress={handleStartPostGuessingPointPhase}
+            disabled={isStartingPhase}
             activeOpacity={0.8}
+            accessibilityLabel={t("game.ui.postGuessing.startPhaseTitle", { locale })}
+            accessibilityRole="button"
           >
-            <IconSymbol name="star.fill" size={16} color={GameColors.white} />
+            {isStartingPhase ? (
+              <ActivityIndicator size="small" color={GameColors.white} />
+            ) : (
+              <IconSymbol name="star.fill" size={16} color={GameColors.white} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -176,35 +189,34 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
   if (!isAdmin) return null;
 
   return (
-    <View style={styles.gameFlowContainer}>
+    <View style={gameStyles.gameFlowContainer}>
       <View style={styles.roundInfo}>
         <ThemedText type="subtitle" style={styles.roundTitle}>
-          Award Points to Players
+          {t("game.ui.postGuessing.awardTitle", { locale })}
         </ThemedText>
         <ThemedText style={styles.targetText}>
-          Select players and award points for their performance
+          {t("game.ui.postGuessing.awardDesc", { locale })}
         </ThemedText>
       </View>
 
       {game.playersWhoAwardedPostGuessPoints?.includes(user?.uid || "") ? (
         <View style={styles.guessResultsContainer}>
           <ThemedText type="subtitle" style={styles.guessResultsTitle}>
-            Points Already Awarded
+            {t("game.ui.postGuessing.alreadyAwardedTitle", { locale })}
           </ThemedText>
           <View style={styles.guessResultCard}>
             <ThemedText style={styles.guessResultText}>
-              You have already awarded points in this phase.
+              {t("game.ui.postGuessing.alreadyAwardedText", { locale })}
             </ThemedText>
             <ThemedText style={styles.guessResultDetail}>
-              Wait for the next round to award points again.
+              {t("game.ui.postGuessing.waitNextRound", { locale })}
             </ThemedText>
           </View>
         </View>
       ) : (
         <View style={styles.postGuessingPointsContainer}>
           <ThemedText style={styles.guessingInstructions}>
-            Select any number of players and award them points. You can do this
-            only once per round.
+            {t("game.ui.postGuessing.instructions", { locale })}
           </ThemedText>
 
           <ScrollView style={styles.playersSelectionScroll} nestedScrollEnabled>
@@ -222,6 +234,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
                       key={participant.userId}
                       style={styles.playerSelectionItem}
                     >
+                      <PlayerAvatar name={participant.userName} photoURL={participant.photoURL} size={32} />
                       <View style={styles.playerSelectionInfo}>
                         <ThemedText style={styles.playerSelectionName}>
                           {joinIndexById[participant.userId]
@@ -284,7 +297,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
                   backgroundColor: GameColors.green,
                   shadowColor: GameColors.shadow,
                 },
-                isAwardingPoints && styles.buttonDisabled,
+                isAwardingPoints && gameStyles.buttonDisabled,
               ]}
               onPress={handleAwardPointsToPlayers}
               disabled={isAwardingPoints}
@@ -300,12 +313,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
                     color={GameColors.white}
                   />
                   <ThemedText style={styles.buttonText}>
-                    Award Points (
-                    {Object.values(selectedPlayersForPoints).reduce(
-                      (sum, points) => sum + points,
-                      0,
-                    )}{" "}
-                    total)
+                    {t("game.ui.postGuessing.awardButton", { locale, total: (Object.values(selectedPlayersForPoints) as number[]).reduce((sum, points) => sum + points, 0) })}
                   </ThemedText>
                 </>
               )}
@@ -320,7 +328,6 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
 export default PostGuessingPointsPanel;
 
 const styles = StyleSheet.create({
-  gameFlowContainer: { marginTop: 24, marginBottom: 24 },
   roundInfo: {
     marginBottom: 20,
     padding: 16,
@@ -352,7 +359,6 @@ const styles = StyleSheet.create({
       android: { elevation: 4 },
     }),
   },
-  buttonDisabled: { opacity: 0.6 },
   buttonText: {
     color: GameColors.white,
     fontSize: 16,

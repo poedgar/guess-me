@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
+import { gameStyles } from './gameStyles';
 import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
@@ -9,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Platform,
     ScrollView,
     StyleSheet,
@@ -203,9 +205,9 @@ export const GuessingPhase: React.FC<Props> = ({
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSelectedGuesses({});
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.submitGuessesFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.submitGuessesFailed', { locale }));
     } finally {
       setIsSubmittingGuesses(false);
     }
@@ -221,10 +223,10 @@ export const GuessingPhase: React.FC<Props> = ({
       await playSound('gameOver');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFancyAlert(t('common.success', { locale }), t('game.alerts.guessingPhaseCompleteGameFinished', { locale }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.finalizeGuessingFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.finalizeGuessingFailed', { locale }));
     } finally {
       setIsFinalizingGuesses(false);
     }
@@ -244,10 +246,10 @@ export const GuessingPhase: React.FC<Props> = ({
         console.warn('startNextRound after finalize failed or game finished', e);
       }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.finishAndStartNextRoundFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.finishAndStartNextRoundFailed', { locale }));
     } finally {
       setIsFinalizingGuesses(false);
     }
@@ -259,15 +261,15 @@ export const GuessingPhase: React.FC<Props> = ({
     <View style={styles.phaseWrapper}>
       {/* Status badge */}
       <View style={styles.gameStatusContainer}>
-        <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
-        <View style={[styles.statusBadge, { backgroundColor: StatusColors.guessing_phase }]}>
-          <ThemedText style={styles.statusText}>
+        <ThemedText style={gameStyles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
+        <View style={[gameStyles.statusBadge, { backgroundColor: StatusColors.guessing_phase }]}>
+          <ThemedText style={gameStyles.statusText}>
             {t('game.ui.statusGuessing', { locale })}
           </ThemedText>
         </View>
       </View>
 
-      <View style={styles.gameFlowContainer}>
+      <View style={gameStyles.gameFlowContainer}>
         <View style={styles.roundInfo}>
           <ThemedText type="subtitle" style={styles.roundTitle}>
             {t('game.ui.guessAuthorsTitle', { locale })}
@@ -284,14 +286,14 @@ export const GuessingPhase: React.FC<Props> = ({
               return (
                 <View style={styles.guessResultsContainer}>
                   <ThemedText type="subtitle" style={styles.guessResultsTitle}>
-                    Результати вгадування
+                    {t('game.ui.guessResultsHeader', { locale })}
                   </ThemedText>
                   <View style={styles.guessResultCard}>
                     <ThemedText style={styles.guessResultText}>
-                      Ви правильно вгадали {playerResult.correctGuesses || 0} з {commentsForPlayer.length} коментарів!
+                      {t('game.ui.guessCorrectCount', { locale, correct: playerResult.correctGuesses || 0, total: commentsForPlayer.length })}
                     </ThemedText>
                     <ThemedText style={styles.guessResultDetail}>
-                      Ви отримали {playerResult.correctGuesses || 0} балів за правильні відповіді.
+                      {t('game.ui.guessPointsEarned', { locale, points: playerResult.correctGuesses || 0 })}
                     </ThemedText>
                   </View>
                 </View>
@@ -369,11 +371,13 @@ export const GuessingPhase: React.FC<Props> = ({
                   style={[
                     styles.submitGuessButton,
                     { backgroundColor: GameColors.purple, shadowColor: GameColors.shadow },
-                    (isSubmittingGuesses || !allCommentsHaveGuesses) && styles.buttonDisabled,
+                    (isSubmittingGuesses || !allCommentsHaveGuesses) && gameStyles.buttonDisabled,
                   ]}
                   onPress={handleSubmitGuesses}
                   disabled={isSubmittingGuesses || !allCommentsHaveGuesses}
                   activeOpacity={0.8}
+                  accessibilityLabel={t('game.ui.submitGuesses', { locale })}
+                  accessibilityRole="button"
                 >
                   {isSubmittingGuesses ? (
                     <ActivityIndicator size="small" color={GameColors.white} />
@@ -412,11 +416,13 @@ export const GuessingPhase: React.FC<Props> = ({
                     style={[
                       styles.adminButton,
                       { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
-                      isFinalizingGuesses && styles.buttonDisabled,
+                      isFinalizingGuesses && gameStyles.buttonDisabled,
                     ]}
                     onPress={handleFinalizeAndNextRound}
                     disabled={isFinalizingGuesses}
                     activeOpacity={0.8}
+                    accessibilityLabel={t('game.ui.finishAndStartNextRound', { locale })}
+                    accessibilityRole="button"
                   >
                     {isFinalizingGuesses ? (
                       <ActivityIndicator size="small" color={GameColors.white} />
@@ -436,11 +442,13 @@ export const GuessingPhase: React.FC<Props> = ({
                     style={[
                       styles.adminButton,
                       { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
-                      isFinalizingGuesses && styles.buttonDisabled,
+                      isFinalizingGuesses && gameStyles.buttonDisabled,
                     ]}
                     onPress={handleFinalizeGuessingPhase}
                     disabled={isFinalizingGuesses}
                     activeOpacity={0.8}
+                    accessibilityLabel={t('game.ui.finalizeGuessingPhase', { locale })}
+                    accessibilityRole="button"
                   >
                     {isFinalizingGuesses ? (
                       <ActivityIndicator size="small" color={GameColors.white} />
@@ -453,7 +461,41 @@ export const GuessingPhase: React.FC<Props> = ({
               );
             }
 
-            return null;
+            const forceHandler = singleTargetId
+              ? handleFinalizeAndNextRound
+              : handleFinalizeGuessingPhase;
+            return (
+              <View style={styles.adminControls}>
+                <TouchableOpacity
+                  style={[
+                    styles.adminButton,
+                    { backgroundColor: GameColors.neutral, shadowColor: GameColors.shadow },
+                    isFinalizingGuesses && gameStyles.buttonDisabled,
+                  ]}
+                  onPress={() => {
+                    Alert.alert(
+                      t('game.ui.forceFinalizeTitle', { locale }),
+                      t('game.ui.forceFinalizeMessage', { locale }),
+                      [
+                        { text: t('common.cancel', { locale }), style: 'cancel' },
+                        { text: t('game.ui.finalizeAnyway', { locale }), onPress: () => { void forceHandler(); } },
+                      ]
+                    );
+                  }}
+                  disabled={isFinalizingGuesses}
+                  activeOpacity={0.8}
+                  accessibilityLabel={t('game.ui.forceFinalizeTitle', { locale })}
+                  accessibilityRole="button"
+                >
+                  {isFinalizingGuesses ? (
+                    <ActivityIndicator size="small" color={GameColors.white} />
+                  ) : (
+                    <IconSymbol name="flag.checkered" size={16} color={GameColors.white} />
+                  )}
+                </TouchableOpacity>
+                <ThemedText style={styles.buttonLabel}>{t('game.ui.finalize', { locale })}</ThemedText>
+              </View>
+            );
           })()
         )}
       </View>
@@ -481,33 +523,26 @@ export const GuessingPhase: React.FC<Props> = ({
               {guessResultModal.map((result, index) => (
                 <View
                   key={index}
-                  style={{
-                    backgroundColor: result.correct ? GameColors.correctBg : GameColors.incorrectBg,
-                    borderColor: result.correct ? GameColors.correct : GameColors.incorrect,
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    padding: 16,
-                    marginBottom: 12,
-                  }}
+                  style={[
+                    styles.guessResultItem,
+                    result.correct ? styles.guessResultItemCorrect : styles.guessResultItemIncorrect,
+                  ]}
                 >
-                  <ThemedText style={{
-                    fontSize: 16, fontWeight: '600', marginBottom: 8, textAlign: 'center',
-                    color: result.correct ? GameColors.correct : GameColors.incorrect,
-                  }}>
+                  <ThemedText style={[styles.guessResultLabel, result.correct ? styles.guessResultCorrect : styles.guessResultIncorrect]}>
                     {result.correct ? t('game.ui.correct', { locale }) : t('game.ui.incorrect', { locale })}
                   </ThemedText>
-                  <ThemedText style={{ fontSize: 14, fontStyle: 'italic', marginBottom: 12, textAlign: 'center' }}>
+                  <ThemedText style={styles.guessResultComment}>
                     "{result.commentText}"
                   </ThemedText>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <View style={[styles.guessResultRow, { marginBottom: 6 }]}>
                     <ThemedText style={{ fontSize: 14, opacity: 0.7 }}>
                       {t('game.ui.actualAuthor', { locale })}:
                     </ThemedText>
-                    <ThemedText style={{ fontSize: 14, fontWeight: '600', color: result.correct ? GameColors.correct : GameColors.incorrect }}>
+                    <ThemedText style={[{ fontSize: 14, fontWeight: '600' }, result.correct ? styles.guessResultCorrect : styles.guessResultIncorrect]}>
                       {result.actualAuthorName}
                     </ThemedText>
                   </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <View style={[styles.guessResultRow, { marginBottom: 8 }]}>
                     <ThemedText style={{ fontSize: 14, opacity: 0.7 }}>
                       {t('game.ui.yourGuess', { locale })}:
                     </ThemedText>
@@ -523,7 +558,7 @@ export const GuessingPhase: React.FC<Props> = ({
                 style={[styles.modalButton, { backgroundColor: GameColors.correct }]}
                 onPress={() => setGuessResultModal(null)}
               >
-                <ThemedText style={{ color: GameColors.white, fontSize: 16, fontWeight: '600' }}>OK</ThemedText>
+                <ThemedText style={styles.modalButtonText}>{t('common.ok', { locale })}</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -537,10 +572,6 @@ const styles = StyleSheet.create({
   phaseWrapper: { backgroundColor: GameColors.guessingTint, borderWidth: 1, borderColor: GameColors.guessingTintBorder, borderRadius: 16, padding: 16, marginBottom: 8 },
   buttonLabel: { fontSize: 10, fontWeight: '600', color: GameColors.white, textAlign: 'center' },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  statusText: { color: GameColors.white, fontSize: 12, fontWeight: '700' },
-  gameFlowContainer: { marginTop: 24, marginBottom: 24 },
   roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: GameColors.cardBg },
   roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
   targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600', fontFamily: Fonts.sans },
@@ -557,7 +588,6 @@ const styles = StyleSheet.create({
   selectedAuthorName: { color: GameColors.white },
   submitGuessButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
 
-  buttonDisabled: { opacity: 0.6 },
   guessResultsContainer: { marginTop: 16, alignItems: 'center' },
   guessResultsTitle: { marginBottom: 16, textAlign: 'center' },
   guessResultCard: { padding: 20, borderRadius: 8, backgroundColor: GameColors.cardBg, alignItems: 'center', width: '100%' },
@@ -573,4 +603,11 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8, textAlign: 'center' },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
   modalButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, minWidth: 80, alignItems: 'center' },
+  modalButtonText: { color: GameColors.white, fontSize: 16, fontWeight: '600' as const },
+  guessResultItem: { borderWidth: 1, borderRadius: 8, padding: 16, marginBottom: 12 },
+  guessResultItemCorrect: { backgroundColor: GameColors.correctBg, borderColor: GameColors.correct },
+  guessResultItemIncorrect: { backgroundColor: GameColors.incorrectBg, borderColor: GameColors.incorrect },
+  guessResultLabel: { fontSize: 16, fontWeight: '600' as const, marginBottom: 8, textAlign: 'center' as const },
+  guessResultComment: { fontSize: 14, fontStyle: 'italic' as const, marginBottom: 12, textAlign: 'center' as const },
+  guessResultRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const },
 });

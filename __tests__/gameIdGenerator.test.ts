@@ -51,4 +51,16 @@ describe('generateGameId', () => {
     expect(Array.isArray(ukrainianNouns)).toBe(true);
     expect(ukrainianNouns.length).toBeGreaterThan(0);
   });
+
+  it('all adjectives are unique after lowercasing', () => {
+    const lower = ukrainianAdjectives.map(a => a.toLowerCase());
+    const duplicates = lower.filter((w, i) => lower.indexOf(w) !== i);
+    expect(duplicates).toEqual([]);
+  });
+
+  it('all nouns are unique after lowercasing', () => {
+    const lower = ukrainianNouns.map(n => n.toLowerCase());
+    const duplicates = lower.filter((w, i) => lower.indexOf(w) !== i);
+    expect(duplicates).toEqual([]);
+  });
 });

@@ -4,7 +4,7 @@ import { ThemedText } from "@/components/themed-text";
 import { HeaderLogo } from "@/components/ui/HeaderLogo";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { SuccessAnimation } from "@/components/ui/SuccessAnimation";
-import { Colors, Fonts, GameColors } from "@/constants/theme";
+import { Fonts, GameColors, themedInput } from "@/constants/theme";
 import { useGame } from "@/contexts/GameContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSound } from "@/contexts/SoundContext";
@@ -40,6 +40,7 @@ export const JoinScreen: React.FC<Props> = ({
   const { enterGame, loading } = useGame();
   const [gameIdInput, setGameIdInput] = useState("");
   const [isProcessingEnter, setIsProcessingEnter] = useState(false);
+  const inputTheme = themedInput(isDark);
 
   const handleEnterGame = async () => {
     if (!isSignedIn) {
@@ -81,6 +82,7 @@ export const JoinScreen: React.FC<Props> = ({
               onPress: async () => {
                 await playSound("copy");
                 Clipboard.setString(gameId);
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 showFancyAlert(
                   t("game.alerts.copiedTitle", { locale }),
                   t("game.alerts.copiedMessage", { locale }),
@@ -103,15 +105,13 @@ export const JoinScreen: React.FC<Props> = ({
           </View>,
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound("error");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      // showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.enterGameFailed', { locale }));
-      // setFaceMessage({
-      //     visible: true,
-      //     message: t('common.error', { locale }), error.message || t('game.alerts.enterGameFailed', { locale }),
-      //     face: '🎉',
-      //   });
+      const message = error?.message === 'game_not_found'
+        ? t("game.alerts.gameNotFound", { locale })
+        : t("game.alerts.enterGameFailed", { locale });
+      showFancyAlert(t("common.error", { locale }), message);
     } finally {
       setIsProcessingEnter(false);
     }
@@ -152,22 +152,9 @@ export const JoinScreen: React.FC<Props> = ({
           </ThemedText>
 
           <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: isDark
-                  ? GameColors.inputDark
-                  : GameColors.inputLight,
-                color: isDark ? Colors.dark.text : Colors.light.text,
-                borderColor: isDark
-                  ? GameColors.inputBorderDark
-                  : GameColors.inputBorderLight,
-              },
-            ]}
+            style={[styles.input, inputTheme.style]}
             placeholder={t("game.ui.createOrJoin.inputPlaceholder", { locale })}
-            placeholderTextColor={
-              isDark ? GameColors.placeholderDark : GameColors.placeholderLight
-            }
+            placeholderTextColor={inputTheme.placeholderTextColor}
             value={gameIdInput}
             onChangeText={setGameIdInput}
             autoCapitalize="none"
@@ -186,6 +173,8 @@ export const JoinScreen: React.FC<Props> = ({
             onPress={handleEnterGame}
             disabled={isProcessingEnter || loading || !gameIdInput.trim()}
             activeOpacity={0.8}
+            accessibilityLabel={t("game.ui.enterGame", { locale })}
+            accessibilityRole="button"
           >
             {isProcessingEnter ? (
               <View style={styles.buttonLoading}>

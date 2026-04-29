@@ -11,7 +11,7 @@ import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ActivePhase } from './ActivePhase';
@@ -52,6 +52,8 @@ export const GameScreen: React.FC = () => {
   const [fancyButtons, setFancyButtons] = useState<FancyAlertButton[]>([]);
   const [fancyCustomContent, setFancyCustomContent] = useState<React.ReactNode>();
 
+  const [isLeaving, setIsLeaving] = useState(false);
+
   const [faceMessage, setFaceMessage] = useState<{ visible: boolean; message: string; face?: string }>({
     visible: false,
     message: '',
@@ -80,19 +82,15 @@ export const GameScreen: React.FC = () => {
   // Shared computed values
   const isAdmin = currentGame?.adminId === user?.uid;
 
-  const getDisplayName = (fullName: string) => {
+  const getDisplayName = useCallback((fullName: string) => {
     if (currentGame?.showSurnames) return fullName;
     return fullName.split(' ')[0];
-  };
+  }, [currentGame?.showSurnames]);
 
   const participantsByJoin = (currentGame?.participants || []).slice().sort((a, b) => {
-    const aMillis = a.joinedAt && typeof (a.joinedAt as any)?.toDate === 'function'
-      ? (a.joinedAt as any).toDate().getTime()
-      : new Date(a.joinedAt).getTime();
-    const bMillis = b.joinedAt && typeof (b.joinedAt as any)?.toDate === 'function'
-      ? (b.joinedAt as any).toDate().getTime()
-      : new Date(b.joinedAt).getTime();
-    return aMillis - bMillis;
+    const toMillis = (v: Date | { toDate(): Date }) =>
+      typeof (v as any).toDate === 'function' ? (v as { toDate(): Date }).toDate().getTime() : (v as Date).getTime();
+    return toMillis(a.joinedAt) - toMillis(b.joinedAt);
   });
 
   const joinIndexById: Record<string, number> = Object.fromEntries(
@@ -105,11 +103,13 @@ export const GameScreen: React.FC = () => {
     if (currentGame) {
       await playSound('copy');
       Clipboard.setString(currentGame.id);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFancyAlert(t('game.alerts.copiedTitle', { locale }), t('game.alerts.copiedMessage', { locale }));
     }
   };
 
   const handleLeaveGame = async () => {
+    if (isLeaving) return;
     await playSound('click');
     showFancyAlert(
       t('game.alerts.leaveGameTitle', { locale }),
@@ -121,13 +121,16 @@ export const GameScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
+              setIsLeaving(true);
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               await leaveGame();
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               showFancyAlert(t('game.alerts.leftGameTitle', { locale }));
-            } catch (error: any) {
+            } catch (error: unknown) {
               console.error('handleLeaveGame error', error);
-              showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.leaveGameFailed', { locale }));
+              showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.leaveGameFailed', { locale }));
+            } finally {
+              setIsLeaving(false);
             }
           },
         },
@@ -187,9 +190,12 @@ export const GameScreen: React.FC = () => {
 
             <View style={styles.leaveButtonWrapper}>
               <TouchableOpacity
-                style={[styles.leaveButton, { backgroundColor: GameColors.danger, shadowColor: GameColors.shadow }]}
+                style={[styles.leaveButton, { backgroundColor: GameColors.danger, shadowColor: GameColors.shadow }, isLeaving && { opacity: 0.6 }]}
                 onPress={handleLeaveGame}
+                disabled={isLeaving}
                 activeOpacity={0.8}
+                accessibilityLabel={t('game.ui.leaveGame', { locale })}
+                accessibilityRole="button"
               >
                 <IconSymbol name="door.left.hand.open" size={16} color={GameColors.white} />
               </TouchableOpacity>

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 interface SoundContextType {
@@ -72,9 +72,14 @@ async function playNativeTone(frequency: number, duration: number, type: 'sine' 
   }
 }
 
+interface WebkitWindow extends Window {
+  webkitAudioContext: typeof AudioContext;
+}
+
 function playWebTone(frequency: number, duration: number, type: OscillatorType = 'sine') {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioCtx = window.AudioContext || (window as unknown as WebkitWindow).webkitAudioContext;
+    const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -92,6 +97,11 @@ function playWebTone(frequency: number, duration: number, type: OscillatorType =
 
 export function SoundProvider({ children }: { children: ReactNode }) {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const pendingTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => { pendingTimers.current.forEach(clearTimeout); };
+  }, []);
 
   useEffect(() => {
     loadSoundPreference();
@@ -125,8 +135,10 @@ export function SoundProvider({ children }: { children: ReactNode }) {
 
   const tone = (freq: number, dur: number, type: 'sine' | 'square' | 'sawtooth' = 'sine', delayMs = 0) => {
     const play = () => Platform.OS === 'web' ? playWebTone(freq, dur, type) : playNativeTone(freq, dur, type);
-    if (delayMs > 0) setTimeout(play, delayMs);
-    else play();
+    if (delayMs > 0) {
+      const id = setTimeout(play, delayMs);
+      pendingTimers.current.push(id);
+    } else play();
   };
 
   const playSound = async (soundType: 'success' | 'error' | 'click' | 'gameStart' | 'points' | 'notification' | 'copy' | 'correctGuess' | 'wrongGuess' | 'roundComplete' | 'gameOver' | 'timerWarning' | 'achievement') => {

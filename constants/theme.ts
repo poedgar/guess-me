@@ -164,6 +164,18 @@ export const ModalStyles = {
   },
 };
 
+/** Returns themed style + placeholderTextColor for a TextInput, based on dark/light mode. */
+export function themedInput(isDark: boolean) {
+  return {
+    style: {
+      backgroundColor: isDark ? GameColors.inputDark : GameColors.inputLight,
+      color: isDark ? Colors.dark.text : Colors.light.text,
+      borderColor: isDark ? GameColors.inputBorderDark : GameColors.inputBorderLight,
+    },
+    placeholderTextColor: isDark ? GameColors.placeholderDark : GameColors.placeholderLight,
+  };
+}
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

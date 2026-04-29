@@ -65,12 +65,12 @@ export const AuthScreen: React.FC = () => {
       await signIn();
       await playSound("success");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound("error");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(
         t("auth.signInErrorTitle", { locale }),
-        error.message || t("auth.signInErrorMessage", { locale }),
+        (error instanceof Error && error.message) || t("auth.signInErrorMessage", { locale }),
       );
     } finally {
       setIsSigningIn(false);
@@ -99,10 +99,10 @@ export const AuthScreen: React.FC = () => {
           },
         ],
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       showFancyAlert(
         t("auth.signOutErrorTitle", { locale }),
-        error.message || t("auth.signOutErrorMessage", { locale }),
+        (error instanceof Error && error.message) || t("auth.signOutErrorMessage", { locale }),
       );
     }
   };
@@ -268,7 +268,7 @@ export const AuthScreen: React.FC = () => {
                 <View style={styles.webGoogleIcon}>
                   <IconSymbol
                     name="lock.shield"
-                    size={20}
+                    size={16}
                     color={GameColors.blue}
                   />
                 </View>
@@ -382,12 +382,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  webGoogleIconText: {
-    color: GameColors.blue,
-    fontSize: 14,
-    fontWeight: "bold",
-    fontFamily: Fonts.sans,
-  },
   webGoogleButtonText: {
     color: GameColors.white,
     fontSize: 16,
@@ -404,13 +398,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: "100%",
     height: 50,
-  },
-  loadingButtonText: {
-    color: GameColors.white,
-    marginLeft: 12,
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: Fonts.sans,
   },
   profileContainer: {
     width: "100%",
@@ -487,73 +474,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     fontFamily: Fonts.sans,
-  },
-  // Fancy alert styles
-  fancyModalOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: GameColors.overlayBg,
-  },
-  fancyModal: {
-    width: "85%",
-    backgroundColor: GameColors.white,
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: GameColors.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  fancyTitle: {
-    color: GameColors.shadow,
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 8,
-    textAlign: "center",
-    fontFamily: Fonts.sans,
-  },
-  fancyMessage: {
-    color: GameColors.shadow,
-    fontSize: 15,
-    opacity: 0.9,
-    marginBottom: 16,
-    textAlign: "center",
-    fontFamily: Fonts.sans,
-  },
-  fancyButtonsRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  fancyButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  fancyButtonText: {
-    fontSize: 15,
-    color: GameColors.blue,
-    fontWeight: "700",
-    fontFamily: Fonts.sans,
-  },
-  fancyDestructiveButton: {},
-  fancyDestructiveButtonText: {
-    color: GameColors.danger,
-  },
-  headerLogoContainer: {
-    justifyContent: "center",
-    alignItems: "flex-start",
-    backgroundColor: "transparent",
-    marginTop: -40,
-  },
-  headerLogo: {
-    width: 80,
-    height: 80,
   },
 });

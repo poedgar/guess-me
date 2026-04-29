@@ -1,28 +1,11 @@
 import { ThemedText } from '@/components/themed-text';
+import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { GameColors } from '@/constants/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
-import { Image as ExpoImage } from 'expo-image';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-
-function HeaderLogo() {
-  const source =
-    Platform.OS === 'web'
-      ? require('../../assets/images/logo.svg')
-      : require('../../assets/images/icon.png');
-
-  return (
-    <View style={styles.headerLogoContainer}>
-      <ExpoImage 
-        source={source} 
-        style={styles.headerLogo} 
-        contentFit="contain" 
-      />
-    </View>
-  );
-}
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 export default function RulesScreen() {
   const colorScheme = useColorScheme();
@@ -229,17 +212,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 20,
     paddingBottom: 40,
-  },
-  headerLogoContainer: { 
-    height: 60, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: 20,
-    backgroundColor: 'transparent',
-  },
-  headerLogo: {
-    width: 40,
-    height: 40,
   },
   header: {
     alignItems: 'center',

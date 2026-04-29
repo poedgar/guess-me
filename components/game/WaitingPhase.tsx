@@ -1,8 +1,10 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
+import { gameStyles } from './gameStyles';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
@@ -16,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { Leaderboard } from './Leaderboard';
 import { ShowFancyAlertFn } from './GameHeader';
 
 interface Props {
@@ -70,10 +73,10 @@ export const WaitingPhase: React.FC<Props> = ({
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const msg = getSuccessMessage?.(newValue);
       if (msg) showFancyAlert(t('common.success', { locale }), msg);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.updateSettingsFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.updateSettingsFailed', { locale }));
     }
   };
 
@@ -104,10 +107,10 @@ export const WaitingPhase: React.FC<Props> = ({
       await startGame();
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.startGameFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.startGameFailed', { locale }));
     }
   };
 
@@ -124,6 +127,8 @@ export const WaitingPhase: React.FC<Props> = ({
           <TouchableOpacity
             onPress={onCopyGameId}
             style={styles.gameIdBox}
+            accessibilityLabel={t('game.alerts.copyId', { locale })}
+            accessibilityRole="button"
           >
             <ThemedText style={styles.gameIdText}>{game.id}</ThemedText>
             <ThemedText style={styles.copyHint}>{t('game.ui.tapToCopy', { locale })}</ThemedText>
@@ -148,9 +153,9 @@ export const WaitingPhase: React.FC<Props> = ({
 
       {/* Status */}
       <View style={styles.gameStatusContainer}>
-        <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
-        <View style={[styles.statusBadge, { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, }]}>
-          <ThemedText style={styles.statusText}>
+        <ThemedText style={gameStyles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
+        <View style={[gameStyles.statusBadge, { backgroundColor: StatusColors.waiting, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+          <ThemedText style={gameStyles.statusText}>
             {t('game.ui.statusWaiting', { locale })}
           </ThemedText>
 
@@ -259,6 +264,7 @@ export const WaitingPhase: React.FC<Props> = ({
                 participant.userId === game.adminId && styles.adminParticipant,
               ]}
             >
+              <PlayerAvatar name={participant.userName} photoURL={participant.photoURL} size={36} />
               <View style={styles.participantInfo}>
                 <ThemedText style={styles.participantName}>
                   {`${idx + 1}. `}{getDisplayName(participant.userName)}
@@ -275,72 +281,18 @@ export const WaitingPhase: React.FC<Props> = ({
 
       {/* Leaderboard (if scores exist) */}
       {game.scores && (
-        <View style={styles.scoresContainer}>
-          <ThemedText type="subtitle" style={styles.scoresTitle}>
-            {t('game.ui.leaderboardTitle', { locale })}
-          </ThemedText>
-          {(() => {
-            const participantsWithScores = game.participants
-              .map(p => {
-                const gamePoints = game.scores?.[p.userId] || 0;
-                const guessPoints = game.guessResults?.[p.userId]?.correctGuesses || 0;
-                const totalPoints = gamePoints + guessPoints;
-                return { ...p, gamePoints, guessPoints, totalPoints };
-              })
-              .sort((a, b) => b.totalPoints - a.totalPoints);
-
-            return (
-              <ScrollView style={styles.leaderboardScroll} nestedScrollEnabled>
-                <View style={styles.leaderboard}>
-                  {participantsWithScores.map((participant, index) => (
-                    <View
-                      key={participant.userId}
-                      style={[
-                        styles.leaderboardItem,
-                        index === 0 && styles.leaderboardFirst,
-                        participant.userId === user?.uid && styles.leaderboardCurrentUser,
-                      ]}
-                    >
-                      <View style={styles.leaderboardRank}>
-                        {index === 0 && <ThemedText style={styles.rankEmoji}>🥇</ThemedText>}
-                        {index === 1 && <ThemedText style={styles.rankEmoji}>🥈</ThemedText>}
-                        {index === 2 && <ThemedText style={styles.rankEmoji}>🥉</ThemedText>}
-                        {index > 2 && (
-                          <ThemedText style={styles.rankNumber}>#{index + 1}</ThemedText>
-                        )}
-                      </View>
-                      <View style={styles.leaderboardInfo}>
-                        <ThemedText style={styles.leaderboardName}>
-                          {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : `${getDisplayName(participant.userName)}`}
-                          {participant.userId === game.adminId && ' 👑'}
-                          {participant.userId === user?.uid && ` ${t('game.ui.youLabel', { locale })}`}
-                        </ThemedText>
-                        <View style={styles.pointsRow}>
-                          <ThemedText style={styles.pointsDetail}>
-                            {t('game.ui.pointsGame', { locale })}: {participant.gamePoints}
-                          </ThemedText>
-                          <ThemedText style={styles.pointsDetail}>
-                            {t('game.ui.pointsGuessing', { locale })}: {participant.guessPoints}
-                          </ThemedText>
-                        </View>
-                      </View>
-                      <View style={styles.leaderboardPoints}>
-                        <ThemedText style={styles.pointsValue}>
-                          {participant.totalPoints}
-                        </ThemedText>
-                        <ThemedText style={styles.pointsLabel}>{t('game.ui.pointsTotal', { locale })}</ThemedText>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </ScrollView>
-            );
-          })()}
-        </View>
+        <Leaderboard
+          game={game}
+          user={user}
+          joinIndexById={joinIndexById}
+          getDisplayName={getDisplayName}
+          locale={locale}
+          title={t('game.ui.leaderboardTitle', { locale })}
+        />
       )}
 
       {/* Start Game / Waiting */}
-      <View style={styles.gameFlowContainer}>
+      <View style={gameStyles.gameFlowContainer}>
         {isAdmin && (
           <View style={styles.buttonWrapper}>
             <TouchableOpacity
@@ -350,11 +302,13 @@ export const WaitingPhase: React.FC<Props> = ({
                   backgroundColor: GameColors.green,
                   shadowColor: GameColors.shadow,
                 },
-                (loading || game.participants.length < 2) && styles.buttonDisabled,
+                (loading || game.participants.length < 2) && gameStyles.buttonDisabled,
               ]}
               onPress={handleStartGame}
               disabled={loading || game.participants.length < 2}
               activeOpacity={0.8}
+              accessibilityLabel={t('game.ui.startGame', { locale })}
+              accessibilityRole="button"
             >
               <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />
             </TouchableOpacity>
@@ -398,9 +352,6 @@ const styles = StyleSheet.create({
     backgroundColor: GameColors.textDark,
   },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-  statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
-  statusBadge: {  },
-  statusText: { backgroundColor: StatusColors.waiting, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, color: GameColors.white, fontSize: 12, fontWeight: '700' },
   toggleContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: 16, backgroundColor: GameColors.cardBg, borderRadius: 8 },
   toggleInfo: { flex: 1, marginRight: 16 },
   toggleLabel: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
@@ -413,27 +364,8 @@ const styles = StyleSheet.create({
   participantName: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
   participantEmail: { fontSize: 14, opacity: 0.7, fontFamily: Fonts.sans },
   participantsScroll: { maxHeight: 160, marginTop: 8 },
-  scoresContainer: { marginBottom: 24, marginTop: 8 },
-  scoresTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
-  leaderboard: { borderRadius: 8, overflow: 'hidden' },
-  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: GameColors.cardBg },
-  leaderboardFirst: { backgroundColor: GameColors.goldTint, borderWidth: 2, borderColor: GameColors.goldTintBorder },
-  leaderboardCurrentUser: { backgroundColor: GameColors.blueTint, borderWidth: 1, borderColor: GameColors.blueTintBorder },
-  leaderboardRank: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  rankEmoji: { fontSize: 24 },
-  rankNumber: { fontSize: 14, fontWeight: '600', opacity: 0.6 },
-  leaderboardInfo: { flex: 1, marginLeft: 12 },
-  leaderboardName: { fontSize: 16, fontWeight: '600' },
-  pointsRow: { marginTop: 4, flexDirection: 'row', flexWrap: 'wrap' },
-  pointsDetail: { fontSize: 12, opacity: 0.8, marginRight: 8 },
-  leaderboardPoints: { alignItems: 'flex-end' },
-  pointsValue: { fontSize: 20, fontWeight: '700', color: GameColors.green },
-  pointsLabel: { fontSize: 12, opacity: 0.6, marginTop: 2 },
-  leaderboardScroll: { maxHeight: 200, marginTop: 8 },
-  gameFlowContainer: { marginTop: 24, marginBottom: 24 },
   buttonWrapper: { alignItems: 'center', gap: 6 },
   startGameButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   buttonLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  buttonDisabled: { opacity: 0.6 },
   waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
 });

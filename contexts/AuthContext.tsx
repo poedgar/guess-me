@@ -4,6 +4,10 @@ import { signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, sig
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
+type GoogleSignInResponse =
+  | { data: { idToken: string | null } }
+  | { idToken: string | null };
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -66,9 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         
         // Get user info from Google Sign-In
-        const response = await GoogleSignin.signIn();
-        // Handle different response structures (v16+ uses data property)
-        const idToken = (response as any).data?.idToken || (response as any).idToken;
+        const response = await GoogleSignin.signIn() as GoogleSignInResponse;
+        const idToken = 'data' in response ? response.data.idToken : response.idToken;
         
         if (!idToken) {
           throw new Error('No ID token received from Google Sign-In');
@@ -80,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Sign in the user with the credential
         await signInWithCredential(auth, googleCredential);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign-in error:', error);
       setLoading(false);
       throw error;
@@ -96,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (Platform.OS !== 'web') {
         await GoogleSignin.signOut();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sign-out error:', error);
       setLoading(false);
       throw error;

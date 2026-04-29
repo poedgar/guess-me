@@ -1,9 +1,11 @@
 import { ThemedText } from '@/components/themed-text';
 import { Fonts, GameColors } from '@/constants/theme';
+import { gameStyles } from './gameStyles';
 import { Game } from '@/contexts/GameContext';
 import { t } from '@/i18n';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Leaderboard } from './Leaderboard';
 
 interface Props {
   game: Game;
@@ -15,7 +17,7 @@ interface Props {
 
 export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDisplayName, locale }) => {
   return (
-    <View style={[styles.gameFlowContainer, styles.phaseWrapper]}>
+    <View style={[gameStyles.gameFlowContainer, styles.phaseWrapper]}>
       {game.adminLeft ? (
         <>
           <ThemedText type="title" style={styles.finishedTitle}>
@@ -33,60 +35,14 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
           <ThemedText style={styles.finishedText}>
             {t('game.ui.gameFinishedMessage', { locale })}
           </ThemedText>
-          <View style={styles.scoresContainer}>
-            <ThemedText type="subtitle" style={styles.scoresTitle}>
-              {t('game.ui.finalLeaderboardTitle', { locale })}
-            </ThemedText>
-            {(() => {
-              const participantsWithScores = game.participants
-                .map(p => {
-                  const gamePoints = game.scores?.[p.userId] || 0;
-                  const guessPoints = game.guessResults?.[p.userId]?.correctGuesses || 0;
-                  const totalPoints = gamePoints + guessPoints;
-                  return { ...p, gamePoints, guessPoints, totalPoints };
-                })
-                .sort((a, b) => b.totalPoints - a.totalPoints);
-              return (
-                <ScrollView style={styles.leaderboardScroll} nestedScrollEnabled>
-                  <View style={styles.leaderboard}>
-                    {participantsWithScores.map((participant, index) => (
-                      <View
-                        key={participant.userId}
-                        style={[
-                          styles.leaderboardItem,
-                          index === 0 && styles.leaderboardFirst,
-                          participant.userId === user?.uid && styles.leaderboardCurrentUser,
-                        ]}
-                      >
-                        <View style={styles.leaderboardRank}>
-                          {index === 0 && <ThemedText style={styles.rankEmoji}>🥇</ThemedText>}
-                          {index === 1 && <ThemedText style={styles.rankEmoji}>🥈</ThemedText>}
-                          {index === 2 && <ThemedText style={styles.rankEmoji}>🥉</ThemedText>}
-                          {index > 2 && <ThemedText style={styles.rankNumber}>#{index + 1}</ThemedText>}
-                        </View>
-                        <View style={styles.leaderboardInfo}>
-                          <ThemedText style={styles.leaderboardName}>
-                            {joinIndexById[participant.userId] ? `${joinIndexById[participant.userId]}. ` : ''}
-                            {getDisplayName(participant.userName)}
-                            {participant.userId === game.adminId && ' 👑'}
-                            {participant.userId === user?.uid && ' (Ви)'}
-                          </ThemedText>
-                          <View style={styles.pointsRow}>
-                            <ThemedText style={styles.pointsDetail}>Гра: {participant.gamePoints}</ThemedText>
-                            <ThemedText style={styles.pointsDetail}>Вгадування: {participant.guessPoints}</ThemedText>
-                          </View>
-                        </View>
-                        <View style={styles.leaderboardPoints}>
-                          <ThemedText style={styles.pointsValue}>{participant.totalPoints}</ThemedText>
-                          <ThemedText style={styles.pointsLabel}>всього</ThemedText>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </ScrollView>
-              );
-            })()}
-          </View>
+          <Leaderboard
+            game={game}
+            user={user}
+            joinIndexById={joinIndexById}
+            getDisplayName={getDisplayName}
+            locale={locale}
+            title={t('game.ui.finalLeaderboardTitle', { locale })}
+          />
         </>
       )}
     </View>
@@ -94,25 +50,7 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
 };
 
 const styles = StyleSheet.create({
-  gameFlowContainer: { marginTop: 24, marginBottom: 24 },
   phaseWrapper: { backgroundColor: GameColors.resultsTint, borderWidth: 1, borderColor: GameColors.resultsTintBorder, borderRadius: 16, padding: 16, marginBottom: 8 },
   finishedTitle: { textAlign: 'center', marginBottom: 12, fontFamily: Fonts.sans },
   finishedText: { textAlign: 'center', opacity: 0.7, fontSize: 16, fontFamily: Fonts.sans },
-  scoresContainer: { marginBottom: 24, marginTop: 8 },
-  scoresTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
-  leaderboard: { borderRadius: 8, overflow: 'hidden' },
-  leaderboardItem: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8, borderRadius: 8, backgroundColor: GameColors.cardBg },
-  leaderboardFirst: { backgroundColor: GameColors.goldTint, borderWidth: 2, borderColor: GameColors.goldTintBorder },
-  leaderboardCurrentUser: { backgroundColor: GameColors.blueTint, borderWidth: 1, borderColor: GameColors.blueTintBorder },
-  leaderboardRank: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  rankEmoji: { fontSize: 24 },
-  rankNumber: { fontSize: 14, fontWeight: '600', opacity: 0.6 },
-  leaderboardInfo: { flex: 1, marginLeft: 12 },
-  leaderboardName: { fontSize: 16, fontWeight: '600' },
-  pointsRow: { marginTop: 4, flexDirection: 'row', flexWrap: 'wrap' },
-  pointsDetail: { fontSize: 12, opacity: 0.8, marginRight: 8 },
-  leaderboardPoints: { alignItems: 'flex-end' },
-  pointsValue: { fontSize: 20, fontWeight: '700', color: GameColors.green },
-  pointsLabel: { fontSize: 12, opacity: 0.6, marginTop: 2 },
-  leaderboardScroll: { maxHeight: 200, marginTop: 8 },
 });

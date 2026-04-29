@@ -18,7 +18,7 @@ export function useLanguage() {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocale] = useState('en');
+  const [locale, setLocale] = useState(i18n.locale);
 
   useEffect(() => {
     const loadLocale = async () => {

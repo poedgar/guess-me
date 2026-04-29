@@ -3,7 +3,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts, GameColors } from '@/constants/theme';
 import { useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
-// import { t } from '@/i18n';
+import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -28,11 +28,11 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
       await resetTargetControls();
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert('Успіх', 'Налаштування цілей скинуто!');
-    } catch (error: any) {
+      showFancyAlert(t('common.success', { locale }), t('game.alerts.resetTargetSuccess', { locale }));
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося скинути налаштування');
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.resetTargetFailed', { locale }));
     } finally {
       setIsResetting(false);
     }
@@ -46,11 +46,11 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
       await setNextRoundTarget(participantId);
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert('Успіх', 'Цільового гравця для наступного раунду встановлено!');
-    } catch (error: any) {
+      showFancyAlert(t('common.success', { locale }), t('game.alerts.setTargetSuccess', { locale }));
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося встановити ціль');
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.setTargetFailed', { locale }));
     } finally {
       setSettingTarget(null);
     }
@@ -64,11 +64,11 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
       await skipNextRoundTarget(participantId);
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert('Успіх', 'Гравця пропущено з вибору цілі!');
-    } catch (error: any) {
+      showFancyAlert(t('common.success', { locale }), t('game.alerts.skipTargetSuccess', { locale }));
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert('Помилка', error.message || 'Не вдалося пропустити гравця');
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.skipTargetFailed', { locale }));
     } finally {
       setSkippingTarget(null);
     }
@@ -82,24 +82,24 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
   return (
     <View style={styles.container}>
       <ThemedText type="subtitle" style={styles.title}>
-        Керування цільовими гравцями
+        {t('game.ui.targetControl.title', { locale })}
       </ThemedText>
-      
+
       <View style={styles.statusContainer}>
         {preferredTarget && (
           <View style={styles.statusItem}>
             <IconSymbol name="star.fill" size={16} color={GameColors.green} />
             <ThemedText style={styles.statusText}>
-              Наступна ціль: {currentGame.participants.find(p => p.userId === preferredTarget)?.userName}
+              {t('game.ui.targetControl.nextTarget', { locale, name: currentGame.participants.find(p => p.userId === preferredTarget)?.userName })}
             </ThemedText>
           </View>
         )}
-        
+
         {skippedTargets.length > 0 && (
           <View style={styles.statusItem}>
             <IconSymbol name="hourglass" size={16} color={GameColors.danger} />
             <ThemedText style={styles.statusText}>
-              Пропущено: {skippedTargets.length} гравців
+              {t('game.ui.targetControl.skippedCount', { locale, count: skippedTargets.length })}
             </ThemedText>
           </View>
         )}
@@ -120,7 +120,7 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
         ) : (
           <IconSymbol name="arrow.up.circle.fill" size={16} color={GameColors.white} />
         )}
-        <ThemedText style={styles.resetButtonText}>Скинути</ThemedText>
+        <ThemedText style={styles.resetButtonText}>{t('game.ui.targetControl.reset', { locale })}</ThemedText>
       </TouchableOpacity>
 
       <ScrollView style={styles.participantsList} showsVerticalScrollIndicator={false}>
@@ -141,13 +141,13 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
                   {participant.userName}
                 </ThemedText>
                 {isCurrentTarget && (
-                  <ThemedText style={styles.currentLabel}>Поточна ціль</ThemedText>
+                  <ThemedText style={styles.currentLabel}>{t('game.ui.targetControl.currentTarget', { locale })}</ThemedText>
                 )}
                 {isPreferred && (
-                  <ThemedText style={styles.preferredLabel}>Наступна ціль</ThemedText>
+                  <ThemedText style={styles.preferredLabel}>{t('game.ui.targetControl.nextTargetLabel', { locale })}</ThemedText>
                 )}
                 {isSkipped && (
-                  <ThemedText style={styles.skippedLabel}>Пропущено</ThemedText>
+                  <ThemedText style={styles.skippedLabel}>{t('game.ui.targetControl.skippedLabel', { locale })}</ThemedText>
                 )}
               </View>
               

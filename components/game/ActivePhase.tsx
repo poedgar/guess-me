@@ -2,14 +2,16 @@ import { ThemedText } from '@/components/themed-text';
 import { FaceMessage } from '@/components/ui/FaceMessage';
 import { SuccessAnimation } from '@/components/ui/SuccessAnimation';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Fonts, GameColors, StatusColors } from '@/constants/theme';
+import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
+import { gameStyles } from './gameStyles';
 import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   StyleSheet,
   TextInput,
@@ -56,6 +58,7 @@ export const ActivePhase: React.FC<Props> = ({
     skipPostCommentPhase,
   } = useGame();
 
+  const inputTheme = themedInput(isDark);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
@@ -66,21 +69,14 @@ export const ActivePhase: React.FC<Props> = ({
     face: '😊',
   });
 
-  const getRequiredComments = () => {
+  const requiredComments = useMemo(() => {
     if (!game.currentRound) return 0;
     const targetUserId = game.currentRound.targetUserId;
     const isTargetAdmin = targetUserId === game.adminId;
-
-    if (!game.adminWritesComments) {
-      return game.participants.length - 2;
-    }
-
-    if (isTargetAdmin) {
-      return game.participants.length - 1;
-    }
-
+    if (!game.adminWritesComments) return game.participants.length - 2;
+    if (isTargetAdmin) return game.participants.length - 1;
     return game.participants.length - 2;
-  };
+  }, [game.currentRound, game.adminId, game.adminWritesComments, game.participants.length]);
 
   const getMaxPoints = () => {
     // Maximum points is participants count minus 1 (excluding the target themselves)
@@ -100,27 +96,43 @@ export const ActivePhase: React.FC<Props> = ({
       setCommentText('');
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.submitCommentFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.submitCommentFailed', { locale }));
     } finally {
       setIsSubmittingComment(false);
     }
   };
 
-  const handleShowComments = async () => {
+  const doShowComments = async () => {
     try {
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await showComments();
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.showCommentsFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.showCommentsFailed', { locale }));
     }
+  };
+
+  const handleShowComments = () => {
+    const received = game.currentRound?.comments?.length ?? 0;
+    if (received < requiredComments) {
+      Alert.alert(
+        t('game.ui.forceShowCommentsTitle', { locale }),
+        t('game.ui.forceShowCommentsMessage', { locale, received, required: requiredComments }),
+        [
+          { text: t('common.cancel', { locale }), style: 'cancel' },
+          { text: t('game.ui.showAnyway', { locale }), onPress: () => { void doShowComments(); } },
+        ]
+      );
+      return;
+    }
+    void doShowComments();
   };
 
   const handleGivePoints = async (commentId: string, points: number) => {
@@ -139,10 +151,10 @@ export const ActivePhase: React.FC<Props> = ({
         t('game.alerts.pointsAwarded', { locale }), 
         <View style={{ padding: 16 }}><SuccessAnimation /></View>
       ); 
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.pointsAwardFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.pointsAwardFailed', { locale }));
     } finally {
       setGivingPoints(prev => ({ ...prev, [commentId]: false }));
     }
@@ -161,24 +173,24 @@ export const ActivePhase: React.FC<Props> = ({
         t('game.alerts.finishPointsSuccess', { locale }), 
         <View style={{ padding: 16 }}><SuccessAnimation /></View>
       ); 
-    } catch (error: any) {
+    } catch (error: unknown) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.finishPointsFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.finishPointsFailed', { locale }));
     }
   };
 
   const handleGivePointsToTargetWithConfirm = (points: number) => {
-    const message = points === 0 
-      ? 'Ви впевнені, що хочете пропустити?' 
-      : `Ви впевнені, що хочете надати ${points} бал${points > 1 ? 'и' : ''}?`;
-    
+    const message = points === 0
+      ? t('game.alerts.confirmSkipPoints', { locale })
+      : t('game.alerts.confirmGivePoints', { locale, points });
+
     showFancyAlert(
-      'Підтвердження',
+      t('game.alerts.confirmTitle', { locale }),
       message,
       [
-        { text: 'Скасувати', style: 'cancel' },
-        { 
-          text: 'Підтвердити', 
+        { text: t('common.cancel', { locale }), style: 'cancel' },
+        {
+          text: t('common.yes', { locale }),
           onPress: async () => {
             await handleGivePointsToTarget(points);
           }
@@ -200,13 +212,15 @@ export const ActivePhase: React.FC<Props> = ({
       await givePointsToTarget(game.currentRound.targetUserId, points);
 
       showFaceMessage(
-        points > 0 ? `Ви надали ${points} бал(ів) цільовому гравцю!` : 'Ви пропустили фазу!', 
+        points > 0
+          ? t('game.alerts.pointsGivenToTarget', { locale, points })
+          : t('game.alerts.phaseSkipped', { locale }),
         <View style={{ padding: 16 }}><SuccessAnimation /></View>
       );    
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error?.message || t('game.alerts.targetPointsAwardFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.targetPointsAwardFailed', { locale }));
     } finally {
       setGivingPointsToTarget(false);
     }
@@ -225,29 +239,44 @@ export const ActivePhase: React.FC<Props> = ({
       // Show face message instead of fancy alert
       setFaceMessage({
         visible: true,
-        message: 'Ти пропустив фазу коментарів!',
+        message: t('game.alerts.commentPhaseSkipped', { locale }),
         face: '🤷‍♂️',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error?.message || 'Failed to skip phase');
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.skipPhaseFailed', { locale }));
     }
   };
 
-  const handleStartGuessingPhase = async () => {
-    if (!isAdmin) return;
+  const doStartGuessingPhase = async () => {
     try {
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await startGuessingPhase();
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
+    } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), error.message || t('game.alerts.startGuessingPhaseFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.startGuessingPhaseFailed', { locale }));
     }
+  };
+
+  const handleStartGuessingPhase = () => {
+    if (!isAdmin) return;
+    if (!game.currentRound?.pointsGiven) {
+      Alert.alert(
+        t('game.ui.forceStartGuessingTitle', { locale }),
+        t('game.ui.forceStartGuessingMessage', { locale }),
+        [
+          { text: t('common.cancel', { locale }), style: 'cancel' },
+          { text: t('game.ui.startAnyway', { locale }), onPress: () => { void doStartGuessingPhase(); } },
+        ]
+      );
+      return;
+    }
+    void doStartGuessingPhase();
   };
 
   if (!game.currentRound) return null;
@@ -256,15 +285,15 @@ export const ActivePhase: React.FC<Props> = ({
     <View style={styles.phaseWrapper}>
       {/* Status badge */}
       <View style={styles.gameStatusContainer}>
-        <ThemedText style={styles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
-        <View style={[styles.statusBadge, { backgroundColor: StatusColors.active }]}>
-          <ThemedText style={styles.statusText}>
+        <ThemedText style={gameStyles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
+        <View style={[gameStyles.statusBadge, { backgroundColor: StatusColors.active }]}>
+          <ThemedText style={gameStyles.statusText}>
             {t('game.ui.statusActive', { locale })}
           </ThemedText>
         </View>
       </View>
 
-      <View style={styles.gameFlowContainer}>
+      <View style={gameStyles.gameFlowContainer}>
         <View style={styles.roundInfo}>
           <ThemedText type="subtitle" style={styles.roundTitle}>
             {t('game.ui.round', { locale })} {game.currentRound.roundNumber}
@@ -282,35 +311,28 @@ export const ActivePhase: React.FC<Props> = ({
                 <TouchableOpacity
                   style={[
                     styles.adminButton,
-                    {
-                      backgroundColor: GameColors.admin,
-                      shadowColor: GameColors.shadow,
-                    },
-                    (game.currentRound.comments?.length || 0) <
-                      getRequiredComments() && styles.buttonDisabled,
+                    { backgroundColor: GameColors.admin, shadowColor: GameColors.shadow },
                   ]}
                   onPress={handleShowComments}
-                  disabled={(game.currentRound.comments?.length || 0) <
-                    getRequiredComments()}
                   activeOpacity={0.8}
+                  accessibilityLabel={t('game.ui.showComments', { locale })}
+                  accessibilityRole="button"
                 >
                   <IconSymbol name="eye.fill" size={16} color={GameColors.white} />
                 </TouchableOpacity>
               )}
-              {game.currentRound.commentsVisible &&
-                game.currentRound.pointsGiven && (
+              {game.currentRound.commentsVisible && (
                 <TouchableOpacity
                   style={[
                     styles.adminButton,
-                    {
-                      backgroundColor: GameColors.purple,
-                      shadowColor: GameColors.shadow,
-                    },
-                    loading && styles.buttonDisabled,
+                    { backgroundColor: GameColors.purple, shadowColor: GameColors.shadow },
+                    loading && gameStyles.buttonDisabled,
                   ]}
                   onPress={handleStartGuessingPhase}
                   disabled={loading}
                   activeOpacity={0.8}
+                  accessibilityLabel={t('game.ui.startGuessingPhase', { locale })}
+                  accessibilityRole="button"
                 >
                   <>
                     <IconSymbol name="brain.head.profile" size={16} color={GameColors.white} />
@@ -344,11 +366,13 @@ export const ActivePhase: React.FC<Props> = ({
                         style={styles.pointsButton}
                         onPress={() => handleGivePoints(comment.id, 1)}
                         disabled={!!givingPoints[comment.id]}
+                        accessibilityLabel={t('game.ui.awardPoint', { locale })}
+                        accessibilityRole="button"
                       >
                         {givingPoints[comment.id] ? (
                           <ActivityIndicator size="small" color={GameColors.white} />
                         ) : (
-                          <IconSymbol name="plus.circle.fill" size={14} color={GameColors.white} />
+                          <IconSymbol name="plus.circle.fill" size={16} color={GameColors.white} />
                         )}
                       </TouchableOpacity>
                     )}
@@ -367,11 +391,13 @@ export const ActivePhase: React.FC<Props> = ({
                         backgroundColor: GameColors.purple,
                         shadowColor: GameColors.shadow,
                       },
-                      loading && styles.buttonDisabled,
+                      loading && gameStyles.buttonDisabled,
                     ]}
                     onPress={handleFinishGivingPoints}
                     disabled={loading}
                     activeOpacity={0.8}
+                    accessibilityLabel={t('game.ui.finishAwardingPoints', { locale })}
+                    accessibilityRole="button"
                   >
                     {loading ? (
                       <ActivityIndicator size="small" color={GameColors.white} />
@@ -417,20 +443,20 @@ export const ActivePhase: React.FC<Props> = ({
                     <TextInput
                       style={[
                         styles.commentInput,
-                        {
-                          backgroundColor: isDark ? GameColors.inputDark : GameColors.inputLight,
-                          color: isDark ? Colors.dark.text : Colors.light.text,
-                          borderColor: isDark ? GameColors.inputBorderDark : GameColors.inputBorderLight,
-                        },
+                        inputTheme.style,
                       ]}
                       placeholder={t('game.ui.commentPlaceholder', { locale })}
-                      placeholderTextColor={isDark ? GameColors.placeholderDark : GameColors.placeholderLight}
+                      placeholderTextColor={inputTheme.placeholderTextColor}
                       value={commentText}
                       onChangeText={setCommentText}
                       multiline
                       numberOfLines={4}
+                      maxLength={500}
                       textAlignVertical="top"
                     />
+                    <ThemedText style={[styles.charCounter, commentText.length >= 450 && styles.charCounterWarning]}>
+                      {commentText.length}/500
+                    </ThemedText>
                     <TouchableOpacity
                       style={[
                         styles.submitCommentButton,
@@ -438,11 +464,13 @@ export const ActivePhase: React.FC<Props> = ({
                           backgroundColor: GameColors.blue,
                           shadowColor: GameColors.shadow,
                         },
-                        (!commentText.trim() || isSubmittingComment) && styles.buttonDisabled,
+                        (!commentText.trim() || isSubmittingComment) && gameStyles.buttonDisabled,
                       ]}
                       onPress={handleSubmitComment}
                       disabled={!commentText.trim() || isSubmittingComment}
                       activeOpacity={0.8}
+                      accessibilityLabel={t('game.ui.submitComment', { locale })}
+                      accessibilityRole="button"
                     >
                       {isSubmittingComment ? (
                         <ActivityIndicator size="small" color={GameColors.white} />
@@ -494,7 +522,7 @@ export const ActivePhase: React.FC<Props> = ({
                                       key={points}
                                       style={[
                                         styles.pointsButton,
-                                        givingPointsToTarget && styles.buttonDisabled,
+                                        givingPointsToTarget && gameStyles.buttonDisabled,
                                       ]}
                                       onPress={() => handleGivePointsToTargetWithConfirm(points)}
                                       disabled={givingPointsToTarget}
@@ -550,18 +578,12 @@ export const ActivePhase: React.FC<Props> = ({
 const styles = StyleSheet.create({
   phaseWrapper: { backgroundColor: GameColors.activeTint, borderWidth: 1, borderColor: GameColors.activeTintBorder, borderRadius: 16, padding: 16, marginBottom: 8 },
 gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
-statusLabel: { marginRight: 12, fontSize: 16, fontFamily: Fonts.sans },
-statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-statusText: { color: GameColors.white, fontSize: 12, fontWeight: '700' },
-
-gameFlowContainer: { marginTop: 24, marginBottom: 24 },
 roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: GameColors.cardBg },
 roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
 targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600', fontFamily: Fonts.sans },
 adminControls: { marginTop: 24 },
 adminButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
 adminButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12, paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
-buttonDisabled: { opacity: 0.6 },
 buttonText: { color: GameColors.white, fontSize: 16, fontWeight: '600', marginLeft: 8 },
 targetView: { marginBottom: 20 },
 commentView: { marginBottom: 20 },
@@ -591,5 +613,7 @@ submitCommentButton: { borderRadius: 999, alignItems: 'center', justifyContent: 
     fontFamily: Fonts.sans,
   },
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },
-  commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 16, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 4, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
+  charCounter: { fontSize: 12, opacity: 0.5, textAlign: 'right', marginBottom: 12, fontFamily: Fonts.sans },
+  charCounterWarning: { opacity: 1, color: '#e53935' },
 });
