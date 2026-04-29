@@ -92,6 +92,7 @@ export interface Round {
   startedAt: Date | Timestamp;
   targetPoints?: number;
   targetPointsGivenBy?: string[];
+  targetPointsByPlayer?: { [userId: string]: number };
   // New: guesses for this round (who guessed which comment and whether they were correct)
   guesses?: Guess[];
   // New: how many correct guesses the target received for this round
@@ -777,6 +778,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       await updateDoc(gameRef, {
         "currentRound.targetPoints": newTargetPoints,
         "currentRound.targetPointsGivenBy": arrayUnion(userId),
+        [`currentRound.targetPointsByPlayer.${userId}`]: points,
         scores: newScores,
         playersWhoCompletedPostCommentPhase: arrayUnion(userId),
       });
