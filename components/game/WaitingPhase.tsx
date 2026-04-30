@@ -81,22 +81,22 @@ export const WaitingPhase: React.FC<Props> = ({
   };
 
   const handleToggleAdminComments = makeSettingToggler(
-    () => !game.adminWritesComments,
+    () => !(game.adminWritesComments ?? false),
     updateAdminWritesComments
   );
 
   const handleToggleShowSurnames = makeSettingToggler(
-    () => !game.showSurnames,
+    () => !(game.showSurnames ?? false),
     updateShowSurnames
   );
 
   const handleToggleTargetSelectionMode = makeSettingToggler(
-    () => (game.targetSelectionMode === 'random' ? 'chronological' : 'random') as 'random' | 'chronological',
+    () => ((game.targetSelectionMode ?? 'random') === 'random' ? 'chronological' : 'random') as 'random' | 'chronological',
     updateTargetSelectionMode
   );
 
   const handleToggleShowGuessResults = makeSettingToggler(
-    () => !game.showGuessResults,
+    () => !(game.showGuessResults ?? false),
     updateShowGuessResults
   );
 
@@ -176,7 +176,7 @@ export const WaitingPhase: React.FC<Props> = ({
               </ThemedText>
             </View>
             <Switch
-              value={game.adminWritesComments}
+              value={game.adminWritesComments ?? false}
               onValueChange={handleToggleAdminComments}
               trackColor={{ false: GameColors.neutral, true: GameColors.green }}
               thumbColor={GameColors.white}
@@ -194,7 +194,7 @@ export const WaitingPhase: React.FC<Props> = ({
               </ThemedText>
             </View>
             <Switch
-              value={game.showSurnames}
+              value={game.showSurnames ?? false}
               onValueChange={handleToggleShowSurnames}
               trackColor={{ false: GameColors.neutral, true: GameColors.green }}
               thumbColor={GameColors.white}
@@ -212,7 +212,7 @@ export const WaitingPhase: React.FC<Props> = ({
               </ThemedText>
             </View>
             <Switch
-              value={game.targetSelectionMode === 'chronological'}
+              value={(game.targetSelectionMode ?? 'random') === 'chronological'}
               onValueChange={handleToggleTargetSelectionMode}
               trackColor={{ false: GameColors.neutral, true: GameColors.green }}
               thumbColor={GameColors.white}
@@ -230,7 +230,7 @@ export const WaitingPhase: React.FC<Props> = ({
               </ThemedText>
             </View>
             <Switch
-              value={game.showGuessResults}
+              value={game.showGuessResults ?? false}
               onValueChange={handleToggleShowGuessResults}
               trackColor={{ false: GameColors.neutral, true: GameColors.green }}
               thumbColor={GameColors.white}

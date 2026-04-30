@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
+  Transaction,
   Unsubscribe,
   updateDoc,
 } from "firebase/firestore";
@@ -97,6 +98,7 @@ export interface Round {
   guesses?: Guess[];
   // New: how many correct guesses the target received for this round
   targetCorrectGuesses?: number;
+  guessesFinalized?: boolean;
 }
 
 export interface Comment {
@@ -286,6 +288,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         showSurnames: false,
         showGuessResults: false,
         targetSelectionMode: "random",
+        adminAwards: {},
       };
 
       // Use setDoc with custom ID instead of addDoc
@@ -432,6 +435,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             status: "finished",
             currentRound: null,
             adminLeft: true,
+            adminNextTargetPreference: null,
+            playersWhoCompletedPostCommentPhase: [],
           });
         } else {
           transaction.update(gameRef, {
@@ -547,40 +552,40 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
     try {
       setLoading(true);
+      const liveUid = auth.currentUser.uid;
       const gameRef = doc(db, "games", currentGame.id);
-      const gameDoc = await getDoc(gameRef);
 
-      if (!gameDoc.exists()) {
-        throw new Error("Game not found");
-      }
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
 
-      const gameData = gameDoc.data() as Game;
-      const currentRound = gameData.currentRound;
+        if (!gameDoc.exists()) {
+          throw new Error("Game not found");
+        }
 
-      if (!currentRound) {
-        throw new Error("No active round");
-      }
+        const gameData = gameDoc.data() as Game;
+        const round = gameData.currentRound;
 
-      // Check if user already submitted a comment
-      const liveUid = auth.currentUser!.uid;
-      const existingComment = currentRound.comments?.find(
-        (c) => c.authorId === liveUid,
-      );
-      if (existingComment) {
-        throw new Error("You have already submitted a comment for this round");
-      }
+        if (!round) {
+          throw new Error("No active round");
+        }
 
-      const newComment: Comment = {
-        id: `${Date.now()}-${liveUid}`,
-        authorId: liveUid,
-        text: commentText.trim(),
-        submittedAt: new Date(),
-      };
+        const existingComment = round.comments?.find(
+          (c) => c.authorId === liveUid,
+        );
+        if (existingComment) {
+          throw new Error("You have already submitted a comment for this round");
+        }
 
-      const updatedComments = [...(currentRound.comments || []), newComment];
+        const newComment: Comment = {
+          id: `${Date.now()}-${liveUid}`,
+          authorId: liveUid,
+          text: commentText.trim(),
+          submittedAt: new Date(),
+        };
 
-      await updateDoc(gameRef, {
-        "currentRound.comments": updatedComments,
+        transaction.update(gameRef, {
+          "currentRound.comments": [...(round.comments || []), newComment],
+        });
       });
     } catch (error: unknown) {
       console.error("Error submitting comment:", error);
@@ -756,35 +761,36 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       const gameRef = doc(db, "games", currentGame.id);
-      const gameDoc = await getDoc(gameRef);
-      if (!gameDoc.exists()) {
-        throw new Error("Game not found");
-      }
 
-      const gameData = gameDoc.data() as Game;
-      const currentRoundFromServer = gameData.currentRound;
-      if (!currentRoundFromServer) {
-        throw new Error("No active round on server");
-      }
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
 
-      const newTargetPoints =
-        (currentRoundFromServer.targetPoints ?? 0) + points;
-      // Persist to Firestore: update targetPoints, append userId to targetPointsGivenBy, and update scores
-      const newScores = {
-        ...(gameData.scores ?? {}),
-        [targetUserId]: (gameData.scores?.[targetUserId] ?? 0) + points,
-      };
+        const gameData = gameDoc.data() as Game;
+        const round = gameData.currentRound;
+        if (!round) throw new Error("No active round on server");
 
-      await updateDoc(gameRef, {
-        "currentRound.targetPoints": newTargetPoints,
-        "currentRound.targetPointsGivenBy": arrayUnion(userId),
-        [`currentRound.targetPointsByPlayer.${userId}`]: points,
-        scores: newScores,
-        playersWhoCompletedPostCommentPhase: arrayUnion(userId),
+        // Re-check inside transaction — another client may have already recorded this user
+        if (round.targetPointsGivenBy?.includes(userId)) {
+          throw new Error("You already gave points to this target this round");
+        }
+
+        const newScores = {
+          ...(gameData.scores ?? {}),
+          [targetUserId]: (gameData.scores?.[targetUserId] ?? 0) + points,
+        };
+
+        transaction.update(gameRef, {
+          "currentRound.targetPoints": (round.targetPoints ?? 0) + points,
+          "currentRound.targetPointsGivenBy": arrayUnion(userId),
+          [`currentRound.targetPointsByPlayer.${userId}`]: points,
+          scores: newScores,
+          playersWhoCompletedPostCommentPhase: arrayUnion(userId),
+        });
       });
-      // onSnapshot will replace local state with authoritative server state
+      // onSnapshot will replace local optimistic state with authoritative server state
     } catch (err) {
-      // Rollback on error
+      // Rollback optimistic update on error
       setCurrentGame(prevGame);
       console.error("Error giving points to target:", err);
       throw err;
@@ -819,6 +825,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     // Only the round target should be submitting guesses for comments about them
     if (userId !== round.targetUserId)
       throw new Error("Only the target can make guesses");
+    if (round.guessesFinalized)
+      throw new Error("This round's guessing has already been finalized");
 
     // Prevent duplicate guesses for the same comment by the same user
     if (
@@ -1023,7 +1031,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       const availableParticipants = (gameData.participants || []).filter(
         (p) => {
           // Always exclude admin if adminWritesComments is false
-          if (p.userId === gameData.adminId && !gameData.adminWritesComments) {
+          if (p.userId === gameData.adminId && !(gameData.adminWritesComments ?? false)) {
             return false;
           }
           // Exclude anyone who has already been a target
@@ -1113,7 +1121,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     );
 
     // If admin doesn't write comments, exclude admin from the check
-    if (!currentGame.adminWritesComments) {
+    if (!(currentGame.adminWritesComments ?? false)) {
       nonTargetPlayers = nonTargetPlayers.filter(
         (p) => p.userId !== currentGame.adminId,
       );
@@ -1377,22 +1385,27 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       }
 
       if (!isPerRoundGuessing) {
-        // Finalize and finish the game
+        // Finalize and finish the game — stamp all rounds as finalized
+        const stampedRounds = finalRounds.map((r) => ({ ...r, guessesFinalized: true }));
         await updateDoc(gameRef, {
           status: "finished",
           guessResults: mergedGuessResults,
           scores: newScores,
-          rounds: finalRounds,
+          rounds: stampedRounds,
           currentRound: null,
         });
       } else {
-        // This was a per-round guessing session; merge results and return to active state so admin can start next round
+        // Per-round guessing session — stamp only the round that was just guessed
+        const singleTargetId = gameData.guessingData?.singleRoundTargetId;
+        const stampedRounds = finalRounds.map((r) =>
+          r.targetUserId === singleTargetId ? { ...r, guessesFinalized: true } : r,
+        );
         await updateDoc(gameRef, {
           status: "active",
           guessingData: {},
           guessResults: mergedGuessResults,
           scores: newScores,
-          rounds: finalRounds,
+          rounds: stampedRounds,
           currentRound: null,
         });
       }
@@ -1712,6 +1725,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       await updateDoc(gameRef, {
         adminNextTargetPreference: null,
         adminSkippedTargets: [],
+        playersWhoCompletedPostCommentPhase: [],
       });
     } catch (err) {
       console.error("Error resetting target controls:", err);

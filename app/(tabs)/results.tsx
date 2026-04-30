@@ -4,7 +4,8 @@ import { ThemedText } from '@/components/themed-text';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { GameColors } from '@/constants/theme';
 import type { Comment, Round } from '@/contexts/GameContext';
-import { Participant, useGame } from '@/contexts/GameContext';
+import { useGame } from '@/contexts/GameContext';
+import { sortParticipantsByJoin } from '@/utils/participants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n';
 
@@ -12,9 +13,7 @@ export default function TabTwoScreen() {
   const { currentGame } = useGame();
   const { locale } = useLanguage();
 
-  const participantsByJoin = (currentGame?.participants || [])
-    .slice()
-    .sort((a: Participant, b: Participant) => (a.joinedAt || 0) - (b.joinedAt || 0));
+  const participantsByJoin = sortParticipantsByJoin(currentGame?.participants || []);
 
   const joinIndexById: Record<string, number> = {};
   participantsByJoin.forEach((p, i) => (joinIndexById[p.userId] = i + 1));

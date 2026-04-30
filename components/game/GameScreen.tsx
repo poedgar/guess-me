@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
+import { sortParticipantsByJoin } from '@/utils/participants';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -87,11 +88,7 @@ export const GameScreen: React.FC = () => {
     return fullName.split(' ')[0];
   }, [currentGame?.showSurnames]);
 
-  const participantsByJoin = (currentGame?.participants || []).slice().sort((a, b) => {
-    const toMillis = (v: Date | { toDate(): Date }) =>
-      typeof (v as any).toDate === 'function' ? (v as { toDate(): Date }).toDate().getTime() : (v as Date).getTime();
-    return toMillis(a.joinedAt) - toMillis(b.joinedAt);
-  });
+  const participantsByJoin = sortParticipantsByJoin(currentGame?.participants || []);
 
   const joinIndexById: Record<string, number> = Object.fromEntries(
     participantsByJoin.map((p, i) => [p.userId, i + 1])

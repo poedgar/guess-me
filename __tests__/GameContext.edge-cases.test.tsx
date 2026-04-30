@@ -133,20 +133,13 @@ describe('submitComment — duplicate submission guard', () => {
     submittedAt: new Date(),
   };
 
+  const gameWithComment = makeGameDoc({
+    status: 'active',
+    currentRound: { ...ACTIVE_ROUND, comments: [EXISTING_COMMENT] },
+  });
+
   beforeEach(() => {
     const firestore = require('firebase/firestore');
-
-    // getDoc sequence:
-    //   1. password check
-    //   2. uniqueness
-    //   3. submitComment live fetch — returns round that already has admin's comment
-    firestore.getDoc
-      .mockResolvedValueOnce({ exists: () => true, data: () => ({ password: 'SECRET' }) })
-      .mockResolvedValueOnce({ exists: () => false })
-      .mockResolvedValueOnce(makeSnap(makeGameDoc({
-        status: 'active',
-        currentRound: { ...ACTIVE_ROUND, comments: [EXISTING_COMMENT] },
-      })));
 
     firestore.doc.mockReturnValue({ path: 'games/game-x' });
     firestore.setDoc.mockResolvedValue(undefined);
@@ -155,13 +148,24 @@ describe('submitComment — duplicate submission guard', () => {
     firestore.arrayUnion.mockImplementation((v: unknown) => v);
     firestore.onSnapshot.mockReturnValue(jest.fn());
 
-    // Initial snapshot: active game so submitComment guard doesn't fire early
+    // getDoc: password check, uniqueness check
+    firestore.getDoc
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ password: 'SECRET' }) })
+      .mockResolvedValueOnce({ exists: () => false });
+
+    // Initial snapshot: active game with admin's existing comment
     firestore.onSnapshot.mockImplementationOnce((_ref: unknown, cb: (s: unknown) => void) => {
-      cb(makeSnap(makeGameDoc({
-        status: 'active',
-        currentRound: { ...ACTIVE_ROUND, comments: [EXISTING_COMMENT] },
-      })));
+      cb(makeSnap(gameWithComment));
       return jest.fn();
+    });
+
+    // runTransaction: txn.get returns the round that already has admin's comment
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: { get: jest.Mock; update: jest.Mock }) => Promise<void>) => {
+      const txn = {
+        get: jest.fn().mockResolvedValue(makeSnap(gameWithComment)),
+        update: jest.fn(),
+      };
+      await cb(txn);
     });
   });
 
@@ -203,6 +207,7 @@ describe('leaveGame — admin abandons an active game', () => {
   const activeGame = makeGameDoc({
     status: 'active',
     currentRound: ACTIVE_ROUND,
+    adminNextTargetPreference: 'player-uid',
   });
 
   beforeEach(() => {
@@ -228,6 +233,18 @@ describe('leaveGame — admin abandons an active game', () => {
     expect(mockTxn.update).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ status: 'finished', adminLeft: true }),
+    );
+  });
+
+  it('clears adminNextTargetPreference when admin leaves', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    await act(async () => { await result.current.leaveGame(); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ adminNextTargetPreference: null }),
     );
   });
 
@@ -286,5 +303,296 @@ describe('leaveGame — non-admin participant leaves', () => {
     await act(async () => { await result.current.leaveGame(); });
 
     expect(result.current.currentGame).toBeNull();
+  });
+});
+
+// ─── 5. submitComment — uses runTransaction ───────────────────────────────────
+
+describe('submitComment — uses runTransaction to prevent concurrent comment loss', () => {
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  const activeGameDoc = makeGameDoc({
+    status: 'active',
+    currentRound: ACTIVE_ROUND,
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+
+    firestore.doc.mockReturnValue({ path: 'games/game-x' });
+    firestore.setDoc.mockResolvedValue(undefined);
+    firestore.updateDoc.mockResolvedValue(undefined);
+    firestore.serverTimestamp.mockReturnValue(new Date());
+    firestore.arrayUnion.mockImplementation((v: unknown) => v);
+    firestore.onSnapshot.mockReturnValue(jest.fn());
+
+    // getDoc: password, uniqueness, then fallback for current getDoc-based impl
+    firestore.getDoc
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ password: 'SECRET' }) })
+      .mockResolvedValueOnce({ exists: () => false })
+      .mockResolvedValue(makeSnap(activeGameDoc));
+
+    firestore.onSnapshot.mockImplementationOnce((_ref: unknown, cb: (s: unknown) => void) => {
+      cb(makeSnap(activeGameDoc));
+      return jest.fn();
+    });
+
+    // runTransaction executes the callback with the mock transaction object
+    mockTxn.get.mockResolvedValue(makeSnap(activeGameDoc));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  });
+
+  it('calls runTransaction when submitting a comment', async () => {
+    const firestore = require('firebase/firestore');
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.runTransaction.mockClear();
+
+    await act(async () => { await result.current.submitComment('Hello there'); });
+
+    expect(firestore.runTransaction).toHaveBeenCalled();
+  });
+
+  it('appends the new comment via txn.update inside the transaction', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.submitComment('Hello there'); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        'currentRound.comments': expect.arrayContaining([
+          expect.objectContaining({ text: 'Hello there' }),
+        ]),
+      }),
+    );
+  });
+});
+
+// ─── 6. givePointsToTarget — uses runTransaction ──────────────────────────────
+
+describe('givePointsToTarget — uses runTransaction to prevent concurrent point loss', () => {
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  const activeGameDoc = makeGameDoc({
+    status: 'active',
+    currentRound: ACTIVE_ROUND,
+    scores: { 'player-uid': 0 },
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+
+    firestore.doc.mockReturnValue({ path: 'games/game-x' });
+    firestore.setDoc.mockResolvedValue(undefined);
+    firestore.updateDoc.mockResolvedValue(undefined);
+    firestore.serverTimestamp.mockReturnValue(new Date());
+    firestore.arrayUnion.mockImplementation((v: unknown) => v);
+    firestore.onSnapshot.mockReturnValue(jest.fn());
+
+    firestore.getDoc
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ password: 'SECRET' }) })
+      .mockResolvedValueOnce({ exists: () => false })
+      .mockResolvedValue(makeSnap(activeGameDoc));
+
+    firestore.onSnapshot.mockImplementationOnce((_ref: unknown, cb: (s: unknown) => void) => {
+      cb(makeSnap(activeGameDoc));
+      return jest.fn();
+    });
+
+    mockTxn.get.mockResolvedValue(makeSnap(activeGameDoc));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  });
+
+  it('calls runTransaction when giving points to target', async () => {
+    const firestore = require('firebase/firestore');
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.runTransaction.mockClear();
+
+    await act(async () => { await result.current.givePointsToTarget('player-uid', 1); });
+
+    expect(firestore.runTransaction).toHaveBeenCalled();
+  });
+
+  it('writes updated targetPoints and scores via txn.update inside the transaction', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.givePointsToTarget('player-uid', 2); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        'currentRound.targetPoints': expect.any(Number),
+        scores: expect.objectContaining({ 'player-uid': expect.any(Number) }),
+      }),
+    );
+  });
+});
+
+// ─── 7. resetTargetControls clears playersWhoCompletedPostCommentPhase ─────────
+
+describe('resetTargetControls — clears playersWhoCompletedPostCommentPhase', () => {
+  const gameWithCompletions = makeGameDoc({
+    status: 'active',
+    currentRound: ACTIVE_ROUND,
+    playersWhoCompletedPostCommentPhase: ['admin-uid'],
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, gameWithCompletions);
+  });
+
+  it('resets playersWhoCompletedPostCommentPhase when admin resets target controls', async () => {
+    const firestore = require('firebase/firestore');
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.updateDoc.mockClear();
+
+    await act(async () => { await result.current.resetTargetControls(); });
+
+    const calls = firestore.updateDoc.mock.calls;
+    const resetCall = calls.find((call: unknown[]) =>
+      JSON.stringify(call[1]).includes('adminSkippedTargets'),
+    );
+    expect(resetCall).toBeDefined();
+    expect(resetCall![1]).toMatchObject({ playersWhoCompletedPostCommentPhase: [] });
+  });
+});
+
+// ─── 8. leaveGame — admin path clears playersWhoCompletedPostCommentPhase ─────
+
+describe('leaveGame — admin path clears playersWhoCompletedPostCommentPhase', () => {
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  const gameWithCompletions = makeGameDoc({
+    status: 'active',
+    currentRound: ACTIVE_ROUND,
+    playersWhoCompletedPostCommentPhase: ['player-uid'],
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, gameWithCompletions);
+
+    mockTxn.get.mockResolvedValue(makeSnap(gameWithCompletions));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  });
+
+  it('includes playersWhoCompletedPostCommentPhase:[] in the admin-leave transaction', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    await act(async () => { await result.current.leaveGame(); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ playersWhoCompletedPostCommentPhase: [] }),
+    );
+  });
+});
+
+// ─── 9. createGame — adminAwards initialized ──────────────────────────────────
+
+describe('createGame — adminAwards initialized to empty object', () => {
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    firestore.doc.mockReturnValue({ path: 'games/game-x' });
+    firestore.setDoc.mockResolvedValue(undefined);
+    firestore.updateDoc.mockResolvedValue(undefined);
+    firestore.serverTimestamp.mockReturnValue(new Date());
+    firestore.arrayUnion.mockImplementation((v: unknown) => v);
+    firestore.onSnapshot.mockReturnValue(jest.fn());
+
+    firestore.getDoc
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ password: 'SECRET' }) })
+      .mockResolvedValueOnce({ exists: () => false });
+
+    firestore.onSnapshot.mockImplementationOnce((_ref: unknown, cb: (s: unknown) => void) => {
+      cb(makeSnap(makeGameDoc({ status: 'waiting' })));
+      return jest.fn();
+    });
+  });
+
+  it('passes adminAwards:{} to setDoc when creating a game', async () => {
+    const firestore = require('firebase/firestore');
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+
+    const setDocCall = firestore.setDoc.mock.calls[0];
+    expect(setDocCall).toBeDefined();
+    expect(setDocCall[1]).toMatchObject({ adminAwards: {} });
+  });
+});
+
+// ─── 10. submitGuess — blocks on guessesFinalized ────────────────────────────
+
+describe('submitGuess — blocks re-guessing when round is already finalized', () => {
+  const COMMENT = { id: 'c1', authorId: 'player-uid', text: 'hello', submittedAt: new Date() };
+
+  // Round where admin-uid is the target (so admin can call submitGuess) and it's already finalized
+  const finalizedRound = {
+    roundNumber: 1,
+    targetUserId: 'admin-uid',
+    targetUserName: 'Admin',
+    comments: [COMMENT],
+    commentsVisible: true,
+    pointsGiven: true,
+    startedAt: new Date(),
+    guessesFinalized: true,
+  };
+
+  const guessingGame = makeGameDoc({
+    status: 'guessing_phase',
+    currentRound: null,
+    rounds: [finalizedRound],
+    guessingData: {
+      commentsByTarget: { 'admin-uid': [COMMENT] },
+      possibleAuthors: [
+        { userId: 'admin-uid', userName: 'Admin' },
+        { userId: 'player-uid', userName: 'Player' },
+      ],
+      playersWhoSubmittedGuesses: [],
+      allPlayersSubmitted: false,
+    },
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, guessingGame);
+  });
+
+  it('throws when submitting a guess on a round that has guessesFinalized:true', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+
+    let caught: Error | null = null;
+    await act(async () => {
+      try { await result.current.submitGuess(1, 'c1', 'player-uid'); }
+      catch (e) { caught = e as Error; }
+    });
+
+    expect(caught?.message).toBe("This round's guessing has already been finalized");
   });
 });
