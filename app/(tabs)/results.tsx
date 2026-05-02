@@ -5,7 +5,8 @@ import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { GameColors } from '@/constants/theme';
 import type { Comment, Round } from '@/contexts/GameContext';
 import { useGame } from '@/contexts/GameContext';
-import { sortParticipantsByJoin } from '@/utils/participants';
+import { buildJoinIndexById, sortParticipantsByJoin } from '@/utils/participants';
+import { toSafeDate } from '@/utils/dates';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { t } from '@/i18n';
 
@@ -15,8 +16,7 @@ export default function TabTwoScreen() {
 
   const participantsByJoin = sortParticipantsByJoin(currentGame?.participants || []);
 
-  const joinIndexById: Record<string, number> = {};
-  participantsByJoin.forEach((p, i) => (joinIndexById[p.userId] = i + 1));
+  const joinIndexById = buildJoinIndexById(participantsByJoin);
 
   const participantsWithScores = (currentGame?.participants || []).map(p => {
     const gamePoints = currentGame?.scores?.[p.userId] || 0;
@@ -127,8 +127,7 @@ export default function TabTwoScreen() {
                         
                         const roundAwards = allAdminAwards.filter(award => {
                           // Check if this award was given during this round (approximate by checking if award time is after round started)
-                          return round.startedAt && award.awardedAt && 
-                                 new Date(award.awardedAt.toDate?.() || award.awardedAt) >= new Date(round.startedAt.toDate?.() || round.startedAt);
+                          return toSafeDate(award.awardedAt) >= toSafeDate(round.startedAt);
                         });
                         
                         return roundAwards.length > 0 ? (

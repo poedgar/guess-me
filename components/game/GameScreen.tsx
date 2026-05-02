@@ -10,7 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
-import { sortParticipantsByJoin } from '@/utils/participants';
+import { buildJoinIndexById, sortParticipantsByJoin } from '@/utils/participants';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -113,8 +113,8 @@ export const GameScreen: React.FC = () => {
     [currentGame?.participants],
   );
 
-  const joinIndexById = useMemo<Record<string, number>>(
-    () => Object.fromEntries(participantsByJoin.map((p, i) => [p.userId, i + 1])),
+  const joinIndexById = useMemo(
+    () => buildJoinIndexById(participantsByJoin),
     [participantsByJoin],
   );
 

@@ -141,8 +141,8 @@ interface GameContextType {
   startGame: () => Promise<void>;
   submitComment: (commentText: string) => Promise<void>;
   showComments: () => Promise<void>;
-  givePoints: (commentId: string, points: number) => Promise<void>;
-  finishGivingPoints: () => Promise<void>;
+  awardCommentPoints: (commentId: string, points: number) => Promise<void>;
+  finishAwardingPoints: () => Promise<void>;
   startNextRound: () => Promise<void>;
   givePointsToTarget: (targetUserId: string, points?: number) => Promise<void>;
   startGuessingPhase: () => Promise<void>;
@@ -620,7 +620,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const givePoints = async (
+  const awardCommentPoints = async (
     commentId: string,
     points: number,
   ): Promise<void> => {
@@ -685,7 +685,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const finishGivingPoints = async (): Promise<void> => {
+  const finishAwardingPoints = async (): Promise<void> => {
     if (!currentGame || !user || !currentGame.currentRound) {
       throw new Error("No active round");
     }
@@ -1741,8 +1741,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       startGame,
       submitComment,
       showComments,
-      givePoints,
-      finishGivingPoints,
+      awardCommentPoints,
+      finishAwardingPoints,
       startNextRound,
       startGuessingPhase,
       finalizeGuessingPhase,

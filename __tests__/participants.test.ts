@@ -1,4 +1,4 @@
-import { sortParticipantsByJoin } from '../utils/participants';
+import { buildJoinIndexById, sortParticipantsByJoin } from '../utils/participants';
 import type { Participant } from '../contexts/GameContext';
 
 const fakeTimestamp = (date: Date) => ({
@@ -58,5 +58,21 @@ describe('sortParticipantsByJoin', () => {
     ];
     sortParticipantsByJoin(participants);
     expect(participants[0].userId).toBe('b');
+  });
+});
+
+describe('buildJoinIndexById', () => {
+  it('maps each participant to a 1-based position', () => {
+    const sorted = [p('a', new Date(1)), p('b', new Date(2)), p('c', new Date(3))];
+    expect(buildJoinIndexById(sorted)).toEqual({ a: 1, b: 2, c: 3 });
+  });
+
+  it('returns empty object for empty array', () => {
+    expect(buildJoinIndexById([])).toEqual({});
+  });
+
+  it('preserves order — first element gets index 1', () => {
+    const sorted = [p('z', new Date(1)), p('a', new Date(2))];
+    expect(buildJoinIndexById(sorted)).toEqual({ z: 1, a: 2 });
   });
 });

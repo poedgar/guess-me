@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 let mockSortParticipantsByJoin: jest.Mock;
 jest.mock('@/utils/participants', () => ({
   sortParticipantsByJoin: (...args: unknown[]) => mockSortParticipantsByJoin(...args),
+  buildJoinIndexById: (arr: any[]) => Object.fromEntries(arr.map((p: any, i: number) => [p.userId, i + 1])),
 }));
 
 // ── standard GameScreen mocks (mirrors GameScreen.test.tsx) ──────────────
@@ -59,8 +60,8 @@ jest.mock('@/contexts/GameContext', () => ({
     startGame: jest.fn(),
     submitComment: jest.fn(),
     showComments: jest.fn(),
-    givePoints: jest.fn(),
-    finishGivingPoints: jest.fn(),
+    awardCommentPoints: jest.fn(),
+    finishAwardingPoints: jest.fn(),
     givePointsToTarget: jest.fn(),
     startNextRound: jest.fn(),
     startGuessingPhase: jest.fn(),

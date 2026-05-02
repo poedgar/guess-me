@@ -39,10 +39,11 @@ export const Leaderboard: React.FC<Props> = ({
         {title}
       </ThemedText>
       <ScrollView style={[styles.scroll, { maxHeight: scrollHeight }]} nestedScrollEnabled>
-        <View style={styles.list}>
+        <View style={styles.list} accessibilityRole="list">
           {participantsWithScores.map((participant, index) => (
             <View
               key={participant.userId}
+              accessibilityRole="listitem"
               style={[
                 styles.item,
                 index === 0 && styles.itemFirst,

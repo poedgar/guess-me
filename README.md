@@ -52,28 +52,6 @@ Bugs / Correctness
 1.1	GameContext.tsx:384	Password doc ID hardcoded; breaks silently if it changes	Extract to a const ADMIN_PASSWORD_DOC_ID in a config file
 
 
-
-
-
-#	What's missing
-
-
-
-
-#	File	Issue
-
-
-
-#	File	Issue
-
-
-7.4	Leaderboard.tsx	Rendered as plain View, not a list — add accessibilityRole="list"
-Code Quality
-#	File	Issue
-8.1	GameScreen.tsx, results.tsx	Participant sorting duplicated in both places — extract getSortedParticipants() util
-8.2	Multiple	givePoints / awardPoints / targetPoints naming inconsistent across files
-8.3	GameContext.tsx	round.startedAt and award.awardedAt read without ?.toDate?.() ?? new Date() guards
-
 ______
 
 # Rules

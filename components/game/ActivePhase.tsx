@@ -51,8 +51,8 @@ export const ActivePhase: React.FC<Props> = ({
     loading,
     submitComment,
     showComments,
-    givePoints,
-    finishGivingPoints,
+    awardCommentPoints,
+    finishAwardingPoints,
     givePointsToTarget,
     startGuessingPhase,
     skipPostCommentPhase,
@@ -136,7 +136,7 @@ export const ActivePhase: React.FC<Props> = ({
   };
 
   const handleGivePoints = async (commentId: string, points: number) => {
-    if (!givePoints) {
+    if (!awardCommentPoints) {
       showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
       return;
     }
@@ -144,7 +144,7 @@ export const ActivePhase: React.FC<Props> = ({
       setGivingPoints(prev => ({ ...prev, [commentId]: true }));
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await givePoints(commentId, points);
+      await awardCommentPoints(commentId, points);
       await playSound('points');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFaceMessage(
@@ -161,13 +161,13 @@ export const ActivePhase: React.FC<Props> = ({
   };
 
   const handleFinishGivingPoints = async () => {
-    if (!finishGivingPoints) {
+    if (!finishAwardingPoints) {
       showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
       return;
     }
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await finishGivingPoints();
+      await finishAwardingPoints();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFaceMessage(
         t('game.alerts.finishPointsSuccess', { locale }), 
