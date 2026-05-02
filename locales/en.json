@@ -12,7 +12,8 @@
     "edit": "Edit",
     "loading": "Loading...",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "unknown": "Unknown"
   },
   "navigation": {
     "home": "Home",
@@ -83,8 +84,14 @@
       "showGuessResultsDisabled": "Guess results will now be hidden from targets",
       "confirmTitle": "Confirmation",
       "confirmSkipPoints": "Are you sure you want to skip?",
-      "confirmGivePoints": "Are you sure you want to give %{points} point(s)?",
-      "pointsGivenToTarget": "You gave %{points} point(s) to the target player!",
+      "confirmGivePoints": {
+        "one": "Are you sure you want to give 1 point?",
+        "other": "Are you sure you want to give %{count} points?"
+      },
+      "pointsGivenToTarget": {
+        "one": "You gave 1 point to %{name}!",
+        "other": "You gave %{count} points to %{name}!"
+      },
       "phaseSkipped": "You skipped the phase!",
       "commentPhaseSkipped": "You skipped the comment phase!",
       "skipPhaseFailed": "Failed to skip the phase",
@@ -133,7 +140,7 @@
       "correct": "Correct!",
       "incorrect": "Incorrect!",
       "adminLeftTitle": "Admin has left the game",
-      "adminLeftMessage": "The admin has left the game. The game will continue but some features may be limited.",
+      "adminLeftMessage": "The admin has left and the game has ended. You will be returned to the lobby.",
       "participants": "Participants",
       "submitted": "Submitted",
       "leaderboard": "Leaderboard",
@@ -192,6 +199,7 @@
       },
       "guessAuthorsTitle": "Guess the authors",
       "guessAuthorsSubtitle": "Try to guess who wrote each comment about you",
+      "guessingCommentsAbout": "Guessing comments about: %{name}",
       "guessingInstructions": "Below are all comments written about you during the game. Try to guess who wrote each comment. After submitting, you'll see how many you guessed correctly.",
       "guessPrompt": "Who, in your opinion, wrote this comment?",
       "guessResultsTitle": "Thank you - guesses submitted",
@@ -229,7 +237,12 @@
         "waitNextRound": "Wait for the next round to award points again.",
         "instructions": "Select any number of players and award them points. You can do this only once per round.",
         "awardButton": "Award Points (%{total} total)"
-      }
+      },
+      "givePointsLabel": {
+        "one": "Award 1 point to target",
+        "other": "Award %{count} points to target"
+      },
+      "closeGuessResults": "Close guess results"
     }
   },
   "settings": {
@@ -312,7 +325,9 @@
     "comments": "Comments",
     "noComments": "No comments",
     "noResultsTitle": "No Results Yet",
-    "noResultsMessage": "Start playing to see results and leaderboard here!"
+    "noResultsMessage": "Start playing to see results and leaderboard here!",
+    "adminAwardsTitle": "👑 Admin Awards (%{count})",
+    "adminAwardText": "%{awarder} awarded %{recipient}"
   },
   "qr": {
     "scanTitle": "Scan QR Code",

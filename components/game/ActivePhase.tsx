@@ -182,7 +182,7 @@ export const ActivePhase: React.FC<Props> = ({
   const handleGivePointsToTargetWithConfirm = (points: number) => {
     const message = points === 0
       ? t('game.alerts.confirmSkipPoints', { locale })
-      : t('game.alerts.confirmGivePoints', { locale, points });
+      : t('game.alerts.confirmGivePoints', { locale, count: points });
 
     showFancyAlert(
       t('game.alerts.confirmTitle', { locale }),
@@ -213,7 +213,7 @@ export const ActivePhase: React.FC<Props> = ({
 
       showFaceMessage(
         points > 0
-          ? t('game.alerts.pointsGivenToTarget', { locale, points })
+          ? t('game.alerts.pointsGivenToTarget', { locale, count: points, name: getDisplayName(game.currentRound.targetUserName) })
           : t('game.alerts.phaseSkipped', { locale }),
         <View style={{ padding: 16 }}><SuccessAnimation /></View>
       );    
@@ -337,7 +337,7 @@ export const ActivePhase: React.FC<Props> = ({
                   <>
                     <IconSymbol name="brain.head.profile" size={16} color={GameColors.white} />
                     <ThemedText style={styles.buttonText}>
-                      {loading ? 'Завантаження...' : ''}
+                      {loading ? t('common.loading', { locale }) : ''}
                     </ThemedText>
                   </>
                 </TouchableOpacity>
@@ -527,6 +527,8 @@ export const ActivePhase: React.FC<Props> = ({
                                       onPress={() => handleGivePointsToTargetWithConfirm(points)}
                                       disabled={givingPointsToTarget}
                                       activeOpacity={0.8}
+                                      accessibilityLabel={t('game.ui.givePointsLabel', { locale, count: points })}
+                                      accessibilityRole="button"
                                     >
                                       {givingPointsToTarget ? (
                                         <ActivityIndicator size="small" color={GameColors.textDark} />

@@ -210,3 +210,43 @@ describe('Results screen — round history', () => {
     expect(getByText('results.noComments')).toBeTruthy();
   });
 });
+
+describe('Results screen — admin awards i18n (6.3)', () => {
+  const roundForAwards = {
+    roundNumber: 1,
+    targetUserId: 'u2',
+    targetUserName: 'Bob',
+    commentsVisible: true,
+    pointsGiven: true,
+    startedAt: new Date(500),
+    comments: [],
+  };
+
+  beforeEach(() => {
+    mockCurrentGame = {
+      id: 'game1',
+      status: 'active',
+      adminId: 'u1',
+      participants: [
+        { userId: 'u1', userName: 'Alice', userEmail: 'a@t.com', joinedAt: new Date(1000) },
+        { userId: 'u2', userName: 'Bob',   userEmail: 'b@t.com', joinedAt: new Date(2000) },
+      ],
+      scores: {},
+      guessResults: {},
+      rounds: [roundForAwards],
+      adminAwards: {
+        u1: [{ recipientId: 'u2', points: 3, awardedAt: new Date(1000) }],
+      },
+    };
+  });
+
+  it('admin awards section title uses i18n key, not hardcoded text', () => {
+    const { getByText } = renderScreen();
+    expect(getByText(/results\.adminAwardsTitle/)).toBeTruthy();
+  });
+
+  it('admin award body uses i18n key, not hardcoded "awarded"', () => {
+    const { getByText } = renderScreen();
+    expect(getByText(/results\.adminAwardText/)).toBeTruthy();
+  });
+});

@@ -8,7 +8,7 @@ import { gameStyles } from './gameStyles';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Platform,
   ScrollView,
@@ -48,6 +48,14 @@ export const WaitingPhase: React.FC<Props> = ({
 }) => {
   const { playSound } = useSound();
   const { loading, startGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults } = useGame();
+
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyGameId = async () => {
+    await onCopyGameId();
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 1000);
+  };
 
   const prevParticipantCount = useRef(game.participants.length);
   useEffect(() => {
@@ -125,13 +133,17 @@ export const WaitingPhase: React.FC<Props> = ({
             {t('game.ui.gameIdLabel', { locale })}
           </ThemedText>
           <TouchableOpacity
-            onPress={onCopyGameId}
+            onPress={handleCopyGameId}
+            disabled={isCopied}
             style={styles.gameIdBox}
             accessibilityLabel={t('game.alerts.copyId', { locale })}
             accessibilityRole="button"
           >
             <ThemedText style={styles.gameIdText}>{game.id}</ThemedText>
-            <ThemedText style={styles.copyHint}>{t('game.ui.tapToCopy', { locale })}</ThemedText>
+            {isCopied
+              ? <IconSymbol name="checkmark.circle.fill" size={14} color={GameColors.green} />
+              : <ThemedText style={styles.copyHint}>{t('game.ui.tapToCopy', { locale })}</ThemedText>
+            }
           </TouchableOpacity>
         </View>
         {isAdmin && (

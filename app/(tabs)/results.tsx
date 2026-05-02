@@ -134,12 +134,12 @@ export default function TabTwoScreen() {
                         return roundAwards.length > 0 ? (
                           <View style={styles.adminAwardsSection}>
                             <ThemedText style={styles.adminAwardsTitle}>
-                              👑 Admin Awards ({roundAwards.length}):
+                              {t('results.adminAwardsTitle', { locale, count: roundAwards.length })}
                             </ThemedText>
                             {roundAwards.map((award, index) => (
                               <View key={index} style={styles.adminAwardItem}>
                                 <ThemedText style={styles.adminAwardText}>
-                                  {award.awarderName} awarded {participantsByJoin.find(p => p.userId === award.recipientId)?.userName || 'Unknown'} 
+                                  {t('results.adminAwardText', { locale, awarder: award.awarderName, recipient: participantsByJoin.find((p: any) => p.userId === award.recipientId)?.userName || t('common.unknown', { locale }) })}
                                   <ThemedText style={[
                                     styles.adminAwardPoints,
                                     award.points < 0 && styles.adminAwardPointsNegative

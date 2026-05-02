@@ -596,3 +596,110 @@ describe('submitGuess — blocks re-guessing when round is already finalized', (
     expect(caught?.message).toBe("This round's guessing has already been finalized");
   });
 });
+
+// ─── 11. submitComment — 5.1 concurrent race from the same user ──────────────
+//
+// Scenario: a user double-taps Submit. Both calls start before either resolves
+// and the React state has no comment yet. Firestore serializes the two
+// transactions: the second re-reads after the first committed and must be
+// rejected.  The guard lives inside runTransaction (fresh Firestore read), NOT
+// in the stale React-state snapshot.
+
+describe('submitComment — 5.1 concurrent race from the same user', () => {
+  const activeGameNoComments = makeGameDoc({
+    status: 'active',
+    currentRound: ACTIVE_ROUND,
+  });
+
+  const activeGameWithMyComment = makeGameDoc({
+    status: 'active',
+    currentRound: {
+      ...ACTIVE_ROUND,
+      comments: [{ id: 'c1', authorId: 'admin-uid', text: 'First', submittedAt: new Date() }],
+    },
+  });
+
+  function setupMocks(firestore: ReturnType<typeof require>) {
+    firestore.doc.mockReturnValue({ path: 'games/game-x' });
+    firestore.setDoc.mockResolvedValue(undefined);
+    firestore.updateDoc.mockResolvedValue(undefined);
+    firestore.serverTimestamp.mockReturnValue(new Date());
+    firestore.arrayUnion.mockImplementation((v: unknown) => v);
+    firestore.onSnapshot.mockReturnValue(jest.fn());
+    firestore.getDoc
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ password: 'SECRET' }) })
+      .mockResolvedValueOnce({ exists: () => false });
+    firestore.onSnapshot.mockImplementationOnce((_ref: unknown, cb: (s: unknown) => void) => {
+      cb(makeSnap(activeGameNoComments));
+      return jest.fn();
+    });
+  }
+
+  it('rejects the second simultaneous call with "already submitted"', async () => {
+    const firestore = require('firebase/firestore');
+    setupMocks(firestore);
+
+    // Both calls start before either resolves. Firestore serialises them:
+    // txn 1 sees no comment → succeeds; txn 2 re-reads after commit → throws.
+    let txnCallCount = 0;
+    firestore.runTransaction.mockImplementation(
+      async (_db: unknown, cb: (t: { get: jest.Mock; update: jest.Mock }) => Promise<void>) => {
+        txnCallCount++;
+        const snap = txnCallCount === 1
+          ? makeSnap(activeGameNoComments)
+          : makeSnap(activeGameWithMyComment);
+        const txn = { get: jest.fn().mockResolvedValue(snap), update: jest.fn() };
+        await cb(txn);
+      },
+    );
+
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+
+    let results: PromiseSettledResult<void>[] = [];
+    await act(async () => {
+      results = await Promise.allSettled([
+        result.current.submitComment('First'),
+        result.current.submitComment('Second'),
+      ]);
+    });
+
+    expect(results[0].status).toBe('fulfilled');
+    expect(results[1].status).toBe('rejected');
+    expect((results[1] as PromiseRejectedResult).reason.message).toBe(
+      'You have already submitted a comment for this round',
+    );
+  });
+
+  it('writes exactly one comment to Firestore when two calls race', async () => {
+    const firestore = require('firebase/firestore');
+    setupMocks(firestore);
+
+    let txnCallCount = 0;
+    const txnUpdateMocks: jest.Mock[] = [];
+    firestore.runTransaction.mockImplementation(
+      async (_db: unknown, cb: (t: { get: jest.Mock; update: jest.Mock }) => Promise<void>) => {
+        txnCallCount++;
+        const snap = txnCallCount === 1
+          ? makeSnap(activeGameNoComments)
+          : makeSnap(activeGameWithMyComment);
+        const txn = { get: jest.fn().mockResolvedValue(snap), update: jest.fn() };
+        txnUpdateMocks.push(txn.update);
+        await cb(txn);
+      },
+    );
+
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+
+    await act(async () => {
+      await Promise.allSettled([
+        result.current.submitComment('First'),
+        result.current.submitComment('Second'),
+      ]);
+    });
+
+    expect(txnUpdateMocks[0]).toHaveBeenCalledTimes(1);
+    expect(txnUpdateMocks[1]).toHaveBeenCalledTimes(0);
+  });
+});

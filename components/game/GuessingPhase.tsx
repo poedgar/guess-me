@@ -275,11 +275,18 @@ export const GuessingPhase: React.FC<Props> = ({
             {t('game.ui.guessAuthorsTitle', { locale })}
           </ThemedText>
           <ThemedText style={styles.targetText}>
-            {t('game.ui.guessAuthorsSubtitle', { locale })}
+            {singleTargetId
+              ? t('game.ui.guessingCommentsAbout', {
+                  locale,
+                  name: getDisplayName(
+                    game.participants.find(p => p.userId === singleTargetId)?.userName || '',
+                  ),
+                })
+              : t('game.ui.guessAuthorsSubtitle', { locale })}
           </ThemedText>
         </View>
 
-        {game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '') ? (
+        {(hasSubmittedGuesses || game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '')) ? (
           (() => {
             const playerResult = game.guessResults?.[user?.uid ?? ''];
             if (playerResult) {
@@ -300,15 +307,16 @@ export const GuessingPhase: React.FC<Props> = ({
               );
             }
             return (
-              <View style={styles.guessResultsContainer}>
-                <ThemedText type="subtitle" style={styles.guessResultsTitle}>
+              <View style={styles.submittedBanner}>
+                <ThemedText style={styles.submittedBannerIcon}>✅</ThemedText>
+                <ThemedText style={styles.submittedBannerTitle}>
                   {t('game.ui.guessResultsTitle', { locale })}
                 </ThemedText>
-                <ThemedText style={styles.waitingText}>
+                <ThemedText style={styles.submittedBannerMessage}>
                   {t('game.ui.waitingForAdminToComplete', { locale })}
                 </ThemedText>
                 {isAdmin && !game.guessingData.allPlayersSubmitted && (
-                  <ThemedText style={styles.waitingText}>
+                  <ThemedText style={styles.submittedBannerMessage}>
                     {t('game.ui.waitingForAllPlayers', { locale })}
                   </ThemedText>
                 )}
@@ -338,6 +346,8 @@ export const GuessingPhase: React.FC<Props> = ({
                             selectedGuesses[comment.id] === author.userId && styles.selectedAuthorOption,
                           ]}
                           onPress={() => handleGuessSelect(comment.id, author.userId)}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: selectedGuesses[comment.id] === author.userId }}
                         >
                           <ThemedText style={[
                             styles.authorName,
@@ -515,7 +525,7 @@ export const GuessingPhase: React.FC<Props> = ({
       {/* Guess Result Modal */}
       {guessResultModal && (
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={styles.modalContent} accessibilityViewIsModal={true}>
             <ThemedText style={styles.modalTitle}>
               {t('game.ui.guessResultsTitle', { locale })}
             </ThemedText>
@@ -557,6 +567,8 @@ export const GuessingPhase: React.FC<Props> = ({
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: GameColors.correct }]}
                 onPress={() => setGuessResultModal(null)}
+                accessibilityLabel={t('game.ui.closeGuessResults', { locale })}
+                accessibilityRole="button"
               >
                 <ThemedText style={styles.modalButtonText}>{t('common.ok', { locale })}</ThemedText>
               </TouchableOpacity>
@@ -610,4 +622,8 @@ const styles = StyleSheet.create({
   guessResultLabel: { fontSize: 16, fontWeight: '600' as const, marginBottom: 8, textAlign: 'center' as const },
   guessResultComment: { fontSize: 14, fontStyle: 'italic' as const, marginBottom: 12, textAlign: 'center' as const },
   guessResultRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const },
+  submittedBanner: { marginVertical: 16, padding: 24, borderRadius: 16, backgroundColor: GameColors.cardBg, borderWidth: 1, borderColor: GameColors.correct, alignItems: 'center', gap: 8 },
+  submittedBannerIcon: { fontSize: 40 },
+  submittedBannerTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center', fontFamily: Fonts.sans },
+  submittedBannerMessage: { fontSize: 14, textAlign: 'center', opacity: 0.75, fontFamily: Fonts.sans },
 });

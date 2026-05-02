@@ -1,6 +1,7 @@
 import { auth, db } from "@/config/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateGameId } from "@/utils/gameIdGenerator";
+import { sortParticipantsByJoin } from "@/utils/participants";
 import {
   arrayUnion,
   doc,
@@ -889,15 +890,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         }
       });
 
-      // Debug: log guess submission result
-
-      // Force a refresh in case onSnapshot hasn't propagated yet
-      try {
-        await refreshGame(currentGame.id);
-      } catch (e) {
-        console.warn("submitGuess: refresh failed", e);
-      }
-
       // After submitting a guess, check if the guesser has completed all guesses for their own target and mark them as submitted
       try {
         const gameDocAfter = await getDoc(gameRef);
@@ -1073,6 +1065,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         await updateDoc(gameRef, {
           adminNextTargetPreference: null,
         });
+      } else if (gameData.targetSelectionMode === 'chronological') {
+        target = sortParticipantsByJoin(availableParticipants)[0];
       } else {
         // Select random participant from available ones
         const randomIndex = Math.floor(

@@ -12,7 +12,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { t } from '@/i18n';
 import { sortParticipantsByJoin } from '@/utils/participants';
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ActivePhase } from './ActivePhase';
@@ -83,15 +83,39 @@ export const GameScreen: React.FC = () => {
   // Shared computed values
   const isAdmin = currentGame?.adminId === user?.uid;
 
+  // Notify non-admin players exactly once when the admin abandons the game
+  const adminLeftAlertShownForGame = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      currentGame?.adminLeft &&
+      !isAdmin &&
+      adminLeftAlertShownForGame.current !== currentGame.id
+    ) {
+      adminLeftAlertShownForGame.current = currentGame.id;
+      showFancyAlert(
+        t('game.ui.adminLeftTitle', { locale }),
+        t('game.ui.adminLeftMessage', { locale }),
+        [{
+          text: t('common.ok', { locale }),
+          onPress: async () => { try { await leaveGame(); } catch (_) {} },
+        }],
+      );
+    }
+  }, [currentGame?.adminLeft, currentGame?.id, isAdmin, locale]);
+
   const getDisplayName = useCallback((fullName: string) => {
     if (currentGame?.showSurnames) return fullName;
     return fullName.split(' ')[0];
   }, [currentGame?.showSurnames]);
 
-  const participantsByJoin = sortParticipantsByJoin(currentGame?.participants || []);
+  const participantsByJoin = useMemo(
+    () => sortParticipantsByJoin(currentGame?.participants || []),
+    [currentGame?.participants],
+  );
 
-  const joinIndexById: Record<string, number> = Object.fromEntries(
-    participantsByJoin.map((p, i) => [p.userId, i + 1])
+  const joinIndexById = useMemo<Record<string, number>>(
+    () => Object.fromEntries(participantsByJoin.map((p, i) => [p.userId, i + 1])),
+    [participantsByJoin],
   );
 
   const commentsForPlayer = currentGame?.guessingData?.commentsByTarget?.[user?.uid || ''] || [];

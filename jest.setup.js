@@ -168,6 +168,7 @@ jest.mock('@/constants/theme', () => ({
     title: { fontSize: 18, fontWeight: '600', marginBottom: 8, textAlign: 'center', color: '#000' },
     message: { fontSize: 15, textAlign: 'center', color: '#333' },
   },
+  themedInput: () => ({ style: {}, placeholderTextColor: '#999' }),
 }));
 
 // Extend jest-native matchers - do this after jest-expo setup completes
