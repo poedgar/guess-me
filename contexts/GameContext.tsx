@@ -2,6 +2,7 @@ import { auth, db } from "@/config/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateGameId } from "@/utils/gameIdGenerator";
 import { sortParticipantsByJoin } from "@/utils/participants";
+import { BasketAssignment, BasketRound, generateBasketSchedule } from '@/utils/basketSchedule';
 import {
   arrayUnion,
   doc,
@@ -31,7 +32,7 @@ export interface Game {
   adminEmail: string;
   participants: Participant[];
   createdAt: Date | Timestamp;
-  status: "waiting" | "active" | "guessing_phase" | "finished";
+  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing";
   // If set, indicates that target has submitted guesses and players can now award points to each other
   postGuessingPointPhase?: boolean;
   // Track which players have already awarded points in post-guessing phase
@@ -64,6 +65,7 @@ export interface Game {
   targetSelectionMode?: "random" | "chronological";
   // Which game type to play: 'mirror' (default) or 'basket'
   gameType?: 'mirror' | 'basket';
+  basketData?: BasketData;
   // Admin target control preferences
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
@@ -123,6 +125,29 @@ export interface GuessingData {
   singleRoundTargetId?: string;
 }
 
+export interface BasketComment {
+  writerId: string;
+  subjectId: string;
+  text: string;
+  submittedAt: number;
+}
+
+export interface BasketGuess {
+  guesserId: string;
+  commentWriterId: string;
+  authorGuessId?: string;
+  commentCorrect: boolean;
+  authorCorrect: boolean;
+  pointsAwarded: number;
+}
+
+export interface BasketData {
+  schedule: BasketRound[];
+  currentRoundIndex: number;
+  currentRoundComments: BasketComment[];
+  currentRoundGuesses: BasketGuess[];
+}
+
 interface GameContextType {
   currentGame: Game | null;
   loading: boolean;
@@ -165,6 +190,12 @@ interface GameContextType {
   ) => Promise<void>;
   updateShowGuessResults: (showGuessResults: boolean) => Promise<void>;
   setGameType: (type: 'mirror' | 'basket') => Promise<void>;
+  startBasketGame: () => Promise<void>;
+  submitBasketComment: (text: string) => Promise<void>;
+  revealBasketComments: () => Promise<void>;
+  submitBasketCommentGuess: (commentWriterId: string) => Promise<void>;
+  submitBasketAuthorGuess: (authorGuessId: string) => Promise<void>;
+  startNextBasketRound: () => Promise<void>;
   // Admin target control functions
   setNextRoundTarget: (targetUserId: string) => Promise<void>;
   skipNextRoundTarget: (targetUserId: string) => Promise<void>;
@@ -1524,6 +1555,167 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const startBasketGame = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the game");
+    }
+    if (currentGame.participants.length < 2) {
+      throw new Error("Need at least 2 participants to start the game");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const schedule = generateBasketSchedule(currentGame.participants.map((p: Participant) => p.userId));
+      await updateDoc(gameRef, {
+        status: 'basket_writing',
+        basketData: { schedule, currentRoundIndex: 0, currentRoundComments: [], currentRoundGuesses: [] },
+      });
+    } catch (err) {
+      console.error('Error starting basket game:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitBasketComment = async (text: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame?.basketData) throw new Error("No active basket game");
+    if (!text.trim()) throw new Error("Comment cannot be empty");
+    const { schedule, currentRoundIndex } = currentGame.basketData;
+    const assignment = schedule[currentRoundIndex].assignments.find(
+      (a: BasketAssignment) => a.writerId === auth.currentUser!.uid
+    );
+    if (!assignment) throw new Error("No assignment found for this player");
+    const comment: BasketComment = {
+      writerId: auth.currentUser.uid,
+      subjectId: assignment.subjectId,
+      text: text.trim(),
+      submittedAt: Date.now(),
+    };
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, { 'basketData.currentRoundComments': arrayUnion(comment) });
+    } catch (err) {
+      console.error('Error submitting basket comment:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revealBasketComments = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can reveal comments");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, { status: 'basket_guessing' });
+    } catch (err) {
+      console.error('Error revealing basket comments:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitBasketCommentGuess = async (commentWriterId: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame?.basketData) throw new Error("No active basket game");
+    const { currentRoundComments } = currentGame.basketData;
+    const guesserId = auth.currentUser.uid;
+    const actualComment = currentRoundComments.find((c: BasketComment) => c.subjectId === guesserId);
+    if (!actualComment) throw new Error("No comment found for this player");
+    const commentCorrect = actualComment.writerId === commentWriterId;
+    const guess: BasketGuess = {
+      guesserId, commentWriterId, commentCorrect, authorCorrect: false,
+      pointsAwarded: commentCorrect ? 1 : 0,
+    };
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const updates: Record<string, unknown> = {
+        'basketData.currentRoundGuesses': arrayUnion(guess),
+      };
+      if (commentCorrect) {
+        updates[`scores.${guesserId}`] = (currentGame.scores?.[guesserId] ?? 0) + 1;
+      }
+      await updateDoc(gameRef, updates);
+    } catch (err) {
+      console.error('Error submitting basket comment guess:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitBasketAuthorGuess = async (authorGuessId: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame?.basketData) throw new Error("No active basket game");
+    const { schedule, currentRoundIndex, currentRoundGuesses } = currentGame.basketData;
+    const guesserId = auth.currentUser.uid;
+    const existingGuess = currentRoundGuesses.find((g: BasketGuess) => g.guesserId === guesserId);
+    if (!existingGuess?.commentCorrect) {
+      throw new Error("Cannot guess author without a correct comment guess");
+    }
+    const assignment = schedule[currentRoundIndex].assignments.find((a: BasketAssignment) => a.subjectId === guesserId);
+    if (!assignment) throw new Error("No assignment found for this player");
+    const authorCorrect = authorGuessId === assignment.writerId;
+    const updatedGuesses = currentRoundGuesses.map((g: BasketGuess) =>
+      g.guesserId === guesserId
+        ? { ...g, authorGuessId, authorCorrect, pointsAwarded: g.pointsAwarded + (authorCorrect ? 1 : 0) }
+        : g
+    );
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      const updates: Record<string, unknown> = {
+        'basketData.currentRoundGuesses': updatedGuesses,
+      };
+      if (authorCorrect) {
+        updates[`scores.${guesserId}`] = (currentGame.scores?.[guesserId] ?? 0) + 1;
+      }
+      await updateDoc(gameRef, updates);
+    } catch (err) {
+      console.error('Error submitting basket author guess:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startNextBasketRound = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the next round");
+    }
+    if (!currentGame.basketData) throw new Error("No active basket game");
+    const { schedule, currentRoundIndex } = currentGame.basketData;
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      if (currentRoundIndex + 1 >= schedule.length) {
+        await updateDoc(gameRef, { status: 'finished' });
+      } else {
+        await updateDoc(gameRef, {
+          status: 'basket_writing',
+          'basketData.currentRoundIndex': currentRoundIndex + 1,
+          'basketData.currentRoundComments': [],
+          'basketData.currentRoundGuesses': [],
+        });
+      }
+    } catch (err) {
+      console.error('Error starting next basket round:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const setGameType = async (type: 'mirror' | 'basket'): Promise<void> => {
     if (!currentGame) return;
     const gameRef = doc(db, 'games', currentGame.id);
@@ -1763,6 +1955,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       updateTargetSelectionMode,
       updateShowGuessResults,
       setGameType,
+      startBasketGame,
+      submitBasketComment,
+      revealBasketComments,
+      submitBasketCommentGuess,
+      submitBasketAuthorGuess,
+      startNextBasketRound,
       startPostGuessingPointPhase,
       awardPointsToPlayers,
       skipPostCommentPhase,
