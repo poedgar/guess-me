@@ -31,6 +31,7 @@ jest.mock('@/contexts/GameContext', () => ({
   useGame: () => ({
     loading: false,
     startGame: jest.fn(),
+    startBasketGame: jest.fn(),
     updateAdminWritesComments: jest.fn(),
     updateShowSurnames: jest.fn(),
     updateTargetSelectionMode: jest.fn(),

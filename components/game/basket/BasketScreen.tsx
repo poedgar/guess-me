@@ -1,26 +1,22 @@
-import { ThemedText } from '@/components/themed-text';
 import type { Game } from '@/contexts/GameContext';
-import { t } from '@/i18n';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { BasketGuessingPhase } from './BasketGuessingPhase';
+import { BasketWritingPhase } from './BasketWritingPhase';
 
 interface Props {
   game: Game;
   user: { uid: string } | null;
+  isAdmin: boolean;
   locale: string;
+  isDark: boolean;
+  getDisplayName: (name: string) => string;
+  showFancyAlert: (title: string, message?: string | null, buttons?: any[], customContent?: React.ReactNode) => void;
+  showFaceMessage: (message: string, face?: React.ReactNode) => void;
 }
 
-export const BasketScreen: React.FC<Props> = ({ locale }) => (
-  <View style={styles.container}>
-    <ThemedText style={styles.title}>
-      {t('game.ui.gameTypeBasket', { locale })}
-    </ThemedText>
-    <ThemedText style={styles.subtitle}>Coming soon</ThemedText>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center', padding: 40, gap: 16 },
-  title: { fontSize: 28, fontWeight: '700' },
-  subtitle: { fontSize: 16, opacity: 0.6 },
-});
+export const BasketScreen: React.FC<Props> = (props) => {
+  const { game } = props;
+  if (game.status === 'basket_writing') return <BasketWritingPhase {...props} />;
+  if (game.status === 'basket_guessing') return <BasketGuessingPhase {...props} />;
+  return null;
+};

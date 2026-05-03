@@ -47,7 +47,7 @@ export const WaitingPhase: React.FC<Props> = ({
   onCopyGameId,
 }) => {
   const { playSound } = useSound();
-  const { loading, startGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, setGameType } = useGame();
+  const { loading, startGame, startBasketGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, setGameType } = useGame();
 
   const [isCopied, setIsCopied] = useState(false);
 
@@ -112,7 +112,11 @@ export const WaitingPhase: React.FC<Props> = ({
     try {
       await playSound('gameStart');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await startGame();
+      if (game.gameType === 'basket') {
+        await startBasketGame();
+      } else {
+        await startGame();
+      }
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: unknown) {

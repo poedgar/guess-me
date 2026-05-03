@@ -188,7 +188,16 @@ export const GameScreen: React.FC = () => {
 
             <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
               {(currentGame.gameType ?? 'mirror') === 'basket' ? (
-                <BasketScreen game={currentGame} user={user} locale={locale} />
+                <BasketScreen
+                  game={currentGame}
+                  user={user}
+                  isAdmin={isAdmin}
+                  locale={locale}
+                  isDark={isDark}
+                  getDisplayName={getDisplayName}
+                  showFancyAlert={showFancyAlert}
+                  showFaceMessage={showFaceMessage}
+                />
               ) : (
                 <>
                   {currentGame.status === 'waiting' && (
