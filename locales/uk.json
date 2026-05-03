@@ -251,7 +251,23 @@
       "closeGuessResults": "Закрити результати вгадування",
       "gameTypeLabel": "Тип гри",
       "gameTypeMirror": "В дзеркалі",
-      "gameTypeBasket": "Кошик"
+      "gameTypeBasket": "Кошик",
+      "basket": {
+        "round": "Раунд {current} з {total}",
+        "yourSubject": "Напишіть про:",
+        "writeComment": "Ваш коментар...",
+        "submit": "Надіслати",
+        "waitingForOthers": "Очікування... ({count}/{total} надіслано)",
+        "revealComments": "Показати коментарі",
+        "whichIsAboutYou": "Який коментар про вас?",
+        "whoWroteIt": "Хто це написав?",
+        "correct": "Правильно! +1 бал",
+        "correctAuthor": "Автор вгаданий! +1 бал",
+        "wrong": "Не вгадали.",
+        "nextRound": "Наступний раунд",
+        "finishGame": "Закінчити гру",
+        "waitingForGuesses": "{count}/{total} гравців відгадали"
+      }
     }
   },
   "settings": {

@@ -245,7 +245,23 @@
       "closeGuessResults": "Close guess results",
       "gameTypeLabel": "Game type",
       "gameTypeMirror": "In the Mirror",
-      "gameTypeBasket": "Basket"
+      "gameTypeBasket": "Basket",
+      "basket": {
+        "round": "Round {current} of {total}",
+        "yourSubject": "Write about:",
+        "writeComment": "Write your comment...",
+        "submit": "Submit",
+        "waitingForOthers": "Waiting for others... ({count}/{total} submitted)",
+        "revealComments": "Reveal Comments",
+        "whichIsAboutYou": "Which comment is about you?",
+        "whoWroteIt": "Who wrote it?",
+        "correct": "Correct! +1 point",
+        "correctAuthor": "Right author! +1 point",
+        "wrong": "Not quite.",
+        "nextRound": "Next Round",
+        "finishGame": "Finish Game",
+        "waitingForGuesses": "{count}/{total} players guessed"
+      }
     }
   },
   "settings": {
