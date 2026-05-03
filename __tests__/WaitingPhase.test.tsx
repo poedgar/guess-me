@@ -25,6 +25,8 @@ jest.mock('@/contexts/SoundContext', () => ({
   useSound: () => ({ playSound: jest.fn().mockResolvedValue(undefined) }),
 }));
 
+let mockSetGameType = jest.fn();
+
 jest.mock('@/contexts/GameContext', () => ({
   useGame: () => ({
     loading: false,
@@ -33,6 +35,7 @@ jest.mock('@/contexts/GameContext', () => ({
     updateShowSurnames: jest.fn(),
     updateTargetSelectionMode: jest.fn(),
     updateShowGuessResults: jest.fn(),
+    setGameType: mockSetGameType,
   }),
 }));
 
@@ -95,6 +98,7 @@ const baseGame = {
 
 describe('WaitingPhase — 3.5 copy button visual feedback', () => {
   beforeEach(() => {
+    mockSetGameType = jest.fn();
     jest.useFakeTimers();
     capturedIconProps = null;
   });
@@ -159,5 +163,79 @@ describe('WaitingPhase — 3.5 copy button visual feedback', () => {
     act(() => { jest.advanceTimersByTime(1000); });
     expect(queryByText('game.ui.tapToCopy')).toBeTruthy();
     expect(queryByTestId('icon-checkmark.circle.fill')).toBeNull();
+  });
+});
+
+describe('WaitingPhase — game type toggle', () => {
+  beforeEach(() => {
+    mockSetGameType = jest.fn();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.runAllTimers();
+    jest.useRealTimers();
+  });
+
+  function renderWaiting(gameOverrides = {}) {
+    return render(
+      <WaitingPhase
+        game={{ ...baseGame, ...gameOverrides }}
+        isAdmin={true}
+        user={{ uid: USER_UID }}
+        participantsByJoin={baseGame.participants}
+        joinIndexById={{ [USER_UID]: 1, p2: 2 }}
+        getDisplayName={(n: string) => n}
+        showFancyAlert={jest.fn()}
+        showFaceMessage={jest.fn()}
+        locale="en"
+        isDark={false}
+        onCopyGameId={jest.fn()}
+      />
+    );
+  }
+
+  it('shows the game type label for admins', () => {
+    const { queryByText } = renderWaiting();
+    expect(queryByText('game.ui.gameTypeLabel')).toBeTruthy();
+  });
+
+  it('renders Mirror and Basket buttons', () => {
+    const { queryByText } = renderWaiting();
+    expect(queryByText('game.ui.gameTypeMirror')).toBeTruthy();
+    expect(queryByText('game.ui.gameTypeBasket')).toBeTruthy();
+  });
+
+  it('calls setGameType("basket") when Basket button is pressed', async () => {
+    const { getByText } = renderWaiting();
+    fireEvent.press(getByText('game.ui.gameTypeBasket'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mockSetGameType).toHaveBeenCalledWith('basket');
+  });
+
+  it('calls setGameType("mirror") when Mirror button is pressed', async () => {
+    const { getByText } = renderWaiting({ gameType: 'basket' });
+    fireEvent.press(getByText('game.ui.gameTypeMirror'));
+    await act(async () => { await Promise.resolve(); });
+    expect(mockSetGameType).toHaveBeenCalledWith('mirror');
+  });
+
+  it('does not show the toggle for non-admins', () => {
+    const { queryByText } = render(
+      <WaitingPhase
+        game={baseGame}
+        isAdmin={false}
+        user={{ uid: 'p2' }}
+        participantsByJoin={baseGame.participants}
+        joinIndexById={{ [USER_UID]: 1, p2: 2 }}
+        getDisplayName={(n: string) => n}
+        showFancyAlert={jest.fn()}
+        showFaceMessage={jest.fn()}
+        locale="en"
+        isDark={false}
+        onCopyGameId={jest.fn()}
+      />
+    );
+    expect(queryByText('game.ui.gameTypeLabel')).toBeNull();
   });
 });

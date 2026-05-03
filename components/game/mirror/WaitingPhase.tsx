@@ -47,7 +47,7 @@ export const WaitingPhase: React.FC<Props> = ({
   onCopyGameId,
 }) => {
   const { playSound } = useSound();
-  const { loading, startGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults } = useGame();
+  const { loading, startGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, setGameType } = useGame();
 
   const [isCopied, setIsCopied] = useState(false);
 
@@ -249,6 +249,46 @@ export const WaitingPhase: React.FC<Props> = ({
               ios_backgroundColor={GameColors.neutral}
             />
           </View>
+
+          <View style={styles.toggleContainer}>
+            <View style={styles.toggleInfo}>
+              <ThemedText style={styles.toggleLabel}>
+                {t('game.ui.gameTypeLabel', { locale })}
+              </ThemedText>
+            </View>
+            <View style={styles.gameTypeButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.gameTypeButton,
+                  (game.gameType ?? 'mirror') === 'mirror' && styles.gameTypeButtonActive,
+                ]}
+                onPress={() => setGameType('mirror')}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={[
+                  styles.gameTypeButtonText,
+                  (game.gameType ?? 'mirror') === 'mirror' && styles.gameTypeButtonTextActive,
+                ]}>
+                  {t('game.ui.gameTypeMirror', { locale })}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.gameTypeButton,
+                  game.gameType === 'basket' && styles.gameTypeButtonActive,
+                ]}
+                onPress={() => setGameType('basket')}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={[
+                  styles.gameTypeButtonText,
+                  game.gameType === 'basket' && styles.gameTypeButtonTextActive,
+                ]}>
+                  {t('game.ui.gameTypeBasket', { locale })}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
         </>
       )}
 
@@ -377,6 +417,11 @@ const styles = StyleSheet.create({
   participantEmail: { fontSize: 14, opacity: 0.7, fontFamily: Fonts.sans },
   participantsScroll: { maxHeight: 160, marginTop: 8 },
   buttonWrapper: { alignItems: 'center', gap: 6 },
+  gameTypeButtons: { flexDirection: 'row', gap: 8 },
+  gameTypeButton: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: GameColors.blue },
+  gameTypeButtonActive: { backgroundColor: GameColors.blue },
+  gameTypeButtonText: { fontSize: 14, fontWeight: '600', color: GameColors.blue },
+  gameTypeButtonTextActive: { color: GameColors.white },
   startGameButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   buttonLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
   waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
