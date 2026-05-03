@@ -6,6 +6,7 @@ describe('generateBasketSchedule', () => {
     expect(generateBasketSchedule(['a','b','c']).length).toBe(2);
     expect(generateBasketSchedule(['a','b']).length).toBe(1);
     expect(generateBasketSchedule(['a']).length).toBe(0);
+    expect(generateBasketSchedule([]).length).toBe(0);
   });
 
   it('each round has exactly N assignments', () => {
