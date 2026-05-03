@@ -242,7 +242,10 @@
         "one": "Award 1 point to target",
         "other": "Award %{count} points to target"
       },
-      "closeGuessResults": "Close guess results"
+      "closeGuessResults": "Close guess results",
+      "gameTypeLabel": "Game type",
+      "gameTypeMirror": "In the Mirror",
+      "gameTypeBasket": "Basket"
     }
   },
   "settings": {

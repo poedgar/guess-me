@@ -248,7 +248,10 @@
         "many": "Дати %{count} балів цілі",
         "other": "Дати %{count} балів цілі"
       },
-      "closeGuessResults": "Закрити результати вгадування"
+      "closeGuessResults": "Закрити результати вгадування",
+      "gameTypeLabel": "Тип гри",
+      "gameTypeMirror": "В дзеркалі",
+      "gameTypeBasket": "Кошик"
     }
   },
   "settings": {
