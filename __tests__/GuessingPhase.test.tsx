@@ -42,7 +42,7 @@ jest.mock('@/components/themed-text', () => {
 jest.mock('@/components/ui/icon-symbol', () => ({ IconSymbol: () => null }));
 jest.mock('@/components/ui/TargetControlPanel', () => ({ TargetControlPanel: () => null }));
 jest.mock('@/components/game/GameHeader', () => ({ GameHeader: () => null }));
-jest.mock('@/components/game/PostGuessingPointsPanel', () => ({
+jest.mock('@/components/game/mirror/PostGuessingPointsPanel', () => ({
   __esModule: true,
   default: () => null,
 }));
@@ -67,7 +67,7 @@ jest.mock('@/constants/theme', () => ({
   StatusColors: { guessing_phase: '#5856D6' },
 }));
 
-const { GuessingPhase } = require('../components/game/GuessingPhase');
+const { GuessingPhase } = require('../components/game/mirror/GuessingPhase');
 
 const TARGET_UID = 'target-1';
 const TARGET_NAME = 'Bob Smith';

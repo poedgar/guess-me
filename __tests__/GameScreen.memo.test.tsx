@@ -27,7 +27,7 @@ jest.mock('@/components/ui/FancyAlert', () => ({ FancyAlert: () => null }));
 jest.mock('@/components/ui/FaceMessage', () => ({ FaceMessage: () => null }));
 jest.mock('@/components/ui/SuccessAnimation', () => ({ SuccessAnimation: () => null }));
 jest.mock('@/components/game/Leaderboard', () => ({ Leaderboard: () => null }));
-jest.mock('@/components/game/PostGuessingPointsPanel', () => ({ __esModule: true, default: () => null }));
+jest.mock('@/components/game/mirror/PostGuessingPointsPanel', () => ({ __esModule: true, default: () => null }));
 jest.mock('react-native-qrcode-svg', () => 'QRCode');
 jest.mock('@/i18n', () => ({ t: (key: string) => key }));
 jest.mock('@/contexts/LanguageContext', () => ({

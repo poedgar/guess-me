@@ -20,11 +20,11 @@ jest.mock('@/components/SoundToggle', () => ({ SoundToggle: () => null }));
 jest.mock('@/components/ui/SuccessAnimation', () => ({ SuccessAnimation: () => null }));
 jest.mock('@/components/ui/FaceMessage', () => ({ FaceMessage: () => null }));
 jest.mock('@/components/game/Leaderboard', () => ({ Leaderboard: () => null }));
-jest.mock('@/components/game/PostGuessingPointsPanel', () => ({ __esModule: true, default: () => null }));
-jest.mock('@/components/game/ResultsPhase', () => ({ ResultsPhase: () => null }));
-jest.mock('@/components/game/WaitingPhase', () => ({ WaitingPhase: () => null }));
-jest.mock('@/components/game/ActivePhase', () => ({ ActivePhase: () => null }));
-jest.mock('@/components/game/GuessingPhase', () => ({ GuessingPhase: () => null }));
+jest.mock('@/components/game/mirror/PostGuessingPointsPanel', () => ({ __esModule: true, default: () => null }));
+jest.mock('@/components/game/mirror/ResultsPhase', () => ({ ResultsPhase: () => null }));
+jest.mock('@/components/game/mirror/WaitingPhase', () => ({ WaitingPhase: () => null }));
+jest.mock('@/components/game/mirror/ActivePhase', () => ({ ActivePhase: () => null }));
+jest.mock('@/components/game/mirror/GuessingPhase', () => ({ GuessingPhase: () => null }));
 jest.mock('@/components/game/GameHeader', () => ({ GameHeader: () => null }));
 jest.mock('react-native-qrcode-svg', () => 'QRCode');
 

@@ -73,7 +73,7 @@ jest.mock('@/constants/theme', () => ({
   StatusColors: { waiting: '#FF9500' },
 }));
 
-const { WaitingPhase } = require('../components/game/WaitingPhase');
+const { WaitingPhase } = require('../components/game/mirror/WaitingPhase');
 
 const USER_UID = 'admin-1';
 

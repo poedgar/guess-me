@@ -1,12 +1,12 @@
 import { ThemedText } from '@/components/themed-text';
 import { Fonts, GameColors } from '@/constants/theme';
-import { gameStyles } from './gameStyles';
+import { gameStyles } from '../gameStyles';
 import { Game } from '@/contexts/GameContext';
 import { t } from '@/i18n';
 import { calculateSimilarPairs } from '@/utils/playerSimilarity';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Leaderboard } from './Leaderboard';
+import { Leaderboard } from '../Leaderboard';
 
 interface Props {
   game: Game;

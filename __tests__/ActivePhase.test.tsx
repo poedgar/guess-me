@@ -49,7 +49,7 @@ jest.mock('@/components/ui/icon-symbol', () => ({ IconSymbol: () => null }));
 jest.mock('@/components/ui/FaceMessage', () => ({ FaceMessage: () => null }));
 jest.mock('@/components/ui/SuccessAnimation', () => ({ SuccessAnimation: () => null }));
 jest.mock('@/components/game/GameHeader', () => ({ GameHeader: () => null }));
-jest.mock('@/components/game/PostGuessingPointsPanel', () => ({
+jest.mock('@/components/game/mirror/PostGuessingPointsPanel', () => ({
   __esModule: true,
   default: () => null,
 }));
@@ -79,7 +79,7 @@ jest.mock('@/constants/theme', () => ({
   themedInput: () => ({ style: {}, placeholderTextColor: '#999' }),
 }));
 
-const { ActivePhase } = require('../components/game/ActivePhase');
+const { ActivePhase } = require('../components/game/mirror/ActivePhase');
 
 const PLAYER_UID = 'player-1';
 const TARGET_UID = 'target-1';

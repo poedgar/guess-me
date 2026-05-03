@@ -3,7 +3,7 @@ import { FaceMessage } from '@/components/ui/FaceMessage';
 import { SuccessAnimation } from '@/components/ui/SuccessAnimation';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
-import { gameStyles } from './gameStyles';
+import { gameStyles } from '../gameStyles';
 import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
@@ -18,7 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ShowFancyAlertFn } from './GameHeader';
+import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
 
 interface Props {

@@ -3,7 +3,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
 import { SuccessAnimation } from "@/components/ui/SuccessAnimation";
 import { Fonts, GameColors } from "@/constants/theme";
-import { gameStyles } from './gameStyles';
+import { gameStyles } from '../gameStyles';
 import { Game, Participant, useGame } from "@/contexts/GameContext";
 import { useSound } from "@/contexts/SoundContext";
 import { t } from "@/i18n";
@@ -17,7 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { ShowFancyAlertFn } from "./GameHeader";
+import { ShowFancyAlertFn } from "../GameHeader";
 
 interface Props {
   game: Game;

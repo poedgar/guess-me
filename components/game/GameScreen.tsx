@@ -15,12 +15,12 @@ import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { ActivePhase } from './ActivePhase';
+import { ActivePhase } from '@/components/game/mirror/ActivePhase';
 import { GameHeader } from './GameHeader';
-import { GuessingPhase } from './GuessingPhase';
+import { GuessingPhase } from '@/components/game/mirror/GuessingPhase';
 import { JoinScreen } from './JoinScreen';
-import { ResultsPhase } from './ResultsPhase';
-import { WaitingPhase } from './WaitingPhase';
+import { ResultsPhase } from '@/components/game/mirror/ResultsPhase';
+import { WaitingPhase } from '@/components/game/mirror/WaitingPhase';
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();

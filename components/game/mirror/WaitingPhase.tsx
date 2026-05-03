@@ -4,7 +4,7 @@ import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
-import { gameStyles } from './gameStyles';
+import { gameStyles } from '../gameStyles';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
@@ -18,8 +18,8 @@ import {
   View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { Leaderboard } from './Leaderboard';
-import { ShowFancyAlertFn } from './GameHeader';
+import { Leaderboard } from '../Leaderboard';
+import { ShowFancyAlertFn } from '../GameHeader';
 
 interface Props {
   game: Game;
