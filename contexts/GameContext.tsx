@@ -164,6 +164,7 @@ interface GameContextType {
     targetSelectionMode: "random" | "chronological",
   ) => Promise<void>;
   updateShowGuessResults: (showGuessResults: boolean) => Promise<void>;
+  setGameType: (type: 'mirror' | 'basket') => Promise<void>;
   // Admin target control functions
   setNextRoundTarget: (targetUserId: string) => Promise<void>;
   skipNextRoundTarget: (targetUserId: string) => Promise<void>;
@@ -1523,6 +1524,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const setGameType = async (type: 'mirror' | 'basket'): Promise<void> => {
+    if (!currentGame) return;
+    const gameRef = doc(db, 'games', currentGame.id);
+    await updateDoc(gameRef, { gameType: type });
+  };
+
   const startPostGuessingPointPhase = async (): Promise<void> => {
     if (!currentGame || !user) throw new Error("No active game or user");
     if (user.uid !== currentGame.adminId)
@@ -1755,6 +1762,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       updateShowSurnames,
       updateTargetSelectionMode,
       updateShowGuessResults,
+      setGameType,
       startPostGuessingPointPhase,
       awardPointsToPlayers,
       skipPostCommentPhase,

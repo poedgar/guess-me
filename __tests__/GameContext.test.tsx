@@ -51,7 +51,7 @@ describe('GameContext', () => {
         'finalizeGuessingPhase', 'submitGuess', 'markPlayerGuessesSubmitted',
         'updateAdminWritesComments', 'updateShowSurnames', 'updateTargetSelectionMode',
         'updateShowGuessResults', 'startPostGuessingPointPhase',
-        'awardPointsToPlayers', 'skipPostCommentPhase',
+        'awardPointsToPlayers', 'skipPostCommentPhase', 'setGameType',
       ];
       for (const fn of fns) {
         expect(typeof (result.current as any)[fn]).toBe('function');
