@@ -247,11 +247,11 @@
       "gameTypeMirror": "In the Mirror",
       "gameTypeBasket": "Basket",
       "basket": {
-        "round": "Round {current} of {total}",
+        "round": "Round %{current} of %{total}",
         "yourSubject": "Write about:",
         "writeComment": "Write your comment...",
         "submit": "Submit",
-        "waitingForOthers": "Waiting for others... ({count}/{total} submitted)",
+        "waitingForOthers": "Waiting for others... (%{count}/%{total} submitted)",
         "revealComments": "Reveal Comments",
         "whichIsAboutYou": "Which comment is about you?",
         "whoWroteIt": "Who wrote it?",
@@ -260,7 +260,7 @@
         "wrong": "Not quite.",
         "nextRound": "Next Round",
         "finishGame": "Finish Game",
-        "waitingForGuesses": "{count}/{total} players guessed"
+        "waitingForGuesses": "%{count}/%{total} players guessed"
       }
     }
   },

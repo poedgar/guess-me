@@ -187,42 +187,42 @@ export const GameScreen: React.FC = () => {
             />
 
             <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-              {(currentGame.gameType ?? 'mirror') === 'basket' ? (
-                <BasketScreen
-                  game={currentGame}
-                  user={user}
-                  isAdmin={isAdmin}
-                  locale={locale}
-                  isDark={isDark}
-                  getDisplayName={getDisplayName}
-                  showFancyAlert={showFancyAlert}
-                  showFaceMessage={showFaceMessage}
-                />
-              ) : (
-                <>
-                  {currentGame.status === 'waiting' && (
-                    <WaitingPhase {...sharedProps} onCopyGameId={handleCopyGameId} />
-                  )}
+              <>
+                {currentGame.status === 'waiting' && (
+                  <WaitingPhase {...sharedProps} onCopyGameId={handleCopyGameId} />
+                )}
 
-                  {currentGame.status === 'active' && currentGame.currentRound && (
-                    <ActivePhase {...sharedProps} />
-                  )}
+                {(currentGame.status === 'basket_writing' || currentGame.status === 'basket_guessing') && (
+                  <BasketScreen
+                    game={currentGame}
+                    user={user}
+                    isAdmin={isAdmin}
+                    locale={locale}
+                    isDark={isDark}
+                    getDisplayName={getDisplayName}
+                    showFancyAlert={showFancyAlert}
+                    showFaceMessage={showFaceMessage}
+                  />
+                )}
 
-                  {currentGame.status === 'guessing_phase' && (
-                    <GuessingPhase {...sharedProps} commentsForPlayer={commentsForPlayer} />
-                  )}
+                {currentGame.status === 'active' && currentGame.currentRound && (
+                  <ActivePhase {...sharedProps} />
+                )}
 
-                  {currentGame.status === 'finished' && (
-                    <ResultsPhase
-                      game={currentGame}
-                      user={user}
-                      joinIndexById={joinIndexById}
-                      getDisplayName={getDisplayName}
-                      locale={locale}
-                    />
-                  )}
-                </>
-              )}
+                {currentGame.status === 'guessing_phase' && (
+                  <GuessingPhase {...sharedProps} commentsForPlayer={commentsForPlayer} />
+                )}
+
+                {currentGame.status === 'finished' && (
+                  <ResultsPhase
+                    game={currentGame}
+                    user={user}
+                    joinIndexById={joinIndexById}
+                    getDisplayName={getDisplayName}
+                    locale={locale}
+                  />
+                )}
+              </>
             </Animated.View>
 
             <View style={styles.leaveButtonWrapper}>
