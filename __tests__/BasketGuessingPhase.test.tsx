@@ -22,6 +22,17 @@ jest.mock('@/contexts/GameContext', () => ({
   }),
 }));
 
+jest.mock('@/contexts/SoundContext', () => ({
+  useSound: () => ({ playSound: jest.fn().mockResolvedValue(undefined) }),
+}));
+
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn().mockResolvedValue(undefined),
+  notificationAsync: jest.fn().mockResolvedValue(undefined),
+  ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium' },
+  NotificationFeedbackType: { Success: 'Success', Error: 'Error' },
+}));
+
 jest.mock('@/components/themed-text', () => {
   const { Text } = require('react-native');
   return { ThemedText: ({ children, ...p }: any) => <Text {...p}>{children}</Text> };
@@ -31,9 +42,23 @@ jest.mock('@/constants/theme', () => ({
   Fonts: { sans: 'System' },
   GameColors: {
     white: '#fff', blue: '#007AFF', green: '#34C759',
-    correct: '#34C759', shadow: '#000', cardBg: '#fafafa',
+    correct: '#34C759', incorrect: '#FF3B30', shadow: '#000',
+    cardBg: '#fafafa', cardBorder: '#eee', admin: '#FF9500',
   },
+  StatusColors: { basket_writing: '#007AFF', basket_guessing: '#AF52DE' },
+  themedInput: () => ({ style: {}, placeholderTextColor: '#ccc' }),
 }));
+
+jest.mock('@/components/game/gameStyles', () => ({
+  gameStyles: { statusLabel: {}, statusBadge: {}, statusText: {}, buttonDisabled: {}, gameFlowContainer: {} },
+}));
+
+jest.mock('@/components/game/GameHeader', () => ({}));
+
+jest.mock('@/components/ui/icon-symbol', () => {
+  const { Text } = require('react-native');
+  return { IconSymbol: ({ name }: any) => <Text>{name}</Text> };
+});
 
 const { BasketGuessingPhase } = require('../components/game/basket/BasketGuessingPhase');
 

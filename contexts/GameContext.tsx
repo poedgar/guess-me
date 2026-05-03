@@ -1611,6 +1611,11 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
       throw new Error("Only the admin can reveal comments");
     }
+    const submitted = currentGame.basketData?.currentRoundComments?.length ?? 0;
+    const total = currentGame.participants.length;
+    if (submitted < total) {
+      throw new Error(`Not all players have submitted (${submitted}/${total})`);
+    }
     try {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);

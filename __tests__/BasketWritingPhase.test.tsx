@@ -29,13 +29,34 @@ jest.mock('@/components/themed-text', () => {
   return { ThemedText: ({ children, ...p }: any) => <Text {...p}>{children}</Text> };
 });
 
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn().mockResolvedValue(undefined),
+  notificationAsync: jest.fn().mockResolvedValue(undefined),
+  ImpactFeedbackStyle: { Light: 'Light', Medium: 'Medium' },
+  NotificationFeedbackType: { Success: 'Success', Error: 'Error' },
+}));
+
 jest.mock('@/constants/theme', () => ({
   Fonts: { sans: 'System' },
   GameColors: {
     white: '#fff', blue: '#007AFF', green: '#34C759', waiting: '#FF9500',
-    shadow: '#000', textLight: '#888', cardBg: '#fafafa', inputBg: '#f2f2f2',
+    admin: '#FF9500', shadow: '#000', textLight: '#888', cardBg: '#fafafa',
+    cardBorder: '#eee', inputBg: '#f2f2f2', incorrect: '#FF3B30',
   },
+  StatusColors: { basket_writing: '#007AFF', basket_guessing: '#AF52DE' },
+  themedInput: () => ({ style: {}, placeholderTextColor: '#ccc' }),
 }));
+
+jest.mock('@/components/game/gameStyles', () => ({
+  gameStyles: { statusLabel: {}, statusBadge: {}, statusText: {}, buttonDisabled: {}, gameFlowContainer: {} },
+}));
+
+jest.mock('@/components/game/GameHeader', () => ({}));
+
+jest.mock('@/components/ui/icon-symbol', () => {
+  const { Text } = require('react-native');
+  return { IconSymbol: ({ name }: any) => <Text>{name}</Text> };
+});
 
 const { BasketWritingPhase } = require('../components/game/basket/BasketWritingPhase');
 
@@ -121,9 +142,25 @@ describe('BasketWritingPhase', () => {
     expect(queryByText('game.ui.basket.revealComments')).toBeNull();
   });
 
-  it('reveal button calls revealBasketComments', async () => {
-    const { getByText } = renderPhase({}, true);
+  it('reveal button calls revealBasketComments when all submitted', async () => {
+    const allSubmitted = {
+      basketData: {
+        ...baseGame.basketData,
+        currentRoundComments: [
+          { writerId: 'user-1', subjectId: 'user-2', text: 'a', submittedAt: 1 },
+          { writerId: 'user-2', subjectId: 'user-3', text: 'b', submittedAt: 2 },
+          { writerId: 'user-3', subjectId: 'user-1', text: 'c', submittedAt: 3 },
+        ],
+      },
+    };
+    const { getByText } = renderPhase(allSubmitted, true);
     await act(async () => { fireEvent.press(getByText('game.ui.basket.revealComments')); });
     expect(mockRevealBasketComments).toHaveBeenCalled();
+  });
+
+  it('reveal button does nothing when not all players submitted', async () => {
+    const { getByText } = renderPhase({}, true);
+    await act(async () => { fireEvent.press(getByText('game.ui.basket.revealComments')); });
+    expect(mockRevealBasketComments).not.toHaveBeenCalled();
   });
 });

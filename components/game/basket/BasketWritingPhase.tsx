@@ -1,10 +1,15 @@
 import { ThemedText } from '@/components/themed-text';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { ShowFancyAlertFn } from '@/components/game/GameHeader';
+import { gameStyles } from '@/components/game/gameStyles';
+import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
 import type { Game } from '@/contexts/GameContext';
 import { useGame } from '@/contexts/GameContext';
-import { GameColors } from '@/constants/theme';
+import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
+import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Props {
   game: Game;
@@ -13,114 +18,209 @@ interface Props {
   locale: string;
   isDark: boolean;
   getDisplayName: (name: string) => string;
+  showFancyAlert?: ShowFancyAlertFn;
+  showFaceMessage?: (message: string, face?: string) => void;
 }
 
 export const BasketWritingPhase: React.FC<Props> = ({
-  game, user, isAdmin, locale, isDark, getDisplayName,
+  game, user, isAdmin, locale, isDark, getDisplayName, showFancyAlert,
 }) => {
   const { submitBasketComment, revealBasketComments } = useGame();
+  const { playSound } = useSound();
+  const inputTheme = themedInput(isDark);
+
   const [commentText, setCommentText] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
 
   const { schedule, currentRoundIndex, currentRoundComments } = game.basketData!;
   const totalRounds = schedule.length;
-  const myAssignment = schedule[currentRoundIndex].assignments.find(
-    a => a.writerId === user?.uid
-  );
+  const myAssignment = schedule[currentRoundIndex].assignments.find(a => a.writerId === user?.uid);
   const subjectParticipant = game.participants.find(p => p.userId === myAssignment?.subjectId);
   const subjectName = subjectParticipant ? getDisplayName(subjectParticipant.userName) : '?';
-
-  const alreadySubmitted = submitted ||
-    currentRoundComments.some(c => c.writerId === user?.uid);
+  const alreadySubmitted = submitted || currentRoundComments.some(c => c.writerId === user?.uid);
+  const submittedCount = currentRoundComments.length;
+  const totalCount = game.participants.length;
 
   const handleSubmit = async () => {
     if (!commentText.trim()) return;
     try {
+      setIsSubmitting(true);
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await submitBasketComment(commentText.trim());
       setSubmitted(true);
       setCommentText('');
-    } catch (e) {
-      console.error('submitBasketComment error', e);
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: unknown) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert?.(t('common.error', { locale }), (err instanceof Error && err.message) || t('common.error', { locale }));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReveal = async () => {
+    try {
+      setIsRevealing(true);
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await revealBasketComments();
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: unknown) {
+      await playSound('error');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert?.(t('common.error', { locale }), (err instanceof Error && err.message) || t('common.error', { locale }));
+    } finally {
+      setIsRevealing(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <ThemedText style={styles.roundLabel}>
-        {t('game.ui.basket.round', { locale, current: currentRoundIndex + 1, total: totalRounds })}
-      </ThemedText>
-
-      {alreadySubmitted ? (
-        <ThemedText style={styles.waiting}>
-          {t('game.ui.basket.waitingForOthers', {
-            locale,
-            count: currentRoundComments.length,
-            total: game.participants.length,
-          })}
-        </ThemedText>
-      ) : (
-        <View style={styles.writeSection}>
-          <ThemedText style={styles.subjectLabel}>
-            {t('game.ui.basket.yourSubject', { locale })}
+    <View style={styles.phaseWrapper}>
+      <View style={styles.statusRow}>
+        <ThemedText style={gameStyles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
+        <View style={[gameStyles.statusBadge, { backgroundColor: StatusColors.basket_writing }]}>
+          <ThemedText style={gameStyles.statusText}>
+            {t('game.ui.basket.round', { locale, current: currentRoundIndex + 1, total: totalRounds })}
           </ThemedText>
-          <ThemedText style={styles.subjectName}>{subjectName}</ThemedText>
-          <TextInput
-            style={[styles.input, isDark && styles.inputDark]}
-            value={commentText}
-            onChangeText={setCommentText}
-            placeholder={t('game.ui.basket.writeComment', { locale })}
-            multiline
-            numberOfLines={3}
-          />
-          <TouchableOpacity
-            style={[styles.submitButton, !commentText.trim() && styles.submitDisabled]}
-            onPress={handleSubmit}
-            disabled={!commentText.trim()}
-            activeOpacity={0.8}
-          >
-            <ThemedText style={styles.submitText}>
-              {t('game.ui.basket.submit', { locale })}
-            </ThemedText>
-          </TouchableOpacity>
         </View>
-      )}
+      </View>
 
-      {isAdmin && (
-        <TouchableOpacity
-          style={styles.revealButton}
-          onPress={revealBasketComments}
-          activeOpacity={0.8}
-        >
-          <ThemedText style={styles.revealText}>
-            {t('game.ui.basket.revealComments', { locale })}
-          </ThemedText>
-        </TouchableOpacity>
-      )}
+      <View style={gameStyles.gameFlowContainer}>
+        {alreadySubmitted ? (
+          <View style={styles.waitingCard}>
+            <ThemedText style={styles.waitingText}>
+              {t('game.ui.basket.waitingForOthers', { locale, count: submittedCount, total: totalCount })}
+            </ThemedText>
+          </View>
+        ) : (
+          <View style={styles.writeSection}>
+            <View style={styles.subjectCard}>
+              <ThemedText style={styles.subjectLabel}>{t('game.ui.basket.yourSubject', { locale })}</ThemedText>
+              <ThemedText style={styles.subjectName}>{subjectName}</ThemedText>
+            </View>
+            <TextInput
+              style={[styles.input, inputTheme.style]}
+              value={commentText}
+              onChangeText={setCommentText}
+              placeholder={t('game.ui.basket.writeComment', { locale })}
+              placeholderTextColor={inputTheme.placeholderTextColor}
+              multiline
+              numberOfLines={4}
+              maxLength={500}
+              textAlignVertical="top"
+            />
+            <ThemedText style={[styles.charCounter, commentText.length >= 450 && styles.charCounterWarn]}>
+              {commentText.length}/500
+            </ThemedText>
+            <TouchableOpacity
+              style={[
+                styles.wideButton,
+                { backgroundColor: GameColors.blue, shadowColor: GameColors.shadow },
+                (!commentText.trim() || isSubmitting) && gameStyles.buttonDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={!commentText.trim() || isSubmitting}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+            >
+              {isSubmitting
+                ? <ActivityIndicator size="small" color={GameColors.white} />
+                : <IconSymbol name="paperplane.fill" size={16} color={GameColors.white} />}
+              <ThemedText style={styles.wideButtonText}>{t('game.ui.basket.submit', { locale })}</ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isAdmin && (
+          <View style={styles.adminSection}>
+            <ThemedText style={styles.adminCount}>{submittedCount}/{totalCount}</ThemedText>
+            <TouchableOpacity
+              style={[
+                styles.wideButton,
+                { backgroundColor: GameColors.admin, shadowColor: GameColors.shadow },
+                (isRevealing || submittedCount < totalCount) && gameStyles.buttonDisabled,
+              ]}
+              onPress={handleReveal}
+              disabled={isRevealing || submittedCount < totalCount}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+            >
+              {isRevealing
+                ? <ActivityIndicator size="small" color={GameColors.white} />
+                : <IconSymbol name="eye.fill" size={16} color={GameColors.white} />}
+              <ThemedText style={styles.wideButtonText}>{t('game.ui.basket.revealComments', { locale })}</ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { gap: 16, paddingVertical: 8 },
-  roundLabel: { fontSize: 14, opacity: 0.6, textAlign: 'center' },
-  waiting: { textAlign: 'center', marginVertical: 16, opacity: 0.7 },
+  phaseWrapper: {
+    backgroundColor: 'rgba(0,122,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,122,255,0.15)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+  },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   writeSection: { gap: 8 },
-  subjectLabel: { fontSize: 13, opacity: 0.6 },
-  subjectName: { fontSize: 20, fontWeight: '700' },
+  subjectCard: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: GameColors.cardBg,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  subjectLabel: { fontSize: 13, opacity: 0.6, marginBottom: 4, fontFamily: Fonts.sans },
+  subjectName: { fontSize: 22, fontWeight: '700', fontFamily: Fonts.sans },
   input: {
-    borderRadius: 10, padding: 12, fontSize: 15,
-    backgroundColor: '#f2f2f2', minHeight: 80, textAlignVertical: 'top',
+    minHeight: 100,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 4,
+    borderWidth: 1,
+    textAlignVertical: 'top',
+    fontFamily: Fonts.sans,
+    ...Platform.select({
+      ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+      android: { elevation: 2 },
+    }),
   },
-  inputDark: { backgroundColor: '#1c1c1e', color: '#fff' },
-  submitButton: {
-    backgroundColor: GameColors.blue, borderRadius: 10,
-    paddingVertical: 12, alignItems: 'center',
+  charCounter: { fontSize: 12, opacity: 0.5, textAlign: 'right', marginBottom: 8, fontFamily: Fonts.sans },
+  charCounterWarn: { opacity: 1, color: '#e53935' },
+  wideButton: {
+    flexDirection: 'row',
+    borderRadius: 999,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: 8,
+    ...Platform.select({
+      ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
   },
-  submitDisabled: { opacity: 0.4 },
-  submitText: { color: GameColors.white, fontWeight: '600' },
-  revealButton: {
-    backgroundColor: GameColors.green, borderRadius: 10,
-    paddingVertical: 12, alignItems: 'center', marginTop: 8,
+  wideButtonText: { color: GameColors.white, fontWeight: '600', fontSize: 15, fontFamily: Fonts.sans },
+  waitingCard: {
+    padding: 24,
+    borderRadius: 8,
+    backgroundColor: GameColors.cardBg,
+    alignItems: 'center',
   },
-  revealText: { color: GameColors.white, fontWeight: '600' },
+  waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, fontFamily: Fonts.sans },
+  adminSection: { marginTop: 24, alignItems: 'center', gap: 6 },
+  adminCount: { fontSize: 13, opacity: 0.6, fontFamily: Fonts.sans },
 });

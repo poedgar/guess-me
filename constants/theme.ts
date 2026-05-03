@@ -114,6 +114,10 @@ export const GameColors = {
   guessingTintBorder: 'rgba(255,120,0,0.15)',
   resultsTint: 'rgba(255,215,0,0.08)',
   resultsTintBorder: 'rgba(255,215,0,0.25)',
+  basketWritingTint: 'rgba(0,122,255,0.06)',
+  basketWritingTintBorder: 'rgba(0,122,255,0.15)',
+  basketGuessingTint: 'rgba(175,82,222,0.06)',
+  basketGuessingTintBorder: 'rgba(175,82,222,0.15)',
 };
 
 /** Status badge background colors, keyed by game status string. */
@@ -122,6 +126,8 @@ export const StatusColors: Record<string, string> = {
   active: '#34C759',
   guessing_phase: '#AF52DE',
   finished: '#8E8E93',
+  basket_writing: '#007AFF',
+  basket_guessing: '#AF52DE',
 };
 
 /** Shared modal styles for FancyAlert and FaceMessage */
