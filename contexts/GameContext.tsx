@@ -62,6 +62,8 @@ export interface Game {
   showGuessResults?: boolean;
   // Target selection mode: 'random' or 'chronological' (default: 'random')
   targetSelectionMode?: "random" | "chronological";
+  // Which game type to play: 'mirror' (default) or 'basket'
+  gameType?: 'mirror' | 'basket';
   // Admin target control preferences
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
