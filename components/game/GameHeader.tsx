@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginTop: -50,
+    marginTop: 20,
     marginBottom: 30,
   },
   adminBadge: {

@@ -82,7 +82,9 @@ export const JoinScreen: React.FC<Props> = ({
               onPress: async () => {
                 await playSound("copy");
                 Clipboard.setString(gameId);
-                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                await Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
                 showFancyAlert(
                   t("game.alerts.copiedTitle", { locale }),
                   t("game.alerts.copiedMessage", { locale }),
@@ -108,9 +110,10 @@ export const JoinScreen: React.FC<Props> = ({
     } catch (error: unknown) {
       await playSound("error");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const message = error?.message === 'game_not_found'
-        ? t("game.alerts.gameNotFound", { locale })
-        : t("game.alerts.enterGameFailed", { locale });
+      const message =
+        error?.message === "game_not_found"
+          ? t("game.alerts.gameNotFound", { locale })
+          : t("game.alerts.enterGameFailed", { locale });
       showFancyAlert(t("common.error", { locale }), message);
     } finally {
       setIsProcessingEnter(false);
@@ -211,8 +214,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    marginTop: -50,
-    marginBottom: 30,
+    marginTop: 20,
+    marginBottom: 20,
   },
   section: { marginBottom: 32 },
   sectionTitle: { marginBottom: 8 },

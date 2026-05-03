@@ -256,7 +256,7 @@ export const AuthScreen: React.FC = () => {
               style={[
                 styles.webGoogleButton,
                 {
-                  backgroundColor: GameColors.blue,
+                  backgroundColor: GameColors.green,
                   shadowColor: GameColors.shadow,
                 },
               ]}
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    marginTop: -70,
+    marginTop: 20,
   },
   loadingContainer: {
     alignItems: "center",
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: GameColors.blue,
+    backgroundColor: GameColors.green,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 8,

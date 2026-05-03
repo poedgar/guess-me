@@ -1,4 +1,4 @@
-import { OwlsAnimation } from "@/components/ui/OwlsAnimation";
+import { OwlsAnimation } from "@/components/ui/MirrorAnimation";
 import { Platform, StyleSheet, View } from "react-native";
 
 export function HeaderLogo() {
@@ -16,7 +16,7 @@ export function HeaderLogo() {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: -50,
+    marginTop: 0,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "transparent",
