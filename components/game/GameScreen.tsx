@@ -16,6 +16,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ActivePhase } from '@/components/game/mirror/ActivePhase';
+import { BasketScreen } from '@/components/game/basket/BasketScreen';
 import { GameHeader } from './GameHeader';
 import { GuessingPhase } from '@/components/game/mirror/GuessingPhase';
 import { JoinScreen } from './JoinScreen';
@@ -186,26 +187,32 @@ export const GameScreen: React.FC = () => {
             />
 
             <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-              {currentGame.status === 'waiting' && (
-                <WaitingPhase {...sharedProps} onCopyGameId={handleCopyGameId} />
-              )}
+              {(currentGame.gameType ?? 'mirror') === 'basket' ? (
+                <BasketScreen game={currentGame} user={user} locale={locale} />
+              ) : (
+                <>
+                  {currentGame.status === 'waiting' && (
+                    <WaitingPhase {...sharedProps} onCopyGameId={handleCopyGameId} />
+                  )}
 
-              {currentGame.status === 'active' && currentGame.currentRound && (
-                <ActivePhase {...sharedProps} />
-              )}
+                  {currentGame.status === 'active' && currentGame.currentRound && (
+                    <ActivePhase {...sharedProps} />
+                  )}
 
-              {currentGame.status === 'guessing_phase' && (
-                <GuessingPhase {...sharedProps} commentsForPlayer={commentsForPlayer} />
-              )}
+                  {currentGame.status === 'guessing_phase' && (
+                    <GuessingPhase {...sharedProps} commentsForPlayer={commentsForPlayer} />
+                  )}
 
-              {currentGame.status === 'finished' && (
-                <ResultsPhase
-                  game={currentGame}
-                  user={user}
-                  joinIndexById={joinIndexById}
-                  getDisplayName={getDisplayName}
-                  locale={locale}
-                />
+                  {currentGame.status === 'finished' && (
+                    <ResultsPhase
+                      game={currentGame}
+                      user={user}
+                      joinIndexById={joinIndexById}
+                      getDisplayName={getDisplayName}
+                      locale={locale}
+                    />
+                  )}
+                </>
               )}
             </Animated.View>
 

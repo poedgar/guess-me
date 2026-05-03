@@ -12,6 +12,12 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@/components/LanguageSelector', () => ({ LanguageSelector: () => null }));
 jest.mock('@/components/ui/icon-symbol', () => ({ IconSymbol: () => null }));
 jest.mock('react-native-qrcode-svg', () => 'QRCode');
+jest.mock('@/components/game/basket/BasketScreen', () => ({
+  BasketScreen: () => {
+    const { Text } = require('react-native');
+    return <Text testID="basket-screen">BasketScreen</Text>;
+  },
+}));
 jest.mock('@/i18n', () => ({ t: (key: string) => key }));
 jest.mock('@/contexts/LanguageContext', () => ({
   useLanguage: () => ({ locale: 'en', setLocale: jest.fn() }),
@@ -51,6 +57,7 @@ jest.mock('@/contexts/GameContext', () => ({
     awardPointsToPlayers: jest.fn(),
     skipPostCommentPhase: jest.fn(),
     refreshGame: jest.fn(),
+    setGameType: jest.fn(),
   }),
 }));
 
@@ -266,5 +273,46 @@ describe('GameScreen — guessing phase (admin)', () => {
   it('shows leave game button label', () => {
     const { getByText } = renderScreen();
     expect(getByText('game.ui.leaveGame')).toBeTruthy();
+  });
+});
+
+// ── basket game type routing ──────────────────────────────────────────────────
+describe('GameScreen — basket game type routing', () => {
+  beforeEach(() => {
+    mockIsSignedIn = true;
+    mockUser = { uid: 'u1', displayName: 'Alice', email: 'alice@test.com' };
+  });
+
+  it('renders BasketScreen when gameType is basket (status=waiting)', () => {
+    mockCurrentGame = {
+      id: 'G1', adminId: 'u1', status: 'waiting', gameType: 'basket',
+      participants: [{ userId: 'u1', userName: 'Alice', userEmail: 'alice@test.com', joinedAt: new Date() }],
+      scores: {}, adminWritesComments: false, showSurnames: false,
+      targetSelectionMode: 'random', showGuessResults: false,
+    };
+    const { getByTestId } = renderScreen();
+    expect(getByTestId('basket-screen')).toBeTruthy();
+  });
+
+  it('does not render BasketScreen when gameType is mirror', () => {
+    mockCurrentGame = {
+      id: 'G1', adminId: 'u1', status: 'waiting', gameType: 'mirror',
+      participants: [{ userId: 'u1', userName: 'Alice', userEmail: 'alice@test.com', joinedAt: new Date() }],
+      scores: {}, adminWritesComments: false, showSurnames: false,
+      targetSelectionMode: 'random', showGuessResults: false,
+    };
+    const { queryByTestId } = renderScreen();
+    expect(queryByTestId('basket-screen')).toBeNull();
+  });
+
+  it('does not render BasketScreen when gameType is absent (defaults to mirror)', () => {
+    mockCurrentGame = {
+      id: 'G1', adminId: 'u1', status: 'waiting',
+      participants: [{ userId: 'u1', userName: 'Alice', userEmail: 'alice@test.com', joinedAt: new Date() }],
+      scores: {}, adminWritesComments: false, showSurnames: false,
+      targetSelectionMode: 'random', showGuessResults: false,
+    };
+    const { queryByTestId } = renderScreen();
+    expect(queryByTestId('basket-screen')).toBeNull();
   });
 });
