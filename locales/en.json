@@ -246,6 +246,8 @@
       "gameTypeLabel": "Game type",
       "gameTypeMirror": "In the Mirror",
       "gameTypeBasket": "Basket",
+      "gameTypeClash": "Head-to-Head",
+      "gameTypeSoon": "Soon",
       "basket": {
         "round": "Round %{current} of %{total}",
         "yourSubject": "Write about:",
@@ -261,6 +263,32 @@
         "nextRound": "Next Round",
         "finishGame": "Finish Game",
         "waitingForGuesses": "%{count}/%{total} players guessed"
+      },
+      "clash": {
+        "round": "Round %{current} of %{total}",
+        "groupA": "Group A",
+        "groupB": "Group B",
+        "leader": "Leader",
+        "assignLeader": "Tap to set as leader",
+        "unassigned": "Unassigned",
+        "startGame": "Start Game",
+        "equalSizeWarning": "Both groups must have the same number of players",
+        "yourSubject": "Write about:",
+        "writeComment": "Write your comment...",
+        "submit": "Submit",
+        "waitingForGroup": "Group A: %{a}/%{n} · Group B: %{b}/%{n}",
+        "revealComments": "Reveal Comments",
+        "leaderGuessing": "%{name} is guessing…",
+        "whichMember": "Which group member is this about?",
+        "whoWroteIt": "Who wrote it?",
+        "correct": "Correct! +1 point",
+        "correctAuthor": "Right author! +1 point",
+        "wrong": "Not quite.",
+        "teamScore": "Group A: %{a} pts · Group B: %{b} pts",
+        "nextLeader": "Next Leader",
+        "nextRound": "Next Round",
+        "finishGame": "Finish Game",
+        "waitingForLeader": "Waiting for leader to guess…"
       }
     }
   },

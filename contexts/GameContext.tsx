@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { generateGameId } from "@/utils/gameIdGenerator";
 import { sortParticipantsByJoin } from "@/utils/participants";
 import { BasketAssignment, BasketRound, generateBasketSchedule } from '@/utils/basketSchedule';
+import { ClashAssignment, ClashRound } from '@/utils/clashSchedule';
 import {
   arrayUnion,
   doc,
@@ -32,7 +33,7 @@ export interface Game {
   adminEmail: string;
   participants: Participant[];
   createdAt: Date | Timestamp;
-  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing";
+  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing";
   // If set, indicates that target has submitted guesses and players can now award points to each other
   postGuessingPointPhase?: boolean;
   // Track which players have already awarded points in post-guessing phase
@@ -63,9 +64,10 @@ export interface Game {
   showGuessResults?: boolean;
   // Target selection mode: 'random' or 'chronological' (default: 'random')
   targetSelectionMode?: "random" | "chronological";
-  // Which game type to play: 'mirror' (default) or 'basket'
-  gameType?: 'mirror' | 'basket';
+  // Which game type to play: 'mirror' (default), 'basket', or 'clash'
+  gameType?: 'mirror' | 'basket' | 'clash';
   basketData?: BasketData;
+  clashData?: ClashData;
   // Admin target control preferences
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
@@ -148,6 +150,41 @@ export interface BasketData {
   currentRoundGuesses: BasketGuess[];
 }
 
+export interface ClashGroup {
+  leaderId: string;
+  memberIds: string[]; // includes leaderId
+}
+
+export interface ClashComment {
+  writerId: string;
+  subjectId: string;
+  text: string;
+  submittedAt: number;
+}
+
+export interface ClashGuess {
+  commentWriterId: string;
+  guessedSubjectId: string;
+  subjectCorrect: boolean;
+  guessedAuthorId?: string;
+  authorCorrect?: boolean;
+  pointsAwarded: number;
+}
+
+export interface ClashData {
+  groupA: ClashGroup;
+  groupB: ClashGroup;
+  schedule: ClashRound[];
+  currentRoundIndex: number;
+  currentRoundCommentsA: ClashComment[];
+  currentRoundCommentsB: ClashComment[];
+  lastGroupToFinish: 'a' | 'b' | null;
+  currentGuessingGroup: 'a' | 'b' | null;
+  currentRoundGuessesA: ClashGuess[];
+  currentRoundGuessesB: ClashGuess[];
+  teamScores: { a: number; b: number };
+}
+
 interface GameContextType {
   currentGame: Game | null;
   loading: boolean;
@@ -189,13 +226,20 @@ interface GameContextType {
     targetSelectionMode: "random" | "chronological",
   ) => Promise<void>;
   updateShowGuessResults: (showGuessResults: boolean) => Promise<void>;
-  setGameType: (type: 'mirror' | 'basket') => Promise<void>;
+  setGameType: (type: 'mirror' | 'basket' | 'clash') => Promise<void>;
   startBasketGame: () => Promise<void>;
   submitBasketComment: (text: string) => Promise<void>;
   revealBasketComments: () => Promise<void>;
   submitBasketCommentGuess: (commentWriterId: string) => Promise<void>;
   submitBasketAuthorGuess: (authorGuessId: string) => Promise<void>;
   startNextBasketRound: () => Promise<void>;
+  saveClashGroups: (groupA: ClashGroup, groupB: ClashGroup) => Promise<void>;
+  startClashGame: () => Promise<void>;
+  submitClashComment: (text: string) => Promise<void>;
+  revealClashComments: () => Promise<void>;
+  submitClashGuess: (commentWriterId: string, guessedSubjectId: string) => Promise<void>;
+  submitClashAuthorGuess: (commentWriterId: string, guessedAuthorId: string) => Promise<void>;
+  advanceClashGuessing: () => Promise<void>;
   // Admin target control functions
   setNextRoundTarget: (targetUserId: string) => Promise<void>;
   skipNextRoundTarget: (targetUserId: string) => Promise<void>;
@@ -1721,7 +1765,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const setGameType = async (type: 'mirror' | 'basket'): Promise<void> => {
+  const setGameType = async (type: 'mirror' | 'basket' | 'clash'): Promise<void> => {
     if (!currentGame) return;
     const gameRef = doc(db, 'games', currentGame.id);
     await updateDoc(gameRef, { gameType: type });
@@ -1935,6 +1979,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  // Clash methods — implemented in Task 3; stubs satisfy TypeScript until then
+  const saveClashGroups = async (_groupA: ClashGroup, _groupB: ClashGroup): Promise<void> => { throw new Error('not implemented'); };
+  const startClashGame = async (): Promise<void> => { throw new Error('not implemented'); };
+  const submitClashComment = async (_text: string): Promise<void> => { throw new Error('not implemented'); };
+  const revealClashComments = async (): Promise<void> => { throw new Error('not implemented'); };
+  const submitClashGuess = async (_commentWriterId: string, _guessedSubjectId: string): Promise<void> => { throw new Error('not implemented'); };
+  const submitClashAuthorGuess = async (_commentWriterId: string, _guessedAuthorId: string): Promise<void> => { throw new Error('not implemented'); };
+  const advanceClashGuessing = async (): Promise<void> => { throw new Error('not implemented'); };
+
   const value: GameContextType = useMemo(
     () => ({
       currentGame,
@@ -1966,6 +2019,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       submitBasketCommentGuess,
       submitBasketAuthorGuess,
       startNextBasketRound,
+      saveClashGroups,
+      startClashGame,
+      submitClashComment,
+      revealClashComments,
+      submitClashGuess,
+      submitClashAuthorGuess,
+      advanceClashGuessing,
       startPostGuessingPointPhase,
       awardPointsToPlayers,
       skipPostCommentPhase,

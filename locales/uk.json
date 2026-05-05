@@ -252,6 +252,8 @@
       "gameTypeLabel": "Тип гри",
       "gameTypeMirror": "В дзеркалі",
       "gameTypeBasket": "Кошик",
+      "gameTypeClash": "Стінка на стінку",
+      "gameTypeSoon": "Незабаром",
       "basket": {
         "round": "Раунд %{current} з %{total}",
         "yourSubject": "Напишіть про:",
@@ -267,6 +269,32 @@
         "nextRound": "Наступний раунд",
         "finishGame": "Закінчити гру",
         "waitingForGuesses": "%{count}/%{total} гравців відгадали"
+      },
+      "clash": {
+        "round": "Раунд %{current} з %{total}",
+        "groupA": "Команда А",
+        "groupB": "Команда Б",
+        "leader": "Капітан",
+        "assignLeader": "Натисніть, щоб призначити капітаном",
+        "unassigned": "Не призначено",
+        "startGame": "Почати гру",
+        "equalSizeWarning": "Обидві команди повинні мати однакову кількість гравців",
+        "yourSubject": "Написати про:",
+        "writeComment": "Ваш коментар...",
+        "submit": "Надіслати",
+        "waitingForGroup": "Команда А: %{a}/%{n} · Команда Б: %{b}/%{n}",
+        "revealComments": "Показати коментарі",
+        "leaderGuessing": "%{name} відгадує…",
+        "whichMember": "Про кого з команди цей коментар?",
+        "whoWroteIt": "Хто це написав?",
+        "correct": "Правильно! +1 бал",
+        "correctAuthor": "Автор вгаданий! +1 бал",
+        "wrong": "Не вгадали.",
+        "teamScore": "Команда А: %{a} б · Команда Б: %{b} б",
+        "nextLeader": "Наступний капітан",
+        "nextRound": "Наступний раунд",
+        "finishGame": "Закінчити гру",
+        "waitingForLeader": "Очікування вгадування капітана…"
       }
     }
   },
