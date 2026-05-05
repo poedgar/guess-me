@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
+import { ClashSetupPanel } from '@/components/game/clash/ClashSetupPanel';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
 import { gameStyles } from '../gameStyles';
@@ -47,7 +48,7 @@ export const WaitingPhase: React.FC<Props> = ({
   onCopyGameId,
 }) => {
   const { playSound } = useSound();
-  const { loading, startGame, startBasketGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, setGameType } = useGame();
+  const { loading, startGame, startBasketGame, startClashGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, setGameType } = useGame();
 
   const [isCopied, setIsCopied] = useState(false);
 
@@ -114,6 +115,8 @@ export const WaitingPhase: React.FC<Props> = ({
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       if (game.gameType === 'basket') {
         await startBasketGame();
+      } else if (game.gameType === 'clash') {
+        await startClashGame();
       } else {
         await startGame();
       }
@@ -291,15 +294,42 @@ export const WaitingPhase: React.FC<Props> = ({
                   {t('game.ui.gameTypeBasket', { locale })}
                 </ThemedText>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.gameTypeButton,
+                  game.gameType === 'clash' && styles.gameTypeButtonActive,
+                ]}
+                onPress={() => setGameType('clash')}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={[
+                  styles.gameTypeButtonText,
+                  game.gameType === 'clash' && styles.gameTypeButtonTextActive,
+                ]}>
+                  {t('game.ui.gameTypeClash', { locale })}
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           </View>
         </>
       )}
 
       {/* Admin Target Control */}
-      {isAdmin && (
+      {isAdmin && game.gameType !== 'clash' && (
         <TargetControlPanel
           locale={locale}
+          showFancyAlert={showFancyAlert}
+        />
+      )}
+
+      {/* Clash group setup */}
+      {isAdmin && game.gameType === 'clash' && (
+        <ClashSetupPanel
+          game={game}
+          locale={locale}
+          isDark={isDark}
+          getDisplayName={getDisplayName}
+          isAdmin={isAdmin}
           showFancyAlert={showFancyAlert}
         />
       )}
@@ -349,7 +379,7 @@ export const WaitingPhase: React.FC<Props> = ({
 
       {/* Start Game / Waiting */}
       <View style={gameStyles.gameFlowContainer}>
-        {isAdmin && (
+        {isAdmin && game.gameType !== 'clash' && (
           <View style={styles.buttonWrapper}>
             <TouchableOpacity
               style={[
@@ -421,7 +451,7 @@ const styles = StyleSheet.create({
   participantEmail: { fontSize: 14, opacity: 0.7, fontFamily: Fonts.sans },
   participantsScroll: { maxHeight: 160, marginTop: 8 },
   buttonWrapper: { alignItems: 'center', gap: 6 },
-  gameTypeButtons: { flexDirection: 'row', gap: 8 },
+  gameTypeButtons: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   gameTypeButton: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: GameColors.blue },
   gameTypeButtonActive: { backgroundColor: GameColors.blue },
   gameTypeButtonText: { fontSize: 14, fontWeight: '600', color: GameColors.blue },

@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ActivePhase } from '@/components/game/mirror/ActivePhase';
 import { BasketScreen } from '@/components/game/basket/BasketScreen';
+import { ClashScreen } from '@/components/game/clash/ClashScreen';
 import { GameHeader } from './GameHeader';
 import { GuessingPhase } from '@/components/game/mirror/GuessingPhase';
 import { JoinScreen } from './JoinScreen';
@@ -194,6 +195,19 @@ export const GameScreen: React.FC = () => {
 
                 {(currentGame.status === 'basket_writing' || currentGame.status === 'basket_guessing') && (
                   <BasketScreen
+                    game={currentGame}
+                    user={user}
+                    isAdmin={isAdmin}
+                    locale={locale}
+                    isDark={isDark}
+                    getDisplayName={getDisplayName}
+                    showFancyAlert={showFancyAlert}
+                    showFaceMessage={showFaceMessage}
+                  />
+                )}
+
+                {(currentGame.status === 'clash_writing' || currentGame.status === 'clash_guessing') && (
+                  <ClashScreen
                     game={currentGame}
                     user={user}
                     isAdmin={isAdmin}
