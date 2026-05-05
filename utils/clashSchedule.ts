@@ -11,6 +11,9 @@ export interface ClashRound {
 export function generateClashSchedule(groupA: string[], groupB: string[]): ClashRound[] {
   const n = groupA.length;
   if (n === 0) return [];
+  if (groupA.length !== groupB.length) {
+    throw new Error(`generateClashSchedule requires equal-length groups (got ${groupA.length} vs ${groupB.length})`);
+  }
   const rounds: ClashRound[] = [];
   for (let r = 0; r < n; r++) {
     const assignmentsA: ClashAssignment[] = groupA.map((writerId, i) => ({

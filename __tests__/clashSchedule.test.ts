@@ -54,4 +54,8 @@ describe('generateClashSchedule', () => {
       }
     }
   });
+
+  it('throws when groups have different lengths', () => {
+    expect(() => generateClashSchedule(['a1', 'a2'], ['b1'])).toThrow();
+  });
 });
