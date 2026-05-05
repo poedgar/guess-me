@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { generateGameId } from "@/utils/gameIdGenerator";
 import { sortParticipantsByJoin } from "@/utils/participants";
 import { BasketAssignment, BasketRound, generateBasketSchedule } from '@/utils/basketSchedule';
-import { ClashAssignment, ClashRound } from '@/utils/clashSchedule';
+import { ClashAssignment, ClashRound, generateClashSchedule } from '@/utils/clashSchedule';
 import {
   arrayUnion,
   doc,
@@ -1979,14 +1979,221 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  // Clash methods — implemented in Task 3; stubs satisfy TypeScript until then
-  const saveClashGroups = async (_groupA: ClashGroup, _groupB: ClashGroup): Promise<void> => { throw new Error('not implemented'); };
-  const startClashGame = async (): Promise<void> => { throw new Error('not implemented'); };
-  const submitClashComment = async (_text: string): Promise<void> => { throw new Error('not implemented'); };
-  const revealClashComments = async (): Promise<void> => { throw new Error('not implemented'); };
-  const submitClashGuess = async (_commentWriterId: string, _guessedSubjectId: string): Promise<void> => { throw new Error('not implemented'); };
-  const submitClashAuthorGuess = async (_commentWriterId: string, _guessedAuthorId: string): Promise<void> => { throw new Error('not implemented'); };
-  const advanceClashGuessing = async (): Promise<void> => { throw new Error('not implemented'); };
+  const saveClashGroups = async (groupA: ClashGroup, groupB: ClashGroup): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) throw new Error("Only the admin can set up groups");
+    if (groupA.memberIds.length !== groupB.memberIds.length) throw new Error("Both groups must have the same number of players");
+    if (groupA.memberIds.length === 0) throw new Error("Groups cannot be empty");
+    if (!groupA.memberIds.includes(groupA.leaderId)) throw new Error("Group A leader must be a group member");
+    if (!groupB.memberIds.includes(groupB.leaderId)) throw new Error("Group B leader must be a group member");
+    const overlap = groupA.memberIds.filter(id => groupB.memberIds.includes(id));
+    if (overlap.length > 0) throw new Error("Groups cannot share members");
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, { 'clashData.groupA': groupA, 'clashData.groupB': groupB });
+    } catch (err) {
+      console.error('Error saving clash groups:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startClashGame = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) throw new Error("Only the admin can start the game");
+    const cd = currentGame.clashData;
+    if (!cd?.groupA || !cd?.groupB) throw new Error("Groups not set up");
+    if (cd.groupA.memberIds.length !== cd.groupB.memberIds.length) throw new Error("Both groups must have the same number of players");
+    if (cd.groupA.memberIds.length < 2) throw new Error("Each group must have at least 2 players");
+    try {
+      setLoading(true);
+      const schedule = generateClashSchedule(cd.groupA.memberIds, cd.groupB.memberIds);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        status: 'clash_writing',
+        clashData: {
+          ...cd,
+          schedule,
+          currentRoundIndex: 0,
+          currentRoundCommentsA: [],
+          currentRoundCommentsB: [],
+          lastGroupToFinish: null,
+          currentGuessingGroup: null,
+          currentRoundGuessesA: [],
+          currentRoundGuessesB: [],
+          teamScores: { a: 0, b: 0 },
+        },
+      });
+    } catch (err) {
+      console.error('Error starting clash game:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitClashComment = async (text: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    const cd = currentGame?.clashData;
+    if (!cd) throw new Error("No active clash game");
+    if (!text.trim()) throw new Error("Comment cannot be empty");
+    const uid = auth.currentUser.uid;
+    const isGroupA = cd.groupA.memberIds.includes(uid);
+    const isGroupB = cd.groupB.memberIds.includes(uid);
+    if (!isGroupA && !isGroupB) throw new Error("Player not in any group");
+    const assignments = isGroupA
+      ? cd.schedule[cd.currentRoundIndex].assignmentsA
+      : cd.schedule[cd.currentRoundIndex].assignmentsB;
+    const assignment = assignments.find((a: ClashAssignment) => a.writerId === uid);
+    if (!assignment) throw new Error("No assignment found for this player");
+    const comment: ClashComment = { writerId: uid, subjectId: assignment.subjectId, text: text.trim(), submittedAt: Date.now() };
+    const commentKey = isGroupA ? 'clashData.currentRoundCommentsA' : 'clashData.currentRoundCommentsB';
+    const groupSize = cd.groupA.memberIds.length;
+    const newCount = (isGroupA ? cd.currentRoundCommentsA.length : cd.currentRoundCommentsB.length) + 1;
+    const updates: Record<string, unknown> = { [commentKey]: arrayUnion(comment) };
+    if (newCount >= groupSize) {
+      updates['clashData.lastGroupToFinish'] = isGroupA ? 'a' : 'b';
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame!.id);
+      await updateDoc(gameRef, updates);
+    } catch (err) {
+      console.error('Error submitting clash comment:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revealClashComments = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) throw new Error("Only the admin can reveal comments");
+    const cd = currentGame.clashData;
+    if (!cd) throw new Error("No active clash game");
+    const groupSize = cd.groupA.memberIds.length;
+    if (cd.currentRoundCommentsA.length < groupSize) throw new Error(`Group A hasn't finished submitting (${cd.currentRoundCommentsA.length}/${groupSize})`);
+    if (cd.currentRoundCommentsB.length < groupSize) throw new Error(`Group B hasn't finished submitting (${cd.currentRoundCommentsB.length}/${groupSize})`);
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        status: 'clash_guessing',
+        'clashData.currentGuessingGroup': cd.lastGroupToFinish ?? 'a',
+      });
+    } catch (err) {
+      console.error('Error revealing clash comments:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitClashGuess = async (commentWriterId: string, guessedSubjectId: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    const cd = currentGame?.clashData;
+    if (!cd) throw new Error("No active clash game");
+    const uid = auth.currentUser.uid;
+    const currentGroup = cd.currentGuessingGroup;
+    if (!currentGroup) throw new Error("Not in guessing phase");
+    const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+    if (uid !== activeLeaderId) throw new Error("Only the active leader can submit guesses");
+    const oppositeComments = currentGroup === 'a' ? cd.currentRoundCommentsB : cd.currentRoundCommentsA;
+    const comment = oppositeComments.find((c: ClashComment) => c.writerId === commentWriterId);
+    if (!comment) throw new Error("Comment not found");
+    const subjectCorrect = comment.subjectId === guessedSubjectId;
+    const guess: ClashGuess = { commentWriterId, guessedSubjectId, subjectCorrect, pointsAwarded: subjectCorrect ? 1 : 0 };
+    const guessKey = currentGroup === 'a' ? 'clashData.currentRoundGuessesA' : 'clashData.currentRoundGuessesB';
+    const updates: Record<string, unknown> = { [guessKey]: arrayUnion(guess) };
+    if (subjectCorrect) {
+      updates[`clashData.teamScores.${currentGroup}`] = (cd.teamScores[currentGroup] ?? 0) + 1;
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame!.id);
+      await updateDoc(gameRef, updates);
+    } catch (err) {
+      console.error('Error submitting clash guess:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitClashAuthorGuess = async (commentWriterId: string, guessedAuthorId: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    const cd = currentGame?.clashData;
+    if (!cd) throw new Error("No active clash game");
+    const uid = auth.currentUser.uid;
+    const currentGroup = cd.currentGuessingGroup;
+    if (!currentGroup) throw new Error("Not in guessing phase");
+    const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+    if (uid !== activeLeaderId) throw new Error("Only the active leader can submit guesses");
+    const guesses = currentGroup === 'a' ? cd.currentRoundGuessesA : cd.currentRoundGuessesB;
+    const existing = guesses.find((g: ClashGuess) => g.commentWriterId === commentWriterId);
+    if (!existing?.subjectCorrect) throw new Error("Cannot guess author without a correct subject guess");
+    if (existing.guessedAuthorId !== undefined) throw new Error("Author already guessed");
+    const authorCorrect = guessedAuthorId === commentWriterId;
+    const updatedGuesses = guesses.map((g: ClashGuess) =>
+      g.commentWriterId === commentWriterId
+        ? { ...g, guessedAuthorId, authorCorrect, pointsAwarded: g.pointsAwarded + (authorCorrect ? 1 : 0) }
+        : g
+    );
+    const guessKey = currentGroup === 'a' ? 'clashData.currentRoundGuessesA' : 'clashData.currentRoundGuessesB';
+    const updates: Record<string, unknown> = { [guessKey]: updatedGuesses };
+    if (authorCorrect) {
+      updates[`clashData.teamScores.${currentGroup}`] = (cd.teamScores[currentGroup] ?? 0) + 1;
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame!.id);
+      await updateDoc(gameRef, updates);
+    } catch (err) {
+      console.error('Error submitting clash author guess:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const advanceClashGuessing = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) throw new Error("Only the admin can advance guessing");
+    const cd = currentGame.clashData;
+    if (!cd || currentGame.status !== 'clash_guessing') throw new Error("Not in guessing phase");
+    const currentGroup = cd.currentGuessingGroup!;
+    const otherGroup: 'a' | 'b' = currentGroup === 'a' ? 'b' : 'a';
+    const otherGuessCount = otherGroup === 'a' ? cd.currentRoundGuessesA.length : cd.currentRoundGuessesB.length;
+    const otherCommentCount = otherGroup === 'a' ? cd.currentRoundCommentsB.length : cd.currentRoundCommentsA.length;
+    const otherGroupDone = otherCommentCount > 0 && otherGuessCount >= otherCommentCount;
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      if (!otherGroupDone) {
+        await updateDoc(gameRef, { 'clashData.currentGuessingGroup': otherGroup });
+      } else if (cd.currentRoundIndex + 1 >= cd.schedule.length) {
+        await updateDoc(gameRef, { status: 'finished' });
+      } else {
+        await updateDoc(gameRef, {
+          status: 'clash_writing',
+          'clashData.currentRoundIndex': cd.currentRoundIndex + 1,
+          'clashData.currentRoundCommentsA': [],
+          'clashData.currentRoundCommentsB': [],
+          'clashData.currentRoundGuessesA': [],
+          'clashData.currentRoundGuessesB': [],
+          'clashData.lastGroupToFinish': null,
+          'clashData.currentGuessingGroup': null,
+        });
+      }
+    } catch (err) {
+      console.error('Error advancing clash guessing:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const value: GameContextType = useMemo(
     () => ({
