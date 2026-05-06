@@ -41,7 +41,7 @@ export const BasketWritingPhase: React.FC<Props> = ({
   const subjectName = subjectParticipant ? getDisplayName(subjectParticipant.userName) : '?';
   const alreadySubmitted = submitted || currentRoundComments.some(c => c.writerId === user?.uid);
   const submittedCount = currentRoundComments.length;
-  const totalCount = game.participants.length;
+  const totalCount = schedule[currentRoundIndex].assignments.length;
 
   const handleSubmit = async () => {
     if (!commentText.trim()) return;

@@ -62,6 +62,12 @@ export const ClashGuessingPhase: React.FC<Props> = ({
   const otherCommentCount = otherGroup === 'a' ? cd.currentRoundCommentsB.length : cd.currentRoundCommentsA.length;
   const otherGroupDone = otherCommentCount > 0 && otherGuessCount >= otherCommentCount;
 
+  // Every comment must be fully resolved: either the subject was wrong, or the author has been guessed
+  const currentGroupDone = commentsToGuess.length > 0 && commentsToGuess.every(c => {
+    const guess = existingGuesses.find(g => g.commentWriterId === c.writerId);
+    return guess !== undefined && (!guess.subjectCorrect || guess.guessedAuthorId !== undefined);
+  });
+
   const advanceLabel = otherGroupDone
     ? (isLastRound ? t('game.ui.clash.finishGame', { locale }) : t('game.ui.clash.nextRound', { locale }))
     : t('game.ui.clash.nextLeader', { locale });
@@ -111,6 +117,17 @@ export const ClashGuessingPhase: React.FC<Props> = ({
     }
   };
 
+  const confirmSubjectSelect = (commentWriterId: string, guessedSubjectId: string, displayName: string) => {
+    showFancyAlert?.(
+      t('game.alerts.confirmTitle', { locale }),
+      t('game.ui.clash.confirmSubjectGuess', { locale, name: displayName }),
+      [
+        { text: t('common.cancel', { locale }), style: 'cancel' },
+        { text: t('common.yes', { locale }), onPress: async () => { await handleSubjectSelect(commentWriterId, guessedSubjectId); } },
+      ]
+    );
+  };
+
   const handleAuthorSelect = async (commentWriterId: string, guessedAuthorId: string) => {
     if (isSubmitting) return;
     try {
@@ -127,6 +144,17 @@ export const ClashGuessingPhase: React.FC<Props> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const confirmAuthorSelect = (commentWriterId: string, guessedAuthorId: string, displayName: string) => {
+    showFancyAlert?.(
+      t('game.alerts.confirmTitle', { locale }),
+      t('game.ui.clash.confirmAuthorGuess', { locale, name: displayName }),
+      [
+        { text: t('common.cancel', { locale }), style: 'cancel' },
+        { text: t('common.yes', { locale }), onPress: async () => { await handleAuthorSelect(commentWriterId, guessedAuthorId); } },
+      ]
+    );
   };
 
   const handleAdvance = async () => {
@@ -185,15 +213,16 @@ export const ClashGuessingPhase: React.FC<Props> = ({
                       <ThemedText style={styles.pickerLabel}>{t('game.ui.clash.whichMember', { locale })}</ThemedText>
                       {ownGroupIds.map(memberId => {
                         const p = game.participants.find(p => p.userId === memberId);
+                        const name = p ? getDisplayName(p.userName) : memberId;
                         return (
                           <TouchableOpacity
                             key={memberId}
                             style={styles.choiceCard}
-                            onPress={() => handleSubjectSelect(comment.writerId, memberId)}
+                            onPress={() => confirmSubjectSelect(comment.writerId, memberId, name)}
                             disabled={isSubmitting}
                             activeOpacity={0.8}
                           >
-                            <ThemedText style={styles.choiceName}>{p ? getDisplayName(p.userName) : memberId}</ThemedText>
+                            <ThemedText style={styles.choiceName}>{name}</ThemedText>
                           </TouchableOpacity>
                         );
                       })}
@@ -210,15 +239,16 @@ export const ClashGuessingPhase: React.FC<Props> = ({
                       <ThemedText style={styles.pickerLabel}>{t('game.ui.clash.whoWroteIt', { locale })}</ThemedText>
                       {oppositeGroupIds.map(authorId => {
                         const p = game.participants.find(p => p.userId === authorId);
+                        const name = p ? getDisplayName(p.userName) : authorId;
                         return (
                           <TouchableOpacity
                             key={authorId}
                             style={styles.choiceCard}
-                            onPress={() => handleAuthorSelect(comment.writerId, authorId)}
+                            onPress={() => confirmAuthorSelect(comment.writerId, authorId, name)}
                             disabled={isSubmitting}
                             activeOpacity={0.8}
                           >
-                            <ThemedText style={styles.choiceName}>{p ? getDisplayName(p.userName) : authorId}</ThemedText>
+                            <ThemedText style={styles.choiceName}>{name}</ThemedText>
                           </TouchableOpacity>
                         );
                       })}
@@ -238,9 +268,9 @@ export const ClashGuessingPhase: React.FC<Props> = ({
         {isAdmin && (
           <View style={styles.adminSection}>
             <TouchableOpacity
-              style={[styles.wideButton, { backgroundColor: otherGroupDone && isLastRound ? GameColors.green : GameColors.blue, shadowColor: GameColors.shadow }, isAdvancing && gameStyles.buttonDisabled]}
+              style={[styles.wideButton, { backgroundColor: otherGroupDone && isLastRound ? GameColors.green : GameColors.blue, shadowColor: GameColors.shadow }, (isAdvancing || !currentGroupDone) && gameStyles.buttonDisabled]}
               onPress={handleAdvance}
-              disabled={isAdvancing}
+              disabled={isAdvancing || !currentGroupDone}
               activeOpacity={0.8}
               accessibilityRole="button"
             >

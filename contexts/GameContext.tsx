@@ -1610,7 +1610,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);
-      const schedule = generateBasketSchedule(currentGame.participants.map((p: Participant) => p.userId));
+      const writers = (currentGame.adminWritesComments ?? false)
+        ? currentGame.participants.map((p: Participant) => p.userId)
+        : currentGame.participants.filter((p: Participant) => p.userId !== currentGame.adminId).map((p: Participant) => p.userId);
+      const schedule = generateBasketSchedule(writers);
       await updateDoc(gameRef, {
         status: 'basket_writing',
         basketData: { schedule, currentRoundIndex: 0, currentRoundComments: [], currentRoundGuesses: [] },
@@ -2006,7 +2009,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const cd = currentGame.clashData;
     if (!cd?.groupA || !cd?.groupB) throw new Error("Groups not set up");
     if (cd.groupA.memberIds.length !== cd.groupB.memberIds.length) throw new Error("Both groups must have the same number of players");
-    if (cd.groupA.memberIds.length < 2) throw new Error("Each group must have at least 2 players");
+    if (cd.groupA.memberIds.length < 1) throw new Error("Each group must have at least 1 player");
     try {
       setLoading(true);
       const schedule = generateClashSchedule(cd.groupA.memberIds, cd.groupB.memberIds);
@@ -2109,6 +2112,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const updates: Record<string, unknown> = { [guessKey]: arrayUnion(guess) };
     if (subjectCorrect) {
       updates[`clashData.teamScores.${currentGroup}`] = (cd.teamScores[currentGroup] ?? 0) + 1;
+      updates[`scores.${uid}`] = (currentGame!.scores?.[uid] ?? 0) + 1;
     }
     try {
       setLoading(true);
@@ -2145,6 +2149,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const updates: Record<string, unknown> = { [guessKey]: updatedGuesses };
     if (authorCorrect) {
       updates[`clashData.teamScores.${currentGroup}`] = (cd.teamScores[currentGroup] ?? 0) + 1;
+      updates[`scores.${uid}`] = (currentGame!.scores?.[uid] ?? 0) + 1;
     }
     try {
       setLoading(true);

@@ -2,16 +2,13 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
 import { Fonts, GameColors } from '@/constants/theme';
-import type { ClashGroup, Game, Participant } from '@/contexts/GameContext';
+import type { Game, Participant } from '@/contexts/GameContext';
 import { useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useRef, useState } from 'react';
-import {
-  Animated, LayoutRectangle, PanResponder, Platform,
-  StyleSheet, TouchableOpacity, View,
-} from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Props {
   game: Game;
@@ -20,10 +17,6 @@ interface Props {
   getDisplayName: (name: string) => string;
   isAdmin: boolean;
   showFancyAlert?: ShowFancyAlertFn;
-}
-
-function isInBounds(x: number, y: number, bounds: LayoutRectangle): boolean {
-  return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
 }
 
 export const ClashSetupPanel: React.FC<Props> = ({
@@ -39,26 +32,11 @@ export const ClashSetupPanel: React.FC<Props> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
-  const allIds = game.participants.map(p => p.userId);
+  const eligibleParticipants = (game.adminWritesComments ?? false)
+    ? game.participants
+    : game.participants.filter(p => p.userId !== game.adminId);
+  const allIds = eligibleParticipants.map(p => p.userId);
   const unassignedIds = allIds.filter(id => !groupAIds.includes(id) && !groupBIds.includes(id));
-
-  const [dragId, setDragId] = useState<string | null>(null);
-  const dragAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const dragStartPage = useRef({ x: 0, y: 0 });
-
-  const colABounds = useRef<LayoutRectangle | null>(null);
-  const colBBounds = useRef<LayoutRectangle | null>(null);
-  const colARef = useRef<View>(null);
-  const colBRef = useRef<View>(null);
-
-  const measureColumns = useCallback(() => {
-    colARef.current?.measure((_x, _y, width, height, pageX, pageY) => {
-      colABounds.current = { x: pageX, y: pageY, width, height };
-    });
-    colBRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
-      colBBounds.current = { x: pageX, y: pageY, width, height };
-    });
-  }, []);
 
   const persistGroups = useCallback(async (
     newA: string[], newB: string[], newLeaderA: string | null, newLeaderB: string | null
@@ -91,59 +69,17 @@ export const ClashSetupPanel: React.FC<Props> = ({
     setLeaderAId(newLeaderA);
     setLeaderBId(newLeaderB);
     await persistGroups(newA, newB, newLeaderA, newLeaderB);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, [groupAIds, groupBIds, leaderAId, leaderBId, persistGroups]);
 
-  // dragIdRef lets the PanResponder closure see the latest dragId
-  const dragIdRef = useRef<string | null>(null);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => dragIdRef.current !== null,
-      onMoveShouldSetPanResponder: () => dragIdRef.current !== null,
-      onPanResponderMove: (evt) => {
-        dragAnim.setValue({
-          x: evt.nativeEvent.pageX - dragStartPage.current.x,
-          y: evt.nativeEvent.pageY - dragStartPage.current.y,
-        });
-      },
-      onPanResponderRelease: (evt) => {
-        const { pageX, pageY } = evt.nativeEvent;
-        const id = dragIdRef.current;
-        dragIdRef.current = null;
-        setDragId(null);
-        dragAnim.setValue({ x: 0, y: 0 });
-        if (!id) return;
-        if (colABounds.current && isInBounds(pageX, pageY, colABounds.current)) {
-          assignToGroup(id, 'a');
-        } else if (colBBounds.current && isInBounds(pageX, pageY, colBBounds.current)) {
-          assignToGroup(id, 'b');
-        }
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      },
-      onPanResponderTerminate: () => {
-        dragIdRef.current = null;
-        setDragId(null);
-        dragAnim.setValue({ x: 0, y: 0 });
-      },
-    })
-  ).current;
-
-  const startDrag = (playerId: string, pageX: number, pageY: number) => {
-    dragStartPage.current = { x: pageX, y: pageY };
-    dragAnim.setValue({ x: 0, y: 0 });
-    dragIdRef.current = playerId;
-    setDragId(playerId);
-    measureColumns();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
-
-  const toggleLeader = async (playerId: string, group: 'a' | 'b') => {
+  const toggleLeader = useCallback(async (playerId: string, group: 'a' | 'b') => {
     const newLeaderA = group === 'a' ? (leaderAId === playerId ? null : playerId) : leaderAId;
     const newLeaderB = group === 'b' ? (leaderBId === playerId ? null : playerId) : leaderBId;
     setLeaderAId(newLeaderA);
     setLeaderBId(newLeaderB);
     await persistGroups(groupAIds, groupBIds, newLeaderA, newLeaderB);
-  };
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [leaderAId, leaderBId, groupAIds, groupBIds, persistGroups]);
 
   const canStart = isAdmin
     && groupAIds.length > 0
@@ -168,71 +104,102 @@ export const ClashSetupPanel: React.FC<Props> = ({
     }
   };
 
-  const renderPlayerCard = (participant: Participant, group: 'a' | 'b' | 'pool') => {
-    const playerId = participant.userId;
-    const isLeader = (group === 'a' && leaderAId === playerId) || (group === 'b' && leaderBId === playerId);
-    const isDragging = dragId === playerId;
+  const renderPoolCard = (participant: Participant) => (
+    <View key={participant.userId} style={styles.card}>
+      <ThemedText style={styles.cardName} numberOfLines={1}>
+        {getDisplayName(participant.userName)}
+      </ThemedText>
+      {isAdmin && (
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={[styles.assignBtn, styles.assignBtnA]}
+            onPress={() => assignToGroup(participant.userId, 'a')}
+            activeOpacity={0.7}
+          >
+            <ThemedText style={styles.assignBtnText}>A</ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.assignBtn, styles.assignBtnB]}
+            onPress={() => assignToGroup(participant.userId, 'b')}
+            activeOpacity={0.7}
+          >
+            <ThemedText style={styles.assignBtnText}>B</ThemedText>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 
+  const renderGroupCard = (participant: Participant, group: 'a' | 'b') => {
+    const pid = participant.userId;
+    const isLeader = (group === 'a' && leaderAId === pid) || (group === 'b' && leaderBId === pid);
     return (
-      <TouchableOpacity
-        key={playerId}
-        style={[styles.playerCard, isLeader && styles.playerCardLeader, isDragging && styles.playerCardDragging]}
-        onLongPress={(e) => {
-          if (!isAdmin) return;
-          startDrag(playerId, e.nativeEvent.pageX, e.nativeEvent.pageY);
-        }}
-        onPress={() => {
-          if (!isAdmin) return;
-          if (group !== 'pool') toggleLeader(playerId, group);
-        }}
-        delayLongPress={300}
-        activeOpacity={0.8}
-      >
-        <ThemedText style={styles.playerName}>{getDisplayName(participant.userName)}</ThemedText>
-        {isLeader && <IconSymbol name="crown.fill" size={14} color={GameColors.gold} />}
-        {group !== 'pool' && !isLeader && isAdmin && (
-          <ThemedText style={styles.tapLeaderHint}>{t('game.ui.clash.assignLeader', { locale })}</ThemedText>
+      <View key={pid} style={[styles.card, isLeader && styles.cardLeader]}>
+        {isAdmin ? (
+          <TouchableOpacity
+            style={styles.crownBtn}
+            onPress={() => toggleLeader(pid, group)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
+          >
+            <IconSymbol
+              name="crown.fill"
+              size={14}
+              color={isLeader ? GameColors.gold : 'rgba(128,128,128,0.3)'}
+            />
+          </TouchableOpacity>
+        ) : (
+          isLeader && <IconSymbol name="crown.fill" size={14} color={GameColors.gold} />
         )}
-      </TouchableOpacity>
+        <ThemedText style={styles.cardName} numberOfLines={1}>
+          {getDisplayName(participant.userName)}
+        </ThemedText>
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.removeBtn}
+            onPress={() => assignToGroup(pid, null)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+          >
+            <ThemedText style={styles.removeBtnText}>✕</ThemedText>
+          </TouchableOpacity>
+        )}
+      </View>
     );
   };
 
-  const draggedParticipant = dragId ? game.participants.find(p => p.userId === dragId) : null;
-
   return (
-    <View style={styles.container} {...(dragId ? panResponder.panHandlers : {})}>
+    <View style={styles.container}>
       {unassignedIds.length > 0 && (
         <View style={styles.pool}>
-          <ThemedText style={styles.poolLabel}>{t('game.ui.clash.unassigned', { locale })}</ThemedText>
-          <View style={styles.poolRow}>
-            {unassignedIds.map(id => {
-              const p = game.participants.find(pt => pt.userId === id)!;
-              return renderPlayerCard(p, 'pool');
-            })}
-          </View>
+          <ThemedText style={styles.sectionLabel}>{t('game.ui.clash.unassigned', { locale })}</ThemedText>
+          {unassignedIds.map(id => {
+            const p = eligibleParticipants.find(pt => pt.userId === id)!;
+            return renderPoolCard(p);
+          })}
         </View>
       )}
 
       <View style={styles.columnsRow}>
-        <View ref={colARef} style={[styles.column, styles.columnA]} onLayout={measureColumns}>
+        <View style={[styles.column, styles.columnA]}>
           <ThemedText style={styles.columnLabel}>{t('game.ui.clash.groupA', { locale })}</ThemedText>
           {groupAIds.map(id => {
-            const p = game.participants.find(pt => pt.userId === id)!;
-            return renderPlayerCard(p, 'a');
+            const p = eligibleParticipants.find(pt => pt.userId === id)!;
+            return renderGroupCard(p, 'a');
           })}
           {groupAIds.length === 0 && (
-            <ThemedText style={styles.emptyHint}>↑ drag here</ThemedText>
+            <ThemedText style={styles.emptyHint}>{t('game.ui.clash.emptyGroup', { locale })}</ThemedText>
           )}
         </View>
 
-        <View ref={colBRef} style={[styles.column, styles.columnB]} onLayout={measureColumns}>
+        <View style={[styles.column, styles.columnB]}>
           <ThemedText style={styles.columnLabel}>{t('game.ui.clash.groupB', { locale })}</ThemedText>
           {groupBIds.map(id => {
-            const p = game.participants.find(pt => pt.userId === id)!;
-            return renderPlayerCard(p, 'b');
+            const p = eligibleParticipants.find(pt => pt.userId === id)!;
+            return renderGroupCard(p, 'b');
           })}
           {groupBIds.length === 0 && (
-            <ThemedText style={styles.emptyHint}>↑ drag here</ThemedText>
+            <ThemedText style={styles.emptyHint}>{t('game.ui.clash.emptyGroup', { locale })}</ThemedText>
           )}
         </View>
       </View>
@@ -256,41 +223,35 @@ export const ClashSetupPanel: React.FC<Props> = ({
           {isSaving && <ThemedText style={styles.savingHint}>saving…</ThemedText>}
         </View>
       )}
-
-      {dragId && draggedParticipant && (
-        <Animated.View
-          style={[styles.ghostCard, { transform: dragAnim.getTranslateTransform() }]}
-          pointerEvents="none"
-        >
-          <ThemedText style={styles.ghostName}>{getDisplayName(draggedParticipant.userName)}</ThemedText>
-        </Animated.View>
-      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { position: 'relative' },
+  container: {},
   pool: { marginBottom: 16 },
-  poolLabel: { fontSize: 12, opacity: 0.6, fontFamily: Fonts.sans, marginBottom: 6 },
-  poolRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sectionLabel: { fontSize: 12, opacity: 0.6, fontFamily: Fonts.sans, marginBottom: 6 },
   columnsRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  column: { flex: 1, borderRadius: 12, padding: 10, minHeight: 80, borderWidth: 1 },
+  column: { flex: 1, borderRadius: 12, padding: 10, minHeight: 60, borderWidth: 1 },
   columnA: { backgroundColor: 'rgba(0,122,255,0.06)', borderColor: 'rgba(0,122,255,0.2)' },
   columnB: { backgroundColor: 'rgba(175,82,222,0.06)', borderColor: 'rgba(175,82,222,0.2)' },
   columnLabel: { fontSize: 13, fontWeight: '700', fontFamily: Fonts.sans, marginBottom: 8, textAlign: 'center' },
-  emptyHint: { textAlign: 'center', opacity: 0.4, fontSize: 12, fontFamily: Fonts.sans, marginTop: 8 },
-  playerCard: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderRadius: 8, backgroundColor: GameColors.cardBg, borderWidth: 1, borderColor: GameColors.cardBorder, marginBottom: 6 },
-  playerCardLeader: { borderColor: GameColors.gold, borderWidth: 2 },
-  playerCardDragging: { opacity: 0.3 },
-  playerName: { fontSize: 14, fontWeight: '600', fontFamily: Fonts.sans, flex: 1 },
-  tapLeaderHint: { fontSize: 10, opacity: 0.5, fontFamily: Fonts.sans },
+  emptyHint: { textAlign: 'center', opacity: 0.35, fontSize: 11, fontFamily: Fonts.sans, marginTop: 4 },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, backgroundColor: GameColors.cardBg, borderWidth: 1, borderColor: GameColors.cardBorder, marginBottom: 6 },
+  cardLeader: { borderColor: GameColors.gold, borderWidth: 2 },
+  cardName: { flex: 1, fontSize: 14, fontWeight: '600', fontFamily: Fonts.sans },
+  cardActions: { flexDirection: 'row', gap: 4 },
+  assignBtn: { borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center', justifyContent: 'center' },
+  assignBtnA: { backgroundColor: 'rgba(0,122,255,0.15)' },
+  assignBtnB: { backgroundColor: 'rgba(175,82,222,0.15)' },
+  assignBtnText: { fontSize: 12, fontWeight: '700', fontFamily: Fonts.sans },
+  crownBtn: { padding: 2 },
+  removeBtn: { padding: 2 },
+  removeBtnText: { fontSize: 12, opacity: 0.5, fontFamily: Fonts.sans },
   warning: { color: GameColors.danger, fontSize: 12, textAlign: 'center', marginBottom: 8, fontFamily: Fonts.sans },
   startWrapper: { alignItems: 'center', marginTop: 8, gap: 4 },
   startButton: { flexDirection: 'row', borderRadius: 999, paddingVertical: 14, paddingHorizontal: 24, backgroundColor: GameColors.green, alignItems: 'center', gap: 8, ...Platform.select({ ios: { shadowColor: GameColors.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   startButtonDisabled: { opacity: 0.4 },
   startButtonText: { color: GameColors.white, fontWeight: '600', fontSize: 15, fontFamily: Fonts.sans },
   savingHint: { fontSize: 11, opacity: 0.5, fontFamily: Fonts.sans },
-  ghostCard: { position: 'absolute', top: 0, left: 0, padding: 10, borderRadius: 8, backgroundColor: GameColors.blue, zIndex: 999, minWidth: 80 },
-  ghostName: { color: GameColors.white, fontWeight: '700', fontFamily: Fonts.sans },
 });

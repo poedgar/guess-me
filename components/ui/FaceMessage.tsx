@@ -99,10 +99,12 @@ export function FaceMessage({
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    bottom: 40,
-    left: 20,
-    right: 20,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 1000,
   },
   container: {

@@ -288,7 +288,12 @@
         "nextLeader": "Next Leader",
         "nextRound": "Next Round",
         "finishGame": "Finish Game",
-        "waitingForLeader": "Waiting for leader to guess…"
+        "waitingForLeader": "Waiting for leader to guess…",
+        "dropHereToUnassign": "Drop here to remove from team",
+        "tapZoneToDrop": "Tap a team column to place the player",
+        "emptyGroup": "no players yet",
+        "confirmSubjectGuess": "This comment is about %{name}?",
+        "confirmAuthorGuess": "%{name} wrote this comment?"
       }
     }
   },

@@ -294,7 +294,12 @@
         "nextLeader": "Наступний капітан",
         "nextRound": "Наступний раунд",
         "finishGame": "Закінчити гру",
-        "waitingForLeader": "Очікування вгадування капітана…"
+        "waitingForLeader": "Очікування вгадування капітана…",
+        "dropHereToUnassign": "Скинути сюди, щоб прибрати з команди",
+        "tapZoneToDrop": "Натисніть на команду, щоб перемістити гравця",
+        "emptyGroup": "поки немає гравців",
+        "confirmSubjectGuess": "Цей коментар про %{name}?",
+        "confirmAuthorGuess": "%{name} написав(ла) цей коментар?"
       }
     }
   },

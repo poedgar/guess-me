@@ -12,16 +12,6 @@ or
 npx eas build --platform android --profile preview
 
 
-# Scheme change
-eas build:configure --platform android
-
-eas build --platform android --profile production
-eas build --platform android --profile preview
-
-eas credentials
-
-and insert SHA-1 into Firebase
-
 # Firebase Google Auth 👋
 
 - No need in Google Cloud Console
@@ -29,6 +19,8 @@ and insert SHA-1 into Firebase
 - WebClient ID: 841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com is from Firebase Console (Google Sign-in Method)
 
 - SHA-1: D8:48:0E:63:2A:FA:61:30:E3:B9:0A:12:BD:DF:1F:CD:A1:40:12:2E is mapped in Firebase Console (app with package name com.pscycho.play)
+
+and insert SHA-1 into Firebase
 
 - google-services.json is from Firebase Console (app with package name com.pscycho.play)
 

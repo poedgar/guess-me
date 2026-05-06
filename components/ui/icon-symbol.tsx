@@ -39,6 +39,7 @@ const MAPPING = {
   'speaker.1.fill': 'volume-down',
   'speaker.wave.2.fill': 'volume-up',
   'speaker.slash.fill': 'volume-off',
+  'hand.point.up.left.fill': 'touch-app',
 } as const;
 
 /**

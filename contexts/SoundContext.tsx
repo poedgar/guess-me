@@ -14,6 +14,28 @@ const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
 const SOUND_STORAGE_KEY = 'sound_enabled';
 
+// btoa() only handles ASCII (0–127); WAV PCM samples go up to 255 and fail on real devices.
+// This encoder handles all byte values directly.
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let result = '';
+  let i = 0;
+  const len = bytes.length;
+  while (i < len) {
+    const b0 = bytes[i++];
+    const b1 = i < len ? bytes[i++] : 0;
+    const b2 = i < len ? bytes[i++] : 0;
+    result += chars[b0 >> 2];
+    result += chars[((b0 & 3) << 4) | (b1 >> 4)];
+    result += chars[((b1 & 15) << 2) | (b2 >> 6)];
+    result += chars[b2 & 63];
+  }
+  const remainder = len % 3;
+  if (remainder === 1) return result.slice(0, -2) + '==';
+  if (remainder === 2) return result.slice(0, -1) + '=';
+  return result;
+}
+
 function buildWavBase64(frequency: number, duration: number, type: 'sine' | 'square' | 'sawtooth'): string {
   const sampleRate = 22050;
   const numSamples = Math.floor(sampleRate * duration);
@@ -48,10 +70,7 @@ function buildWavBase64(frequency: number, duration: number, type: 'sine' | 'squ
     view.setInt16(44 + i * 2, Math.round(s * fade * 0.3 * 32767), true);
   }
 
-  const bytes = new Uint8Array(buffer);
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin);
+  return uint8ArrayToBase64(new Uint8Array(buffer));
 }
 
 async function playNativeTone(frequency: number, duration: number, type: 'sine' | 'square' | 'sawtooth' = 'sine') {

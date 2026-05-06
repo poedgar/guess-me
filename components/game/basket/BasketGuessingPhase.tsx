@@ -42,7 +42,8 @@ export const BasketGuessingPhase: React.FC<Props> = ({
 
   const existingGuess = currentRoundGuesses.find(g => g.guesserId === guesserId);
   const actualComment = currentRoundComments.find(c => c.subjectId === guesserId);
-  const otherPlayers = game.participants.filter(p => p.userId !== guesserId);
+  const writerIds = new Set(schedule[currentRoundIndex].assignments.map(a => a.writerId));
+  const otherPlayers = game.participants.filter(p => p.userId !== guesserId && writerIds.has(p.userId));
 
   const effectiveCorrect = isCommentCorrect !== null
     ? isCommentCorrect
