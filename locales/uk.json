@@ -268,7 +268,9 @@
         "wrong": "Не вгадали.",
         "nextRound": "Наступний раунд",
         "finishGame": "Закінчити гру",
-        "waitingForGuesses": "%{count}/%{total} гравців відгадали"
+        "waitingForGuesses": "%{count}/%{total} гравців відгадали",
+        "confirmCommentGuess": "Цей коментар про вас?",
+        "confirmAuthorGuess": "%{name} написав(ла) цей коментар?"
       },
       "clash": {
         "round": "Раунд %{current} з %{total}",

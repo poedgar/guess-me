@@ -11,6 +11,7 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Platform,
   ScrollView,
   StyleSheet,
@@ -380,26 +381,23 @@ export const WaitingPhase: React.FC<Props> = ({
       {/* Start Game / Waiting */}
       <View style={gameStyles.gameFlowContainer}>
         {isAdmin && game.gameType !== 'clash' && (
-          <View style={styles.buttonWrapper}>
-            <TouchableOpacity
-              style={[
-                styles.startGameButton,
-                {
-                  backgroundColor: GameColors.green,
-                  shadowColor: GameColors.shadow,
-                },
-                (loading || game.participants.length < 2) && gameStyles.buttonDisabled,
-              ]}
-              onPress={handleStartGame}
-              disabled={loading || game.participants.length < 2}
-              activeOpacity={0.8}
-              accessibilityLabel={t('game.ui.startGame', { locale })}
-              accessibilityRole="button"
-            >
-              <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />
-            </TouchableOpacity>
-            <ThemedText style={styles.buttonLabel}>{t('game.ui.startGame', { locale })}</ThemedText>
-          </View>
+          <TouchableOpacity
+            style={[
+              styles.startGameButton,
+              { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
+              (loading || game.participants.length < 2) && gameStyles.buttonDisabled,
+            ]}
+            onPress={handleStartGame}
+            disabled={loading || game.participants.length < 2}
+            activeOpacity={0.8}
+            accessibilityLabel={t('game.ui.startGame', { locale })}
+            accessibilityRole="button"
+          >
+            {loading
+              ? <ActivityIndicator size="small" color={GameColors.white} />
+              : <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />}
+            <ThemedText style={styles.buttonText}>{t('game.ui.startGame', { locale })}</ThemedText>
+          </TouchableOpacity>
         )}
         {!isAdmin && (
           <ThemedText style={styles.waitingText}>
@@ -456,7 +454,7 @@ const styles = StyleSheet.create({
   gameTypeButtonActive: { backgroundColor: GameColors.blue },
   gameTypeButtonText: { fontSize: 14, fontWeight: '600', color: GameColors.blue },
   gameTypeButtonTextActive: { color: GameColors.white },
-  startGameButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
-  buttonLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  startGameButton: { flexDirection: 'row', borderRadius: 999, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', gap: 8, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  buttonText: { color: GameColors.white, fontWeight: '600', fontSize: 15, fontFamily: Fonts.sans },
   waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
 });

@@ -1613,6 +1613,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       const writers = (currentGame.adminWritesComments ?? false)
         ? currentGame.participants.map((p: Participant) => p.userId)
         : currentGame.participants.filter((p: Participant) => p.userId !== currentGame.adminId).map((p: Participant) => p.userId);
+      if (writers.length < 2) {
+        throw new Error("Need at least 2 players (excluding admin) to start Basket game. Enable 'Admin writes comments' or add more players.");
+      }
       const schedule = generateBasketSchedule(writers);
       await updateDoc(gameRef, {
         status: 'basket_writing',

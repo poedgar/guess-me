@@ -172,11 +172,10 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
             accessibilityLabel={t("game.ui.postGuessing.startPhaseTitle", { locale })}
             accessibilityRole="button"
           >
-            {isStartingPhase ? (
-              <ActivityIndicator size="small" color={GameColors.white} />
-            ) : (
-              <IconSymbol name="star.fill" size={16} color={GameColors.white} />
-            )}
+            {isStartingPhase
+              ? <ActivityIndicator size="small" color={GameColors.white} />
+              : <IconSymbol name="star.fill" size={16} color={GameColors.white} />}
+            <ThemedText style={styles.buttonText}>{t("game.ui.postGuessing.startPhaseTitle", { locale })}</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
@@ -343,13 +342,14 @@ const styles = StyleSheet.create({
   },
   adminControls: { marginTop: 24 },
   adminButton: {
+    flexDirection: 'row',
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
-    marginBottom: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    gap: 8,
     ...Platform.select({
       ios: {
         shadowOffset: { width: 0, height: 4 },
@@ -361,9 +361,9 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: GameColors.white,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
-    marginLeft: 8,
+    fontFamily: Fonts.sans,
   },
   guessResultsContainer: { marginTop: 16, alignItems: "center" },
   guessResultsTitle: { marginBottom: 16, textAlign: "center" },

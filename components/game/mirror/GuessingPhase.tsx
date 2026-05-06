@@ -389,11 +389,10 @@ export const GuessingPhase: React.FC<Props> = ({
                   accessibilityLabel={t('game.ui.submitGuesses', { locale })}
                   accessibilityRole="button"
                 >
-                  {isSubmittingGuesses ? (
-                    <ActivityIndicator size="small" color={GameColors.white} />
-                  ) : (
-                    <IconSymbol name="arrow.up.circle.fill" size={16} color={GameColors.white} />
-                  )}
+                  {isSubmittingGuesses
+                    ? <ActivityIndicator size="small" color={GameColors.white} />
+                    : <IconSymbol name="arrow.up.circle.fill" size={16} color={GameColors.white} />}
+                  <ThemedText style={styles.buttonText}>{t('game.ui.submitGuesses', { locale })}</ThemedText>
                 </TouchableOpacity>
               )}
             </View>
@@ -434,13 +433,11 @@ export const GuessingPhase: React.FC<Props> = ({
                     accessibilityLabel={t('game.ui.finishAndStartNextRound', { locale })}
                     accessibilityRole="button"
                   >
-                    {isFinalizingGuesses ? (
-                      <ActivityIndicator size="small" color={GameColors.white} />
-                    ) : (
-                      <IconSymbol name="forward.end.fill" size={16} color={GameColors.white} />
-                    )}
+                    {isFinalizingGuesses
+                    ? <ActivityIndicator size="small" color={GameColors.white} />
+                    : <IconSymbol name="forward.end.fill" size={16} color={GameColors.white} />}
+                  <ThemedText style={styles.buttonText}>{t('game.ui.nextRound', { locale })}</ThemedText>
                   </TouchableOpacity>
-                  <ThemedText style={styles.buttonLabel}>{t('game.ui.nextRound', { locale })}</ThemedText>
                 </View>
               );
             }
@@ -460,13 +457,11 @@ export const GuessingPhase: React.FC<Props> = ({
                     accessibilityLabel={t('game.ui.finalizeGuessingPhase', { locale })}
                     accessibilityRole="button"
                   >
-                    {isFinalizingGuesses ? (
-                      <ActivityIndicator size="small" color={GameColors.white} />
-                    ) : (
-                      <IconSymbol name="flag.checkered" size={16} color={GameColors.white} />
-                    )}
+                    {isFinalizingGuesses
+                    ? <ActivityIndicator size="small" color={GameColors.white} />
+                    : <IconSymbol name="flag.checkered" size={16} color={GameColors.white} />}
+                  <ThemedText style={styles.buttonText}>{t('game.ui.finalize', { locale })}</ThemedText>
                   </TouchableOpacity>
-                  <ThemedText style={styles.buttonLabel}>{t('game.ui.finalize', { locale })}</ThemedText>
                 </View>
               );
             }
@@ -497,13 +492,11 @@ export const GuessingPhase: React.FC<Props> = ({
                   accessibilityLabel={t('game.ui.forceFinalizeTitle', { locale })}
                   accessibilityRole="button"
                 >
-                  {isFinalizingGuesses ? (
-                    <ActivityIndicator size="small" color={GameColors.white} />
-                  ) : (
-                    <IconSymbol name="flag.checkered" size={16} color={GameColors.white} />
-                  )}
+                  {isFinalizingGuesses
+                    ? <ActivityIndicator size="small" color={GameColors.white} />
+                    : <IconSymbol name="flag.checkered" size={16} color={GameColors.white} />}
+                  <ThemedText style={styles.buttonText}>{t('game.ui.finalize', { locale })}</ThemedText>
                 </TouchableOpacity>
-                <ThemedText style={styles.buttonLabel}>{t('game.ui.finalize', { locale })}</ThemedText>
               </View>
             );
           })()
@@ -582,7 +575,7 @@ export const GuessingPhase: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   phaseWrapper: { backgroundColor: GameColors.guessingTint, borderWidth: 1, borderColor: GameColors.guessingTintBorder, borderRadius: 16, padding: 16, marginBottom: 8 },
-  buttonLabel: { fontSize: 10, fontWeight: '600', color: GameColors.white, textAlign: 'center' },
+  buttonText: { color: GameColors.white, fontWeight: '600', fontSize: 15, fontFamily: Fonts.sans },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   roundInfo: { marginBottom: 20, padding: 16, borderRadius: 8, backgroundColor: GameColors.cardBg },
   roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
@@ -598,7 +591,7 @@ const styles = StyleSheet.create({
   selectedAuthorOption: { backgroundColor: GameColors.blue, borderColor: GameColors.blue },
   authorName: { fontSize: 14, fontWeight: '500' },
   selectedAuthorName: { color: GameColors.white },
-  submitGuessButton: { borderRadius: 999, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  submitGuessButton: { flexDirection: 'row', borderRadius: 999, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', gap: 8, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
 
   guessResultsContainer: { marginTop: 16, alignItems: 'center' },
   guessResultsTitle: { marginBottom: 16, textAlign: 'center' },
@@ -609,7 +602,7 @@ const styles = StyleSheet.create({
   guessResultCorrect: { color: GameColors.correct },
   guessResultIncorrect: { color: GameColors.incorrect },
   adminControls: { marginTop: 24, alignItems: 'center', gap: 6 },
-  adminButton: { borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 16, paddingHorizontal: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  adminButton: { flexDirection: 'row', borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 14, paddingHorizontal: 24, gap: 8, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
   modalOverlay: { position: 'absolute' as const, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: GameColors.overlayBg, alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 1000 },
   modalContent: { width: '85%', backgroundColor: GameColors.white, borderRadius: 12, padding: 20, shadowColor: GameColors.shadow, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },
   modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8, textAlign: 'center' },

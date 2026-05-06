@@ -4,6 +4,7 @@ import { ShowFancyAlertFn } from '@/components/game/GameHeader';
 import { gameStyles } from '@/components/game/gameStyles';
 import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
 import type { Game } from '@/contexts/GameContext';
+import type { BasketAssignment } from '@/utils/basketSchedule';
 import { useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
@@ -36,12 +37,13 @@ export const BasketWritingPhase: React.FC<Props> = ({
 
   const { schedule, currentRoundIndex, currentRoundComments } = game.basketData!;
   const totalRounds = schedule.length;
-  const myAssignment = schedule[currentRoundIndex].assignments.find(a => a.writerId === user?.uid);
+  const currentRound = schedule[currentRoundIndex];
+  const myAssignment = currentRound?.assignments.find((a: BasketAssignment) => a.writerId === user?.uid);
   const subjectParticipant = game.participants.find(p => p.userId === myAssignment?.subjectId);
   const subjectName = subjectParticipant ? getDisplayName(subjectParticipant.userName) : '?';
   const alreadySubmitted = submitted || currentRoundComments.some(c => c.writerId === user?.uid);
   const submittedCount = currentRoundComments.length;
-  const totalCount = schedule[currentRoundIndex].assignments.length;
+  const totalCount = currentRound?.assignments.length ?? 0;
 
   const handleSubmit = async () => {
     if (!commentText.trim()) return;

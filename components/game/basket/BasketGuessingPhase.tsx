@@ -60,6 +60,23 @@ export const BasketGuessingPhase: React.FC<Props> = ({
 
   const showWrong = effectiveCorrect === false && selectedWriterId !== null;
 
+  const subjectIds = schedule[currentRoundIndex]?.assignments.map((a: { subjectId: string }) => a.subjectId) ?? [];
+  const allGuessersDone = subjectIds.length > 0 && subjectIds.every((subjectId: string) => {
+    const guess = currentRoundGuesses.find((g: { guesserId: string; commentCorrect: boolean; authorGuessId?: string }) => g.guesserId === subjectId);
+    return guess !== undefined && (!guess.commentCorrect || guess.authorGuessId !== undefined);
+  });
+
+  const confirmCommentSelect = (commentWriterId: string) => {
+    showFancyAlert?.(
+      t('game.alerts.confirmTitle', { locale }),
+      t('game.ui.basket.confirmCommentGuess', { locale }),
+      [
+        { text: t('common.cancel', { locale }), style: 'cancel' },
+        { text: t('common.yes', { locale }), onPress: async () => { await handleCommentSelect(commentWriterId); } },
+      ]
+    );
+  };
+
   const handleCommentSelect = async (commentWriterId: string) => {
     if (selectedWriterId !== null || isSubmittingGuess) return;
     try {
@@ -101,6 +118,17 @@ export const BasketGuessingPhase: React.FC<Props> = ({
     } finally {
       setIsSubmittingAuthor(false);
     }
+  };
+
+  const confirmAuthorSelect = (authorId: string, displayName: string) => {
+    showFancyAlert?.(
+      t('game.alerts.confirmTitle', { locale }),
+      t('game.ui.basket.confirmAuthorGuess', { locale, name: displayName }),
+      [
+        { text: t('common.cancel', { locale }), style: 'cancel' },
+        { text: t('common.yes', { locale }), onPress: async () => { await handleAuthorSelect(authorId); } },
+      ]
+    );
   };
 
   const handleNextRound = async () => {
@@ -152,7 +180,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({
               <TouchableOpacity
                 key={p.userId}
                 style={styles.authorCard}
-                onPress={() => handleAuthorSelect(p.userId)}
+                onPress={() => confirmAuthorSelect(p.userId, getDisplayName(p.userName))}
                 disabled={isSubmittingAuthor}
                 activeOpacity={0.8}
               >
@@ -171,7 +199,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({
                   styles.commentCard,
                   selectedWriterId === comment.writerId && styles.commentCardSelected,
                 ]}
-                onPress={() => handleCommentSelect(comment.writerId)}
+                onPress={() => confirmCommentSelect(comment.writerId)}
                 disabled={selectedWriterId !== null || isSubmittingGuess}
                 activeOpacity={0.8}
               >
@@ -191,10 +219,10 @@ export const BasketGuessingPhase: React.FC<Props> = ({
               style={[
                 styles.wideButton,
                 { backgroundColor: isLastRound ? GameColors.green : GameColors.blue, shadowColor: GameColors.shadow },
-                isAdvancing && gameStyles.buttonDisabled,
+                (isAdvancing || !allGuessersDone) && gameStyles.buttonDisabled,
               ]}
               onPress={handleNextRound}
-              disabled={isAdvancing}
+              disabled={isAdvancing || !allGuessersDone}
               activeOpacity={0.8}
               accessibilityRole="button"
             >

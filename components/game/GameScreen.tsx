@@ -14,7 +14,7 @@ import { buildJoinIndexById, sortParticipantsByJoin } from '@/utils/participants
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ActivePhase } from '@/components/game/mirror/ActivePhase';
 import { BasketScreen } from '@/components/game/basket/BasketScreen';
 import { ClashScreen } from '@/components/game/clash/ClashScreen';
@@ -239,19 +239,19 @@ export const GameScreen: React.FC = () => {
               </>
             </Animated.View>
 
-            <View style={styles.leaveButtonWrapper}>
-              <TouchableOpacity
-                style={[styles.leaveButton, { backgroundColor: GameColors.danger, shadowColor: GameColors.shadow }, isLeaving && { opacity: 0.6 }]}
-                onPress={handleLeaveGame}
-                disabled={isLeaving}
-                activeOpacity={0.8}
-                accessibilityLabel={t('game.ui.leaveGame', { locale })}
-                accessibilityRole="button"
-              >
-                <IconSymbol name="door.left.hand.open" size={16} color={GameColors.white} />
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.leaveButton, { backgroundColor: GameColors.danger, shadowColor: GameColors.shadow }, isLeaving && { opacity: 0.6 }]}
+              onPress={handleLeaveGame}
+              disabled={isLeaving}
+              activeOpacity={0.8}
+              accessibilityLabel={t('game.ui.leaveGame', { locale })}
+              accessibilityRole="button"
+            >
+              {isLeaving
+                ? <ActivityIndicator size="small" color={GameColors.white} />
+                : <IconSymbol name="door.left.hand.open" size={16} color={GameColors.white} />}
               <ThemedText style={styles.leaveButtonLabel}>{t('game.ui.leaveGame', { locale })}</ThemedText>
-            </View>
+            </TouchableOpacity>
           </>
         )}
       </ScrollView>
@@ -278,7 +278,6 @@ export const GameScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, position: 'relative' as const },
   scrollContent: { padding: 20, paddingBottom: 40 },
-  leaveButtonWrapper: { alignItems: 'center', gap: 6, marginTop: 16 },
-  leaveButton: { borderRadius: 999, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
-  leaveButtonLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  leaveButton: { flexDirection: 'row', borderRadius: 999, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', gap: 8, marginTop: 16, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
+  leaveButtonLabel: { color: '#fff', fontWeight: '600', fontSize: 15 },
 });

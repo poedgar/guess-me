@@ -262,7 +262,9 @@
         "wrong": "Not quite.",
         "nextRound": "Next Round",
         "finishGame": "Finish Game",
-        "waitingForGuesses": "%{count}/%{total} players guessed"
+        "waitingForGuesses": "%{count}/%{total} players guessed",
+        "confirmCommentGuess": "Is this comment about you?",
+        "confirmAuthorGuess": "%{name} wrote this comment?"
       },
       "clash": {
         "round": "Round %{current} of %{total}",
