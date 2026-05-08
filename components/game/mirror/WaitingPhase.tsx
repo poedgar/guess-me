@@ -52,6 +52,8 @@ export const WaitingPhase: React.FC<Props> = ({
   const { loading, startGame, startBasketGame, startClashGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, setGameType } = useGame();
 
   const [isCopied, setIsCopied] = useState(false);
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
 
   const handleCopyGameId = async () => {
     await onCopyGameId();
@@ -64,8 +66,8 @@ export const WaitingPhase: React.FC<Props> = ({
     const prev = prevParticipantCount.current;
     prevParticipantCount.current = game.participants.length;
     if (isAdmin && prev < 2 && game.participants.length >= 2) {
-      playSound('notification');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playSound('notification').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
   }, [game.participants.length]);
 
@@ -111,6 +113,7 @@ export const WaitingPhase: React.FC<Props> = ({
   );
 
   const handleStartGame = async () => {
+    if (isMounted.current === false) return;
     try {
       await playSound('gameStart');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -121,11 +124,11 @@ export const WaitingPhase: React.FC<Props> = ({
       } else {
         await startGame();
       }
-      await playSound('success');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playSound('success').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (error: unknown) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
       showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.startGameFailed', { locale }));
     }
   };
@@ -270,7 +273,7 @@ export const WaitingPhase: React.FC<Props> = ({
                   styles.gameTypeButton,
                   (game.gameType ?? 'mirror') === 'mirror' && styles.gameTypeButtonActive,
                 ]}
-                onPress={() => setGameType('mirror')}
+                onPress={() => setGameType('mirror').catch(() => {})}
                 activeOpacity={0.8}
               >
                 <ThemedText style={[
@@ -285,7 +288,7 @@ export const WaitingPhase: React.FC<Props> = ({
                   styles.gameTypeButton,
                   game.gameType === 'basket' && styles.gameTypeButtonActive,
                 ]}
-                onPress={() => setGameType('basket')}
+                onPress={() => setGameType('basket').catch(() => {})}
                 activeOpacity={0.8}
               >
                 <ThemedText style={[
@@ -300,7 +303,7 @@ export const WaitingPhase: React.FC<Props> = ({
                   styles.gameTypeButton,
                   game.gameType === 'clash' && styles.gameTypeButtonActive,
                 ]}
-                onPress={() => setGameType('clash')}
+                onPress={() => setGameType('clash').catch(() => {})}
                 activeOpacity={0.8}
               >
                 <ThemedText style={[

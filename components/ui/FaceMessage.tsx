@@ -27,21 +27,21 @@ export function FaceMessage({
   useEffect(() => {
     if (visible) {
       // Play sound and haptic when message appears
-      playSound('success');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playSound('success').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       
       // Animate in
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
           tension: 100,
           friction: 8,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]).start();
 
@@ -59,12 +59,12 @@ export function FaceMessage({
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(scaleAnim, {
         toValue: 0.5,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => {
       onComplete?.();

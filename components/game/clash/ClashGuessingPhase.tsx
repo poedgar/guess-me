@@ -9,7 +9,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Props {
@@ -36,7 +36,11 @@ export const ClashGuessingPhase: React.FC<Props> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
 
-  const cd = game.clashData!;
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
+
+  if (!game.clashData) return null;
+  const cd = game.clashData;
   const { currentRoundIndex, teamScores } = cd;
   const totalRounds = cd.schedule.length;
   const uid = user?.uid ?? '';
@@ -158,18 +162,22 @@ export const ClashGuessingPhase: React.FC<Props> = ({
   };
 
   const handleAdvance = async () => {
+    if (isAdvancing) return;
     try {
       setIsAdvancing(true);
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await advanceClashGuessing();
-      await playSound(isLastRound && otherGroupDone ? 'gameOver' : 'roundComplete');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // The game status change will unmount this component — keep post-advance
+      // effects fire-and-forget so they can't surface as errors to the catch block.
+      playSound(isLastRound && otherGroupDone ? 'gameOver' : 'roundComplete').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: unknown) {
-      await playSound('error');
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
       showFancyAlert?.(t('common.error', { locale }), (err instanceof Error && err.message) || t('common.error', { locale }));
     } finally {
-      setIsAdvancing(false);
+      if (isMounted.current) setIsAdvancing(false);
     }
   };
 

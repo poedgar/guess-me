@@ -42,8 +42,8 @@ export const GameScreen: React.FC = () => {
       fadeAnim.setValue(0);
       slideAnim.setValue(24);
       Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 350, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: false }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 350, useNativeDriver: false }),
       ]).start();
     }
   }, [currentGame?.status]);
@@ -123,11 +123,14 @@ export const GameScreen: React.FC = () => {
   const commentsForPlayer = currentGame?.guessingData?.commentsByTarget?.[user?.uid || ''] || [];
 
   const handleCopyGameId = async () => {
-    if (currentGame) {
+    if (!currentGame) return;
+    try {
       await playSound('copy');
       Clipboard.setString(currentGame.id);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       showFancyAlert(t('game.alerts.copiedTitle', { locale }), t('game.alerts.copiedMessage', { locale }));
+    } catch {
+      // silent fail
     }
   };
 

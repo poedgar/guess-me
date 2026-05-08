@@ -65,6 +65,9 @@ export const GuessingPhase: React.FC<Props> = ({
   const [isSubmittingGuesses, setIsSubmittingGuesses] = useState(false);
   const [isFinalizingGuesses, setIsFinalizingGuesses] = useState(false);
 
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
+
   // Reset submission state when entering guessing phase
   useEffect(() => {
     setHasSubmittedGuesses(false);
@@ -83,8 +86,8 @@ export const GuessingPhase: React.FC<Props> = ({
   const prevCanProceed = useRef(false);
   useEffect(() => {
     if (isAdmin && canProceed && !prevCanProceed.current) {
-      playSound('notification');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playSound('notification').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
     prevCanProceed.current = canProceed;
   }, [canProceed]);
@@ -214,44 +217,45 @@ export const GuessingPhase: React.FC<Props> = ({
   };
 
   const handleFinalizeGuessingPhase = async () => {
-    if (!isAdmin || !game) return;
+    if (!isAdmin || !game || isFinalizingGuesses) return;
     try {
       setIsFinalizingGuesses(true);
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finalizeGuessingPhase();
-      await playSound('gameOver');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFancyAlert(t('common.success', { locale }), t('game.alerts.guessingPhaseCompleteGameFinished', { locale }));
+      playSound('gameOver').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (error: unknown) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.finalizeGuessingFailed', { locale }));
     } finally {
-      setIsFinalizingGuesses(false);
+      if (isMounted.current) setIsFinalizingGuesses(false);
     }
   };
 
   const handleFinalizeAndNextRound = async () => {
-    if (!isAdmin || !game) return;
+    if (!isAdmin || !game || isFinalizingGuesses) return;
     try {
       setIsFinalizingGuesses(true);
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await finalizeGuessingPhase();
-      await playSound('roundComplete');
+      playSound('roundComplete').catch(() => {});
       try {
         await startNextRound();
       } catch (e) {
         console.warn('startNextRound after finalize failed or game finished', e);
       }
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (error: unknown) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.finishAndStartNextRoundFailed', { locale }));
     } finally {
-      setIsFinalizingGuesses(false);
+      if (isMounted.current) setIsFinalizingGuesses(false);
     }
   };
 

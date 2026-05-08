@@ -82,8 +82,8 @@ async function playNativeTone(frequency: number, duration: number, type: 'sine' 
     await sound.playAsync();
     sound.setOnPlaybackStatusUpdate((status) => {
       if (status.isLoaded && status.didJustFinish) {
-        sound.unloadAsync();
-        FileSystem.deleteAsync(uri, { idempotent: true });
+        sound.unloadAsync().catch(() => {});
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
       }
     });
   } catch {

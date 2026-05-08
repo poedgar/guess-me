@@ -2,6 +2,7 @@ import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
 import { SuccessAnimation } from "@/components/ui/SuccessAnimation";
+import { TargetControlPanel } from "@/components/ui/TargetControlPanel";
 import { Fonts, GameColors } from "@/constants/theme";
 import { gameStyles } from '../gameStyles';
 import { Game, Participant, useGame } from "@/contexts/GameContext";
@@ -27,7 +28,7 @@ interface Props {
   joinIndexById: Record<string, number>;
   getDisplayName: (name: string) => string;
   showFancyAlert: ShowFancyAlertFn;
-  showFaceMessage: (message: string, face?: string) => void;
+  showFaceMessage?: (message: string, face?: React.ReactNode) => void;
   locale: string;
 }
 
@@ -60,7 +61,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
       await startPostGuessingPointPhase();
       await playSound("success");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFaceMessage(
+      showFaceMessage?.(
         t("game.alerts.postGuessingStarted", { locale }),
         <View style={{ padding: 16 }}>
           <SuccessAnimation />
@@ -115,7 +116,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
       await awardPointsToPlayers(awards);
       await playSound("points");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFaceMessage(
+      showFaceMessage?.(
         t("game.alerts.pointsAwardedSuccessfully", { locale }),
         <View style={{ padding: 16 }}>
           <SuccessAnimation />

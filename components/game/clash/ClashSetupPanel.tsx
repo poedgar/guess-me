@@ -7,7 +7,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Props {
@@ -29,6 +29,9 @@ export const ClashSetupPanel: React.FC<Props> = ({
   const [groupBIds, setGroupBIds] = useState<string[]>(game.clashData?.groupB?.memberIds ?? []);
   const [leaderAId, setLeaderAId] = useState<string | null>(game.clashData?.groupA?.leaderId ?? null);
   const [leaderBId, setLeaderBId] = useState<string | null>(game.clashData?.groupB?.leaderId ?? null);
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
@@ -69,7 +72,7 @@ export const ClashSetupPanel: React.FC<Props> = ({
     setLeaderAId(newLeaderA);
     setLeaderBId(newLeaderB);
     await persistGroups(newA, newB, newLeaderA, newLeaderB);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   }, [groupAIds, groupBIds, leaderAId, leaderBId, persistGroups]);
 
   const toggleLeader = useCallback(async (playerId: string, group: 'a' | 'b') => {
@@ -78,7 +81,7 @@ export const ClashSetupPanel: React.FC<Props> = ({
     setLeaderAId(newLeaderA);
     setLeaderBId(newLeaderB);
     await persistGroups(groupAIds, groupBIds, newLeaderA, newLeaderB);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   }, [leaderAId, leaderBId, groupAIds, groupBIds, persistGroups]);
 
   const canStart = isAdmin
@@ -93,14 +96,14 @@ export const ClashSetupPanel: React.FC<Props> = ({
       await playSound('gameStart');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await startClashGame();
-      await playSound('success');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playSound('success').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: unknown) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
       showFancyAlert?.(t('common.error', { locale }), (err instanceof Error && err.message) || t('common.error', { locale }));
     } finally {
-      setIsStarting(false);
+      if (isMounted.current) setIsStarting(false);
     }
   };
 

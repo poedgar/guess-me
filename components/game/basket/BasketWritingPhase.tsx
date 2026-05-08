@@ -9,7 +9,7 @@ import { useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Props {
@@ -29,6 +29,9 @@ export const BasketWritingPhase: React.FC<Props> = ({
   const { submitBasketComment, revealBasketComments } = useGame();
   const { playSound } = useSound();
   const inputTheme = themedInput(isDark);
+
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
 
   const [commentText, setCommentText] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -71,14 +74,14 @@ export const BasketWritingPhase: React.FC<Props> = ({
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await revealBasketComments();
-      await playSound('success');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playSound('success').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: unknown) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
       showFancyAlert?.(t('common.error', { locale }), (err instanceof Error && err.message) || t('common.error', { locale }));
     } finally {
-      setIsRevealing(false);
+      if (isMounted.current) setIsRevealing(false);
     }
   };
 

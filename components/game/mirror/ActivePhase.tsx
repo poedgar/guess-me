@@ -8,7 +8,7 @@ import { Comment, Game, Participant, useGame } from '@/contexts/GameContext';
 import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -57,6 +57,9 @@ export const ActivePhase: React.FC<Props> = ({
     startGuessingPhase,
     skipPostCommentPhase,
   } = useGame();
+
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
 
   const inputTheme = themedInput(isDark);
   const [commentText, setCommentText] = useState('');
@@ -254,11 +257,11 @@ export const ActivePhase: React.FC<Props> = ({
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await startGuessingPhase();
-      await playSound('success');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      playSound('success').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (error: unknown) {
-      await playSound('error');
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
       showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.startGuessingPhaseFailed', { locale }));
     }
   };
