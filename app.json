@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.psycho.play"
+      "bundleIdentifier": "com.psycho.play",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "package": "com.psycho.play",

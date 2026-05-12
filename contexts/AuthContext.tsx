@@ -39,6 +39,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (Platform.OS !== 'web') {
       GoogleSignin.configure({
         webClientId: "841856303776-n0qnohvvtecnmgj9a8dk2q0s16k820ol.apps.googleusercontent.com",
+        iosClientId: "841856303776-sq4b4lurs12lg1cnb6hm4qkh381kk007.apps.googleusercontent.com",
         scopes: ['profile', 'email'],
         offlineAccess: true,
         forceCodeForRefreshToken: false,
