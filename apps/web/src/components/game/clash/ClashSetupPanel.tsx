@@ -61,8 +61,13 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
     const newB = group === 'b'
       ? [...groupBIds.filter(id => id !== playerId), playerId]
       : groupBIds.filter(id => id !== playerId);
-    const newLeaderA = leaderAId === playerId ? null : leaderAId;
-    const newLeaderB = leaderBId === playerId ? null : leaderBId;
+    // Auto-assign leader if group was empty
+    const newLeaderA = group === 'a' && groupAIds.length === 0
+      ? playerId
+      : (leaderAId === playerId ? null : leaderAId);
+    const newLeaderB = group === 'b' && groupBIds.length === 0
+      ? playerId
+      : (leaderBId === playerId ? null : leaderBId);
     setGroupAIds(newA);
     setGroupBIds(newB);
     setLeaderAId(newLeaderA);
