@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
 import { useGame } from './contexts/GameContext';
 import { HomePage } from './pages/HomePage';
+import { GameJoinPage } from './pages/GameJoinPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { RulesPage } from './pages/RulesPage';
 import './App.css';
@@ -43,6 +44,7 @@ export default function App() {
                 <main className="max-w-2xl mx-auto px-4 py-8">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
+                    <Route path="/game/:gameId" element={<GameJoinPage />} />
                     <Route path="/results" element={<ResultsPage />} />
                     <Route path="/rules" element={<RulesPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />

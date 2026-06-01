@@ -79,9 +79,19 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
               <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 {t('game.ui.gameIdLabel')}
               </p>
-              <p className="font-mono font-bold text-lg text-gray-900 dark:text-white">
-                {game.id}
-              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = `${window.location.origin}/game/${game.id}`;
+                  navigator.clipboard.writeText(url).then(() =>
+                    showAlert(t('game.alerts.copiedTitle'), t('game.alerts.copiedMessage'))
+                  );
+                }}
+                className="font-mono font-bold text-lg text-gray-900 dark:text-white hover:text-game-blue transition-colors text-left"
+                title="Copy game link"
+              >
+                {game.id} 🔗
+              </button>
             </div>
             <span className="bg-game-orange/20 text-game-orange text-xs font-bold px-3 py-1 rounded-full">
               {t('game.ui.statusWaiting')}
