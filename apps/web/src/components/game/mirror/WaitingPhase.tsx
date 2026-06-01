@@ -113,12 +113,12 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
           {/* Game type selector */}
           {isAdmin && (
             <div className="flex gap-2 mb-4">
-              {(['mirror', 'basket'] as const).map(type => (
+              {(['mirror', 'basket', 'clash'] as const).map(type => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => setGameType(type).catch(() => {})}
-                  className={`flex-1 py-2 rounded-full text-sm font-semibold border-2 transition-all ${
+                  className={`flex-1 py-2 rounded-full text-xs font-semibold border-2 transition-all ${
                     (game.gameType ?? 'mirror') === type
                       ? 'bg-game-blue border-game-blue text-white'
                       : 'border-game-blue text-game-blue hover:bg-game-blue/10'
@@ -169,7 +169,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             </div>
           )}
 
-          {isAdmin ? (
+          {isAdmin && (game.gameType ?? 'mirror') !== 'clash' ? (
             <button
               type="button"
               onClick={handleStartGame}

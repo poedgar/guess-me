@@ -9,6 +9,8 @@ import { ActivePhase } from './mirror/ActivePhase';
 import { GuessingPhase } from './mirror/GuessingPhase';
 import { ResultsPhase } from './mirror/ResultsPhase';
 import { BasketScreen } from './basket/BasketScreen';
+import { ClashScreen } from './clash/ClashScreen';
+import { ClashSetupPanel } from './clash/ClashSetupPanel';
 
 export const GameScreen: React.FC = () => {
   const { currentGame, leaveGame } = useGame();
@@ -84,9 +86,20 @@ export const GameScreen: React.FC = () => {
         )}
 
         {gameType === 'clash' && (
-          <div className="text-center py-8">
-            <p className="text-gray-600 dark:text-gray-400">Clash mode coming soon...</p>
-          </div>
+          <>
+            {currentGame.status === 'waiting' && (
+              <>
+                <WaitingPhase game={currentGame} />
+                <div className="mt-4">
+                  <ClashSetupPanel game={currentGame} />
+                </div>
+              </>
+            )}
+            {(currentGame.status === 'clash_writing' || currentGame.status === 'clash_guessing') && (
+              <ClashScreen game={currentGame} />
+            )}
+            {currentGame.status === 'finished' && <ResultsPhase game={currentGame} />}
+          </>
         )}
       </div>
     </>
