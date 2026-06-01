@@ -500,12 +500,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         }
 
         const gameData = gameSnap.data() as Game;
+        const leavingUid = auth.currentUser!.uid;
         const updatedParticipants = (gameData.participants || []).filter(
-          (p) => p.userId !== user.uid,
+          (p) => p.userId !== leavingUid,
         );
 
         // If leaving user was the admin, mark the game as finished and flag adminLeft
-        if (gameData.adminId === user.uid) {
+        if (gameData.adminId === leavingUid) {
           transaction.update(gameRef, {
             participants: updatedParticipants,
             status: "finished",
