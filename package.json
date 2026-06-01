@@ -8,6 +8,7 @@
   "scripts": {
     "expo": "npm -w apps/expo run start",
     "web": "npm -w apps/web run dev",
+    "build": "cd apps/web && npm run build",
     "build:web": "npm -w apps/web run build",
     "deploy:web": "vercel --prod"
   }
