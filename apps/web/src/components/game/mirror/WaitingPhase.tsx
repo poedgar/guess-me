@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Game } from '@mirror/shared';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { t } from '@/i18n';
 
@@ -18,6 +19,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
     updateShowSurnames,
     updateTargetSelectionMode,
   } = useGame();
+  const { showAlert, AlertModal } = useAlert();
   const [isStarting, setIsStarting] = useState(false);
 
   const isAdmin = user?.uid === game.adminId;
@@ -27,86 +29,143 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
       setIsStarting(true);
       await startGame();
     } catch (error) {
-      console.error('Error starting game:', error);
       setIsStarting(false);
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.startGameFailed'),
+      );
     }
   };
 
+  const makeToggler = (updater: (v: any) => Promise<void>, getNewValue: () => any) => async () => {
+    try {
+      await updater(getNewValue());
+    } catch (error) {
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.updateSettingsFailed'),
+      );
+    }
+  };
+
+  const handleToggleAdminComments = makeToggler(
+    updateAdminWritesComments,
+    () => !(game.adminWritesComments ?? false),
+  );
+  const handleToggleShowSurnames = makeToggler(
+    updateShowSurnames,
+    () => !(game.showSurnames ?? false),
+  );
+  const handleToggleTargetMode = makeToggler(
+    updateTargetSelectionMode,
+    () => (game.targetSelectionMode ?? 'random') === 'random' ? 'chronological' : 'random',
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-orange">
-        <h2 className="text-2xl font-bold mb-4 text-game-orange">
-          {t('game.waiting') || 'Waiting for Players'}
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          {t('game.waitingMessage', { count: game.participants.length })}
-        </p>
+    <>
+      {AlertModal}
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-orange">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                {t('game.ui.gameIdLabel')}
+              </p>
+              <p className="font-mono font-bold text-lg text-gray-900 dark:text-white">
+                {game.id}
+              </p>
+            </div>
+            <span className="bg-game-orange/20 text-game-orange text-xs font-bold px-3 py-1 rounded-full">
+              {t('game.ui.statusWaiting')}
+            </span>
+          </div>
 
-        {isAdmin && (
-          <div className="space-y-4 mt-6 pt-6 border-t border-gray-300 dark:border-gray-600">
-            <h3 className="font-semibold text-gray-900 dark:text-white">
-              {t('game.adminSettings') || 'Admin Settings'}
-            </h3>
-
-            <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={game.adminWritesComments ?? false}
-                onChange={(e) => updateAdminWritesComments(e.target.checked)}
-                className="w-4 h-4 rounded"
-              />
-              <span className="text-gray-700 dark:text-gray-300">
-                {t('game.adminWritesComments') || 'Admin also writes comments'}
-              </span>
-            </label>
-
-            <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={game.showSurnames ?? false}
-                onChange={(e) => updateShowSurnames(e.target.checked)}
-                className="w-4 h-4 rounded"
-              />
-              <span className="text-gray-700 dark:text-gray-300">
-                {t('game.showSurnames') || 'Show surnames'}
-              </span>
-            </label>
-
-            <label className="flex items-center gap-3">
-              <select
-                value={game.targetSelectionMode || 'random'}
-                onChange={(e) =>
-                  updateTargetSelectionMode(e.target.value as 'random' | 'chronological')
-                }
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            {t('game.ui.participants')} ({game.participants?.length ?? 0})
+          </p>
+          <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
+            {game.participants?.map((p, idx) => (
+              <div
+                key={p.userId}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                  p.userId === game.adminId
+                    ? 'bg-game-orange/10 border border-game-orange/30'
+                    : 'bg-gray-50 dark:bg-gray-700'
+                }`}
               >
-                <option value="random">
-                  {t('game.targetSelectionRandom') || 'Random targets'}
-                </option>
-                <option value="chronological">
-                  {t('game.targetSelectionChronological') || 'Chronological targets'}
-                </option>
-              </select>
-            </label>
+                <span className="text-sm text-gray-500 dark:text-gray-400 w-5">{idx + 1}.</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
+                  {p.userName}
+                  {p.userId === game.adminId && ' 👑'}
+                </span>
+              </div>
+            ))}
+          </div>
 
+          {/* Admin settings */}
+          {isAdmin && (
+            <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+              {[
+                {
+                  label: t('game.ui.adminWritesCommentsTitle'),
+                  desc: t('game.ui.adminWritesCommentsDescription'),
+                  checked: game.adminWritesComments ?? false,
+                  onChange: handleToggleAdminComments,
+                },
+                {
+                  label: t('game.ui.showSurnamesTitle'),
+                  desc: t('game.ui.showSurnamesDescription'),
+                  checked: game.showSurnames ?? false,
+                  onChange: handleToggleShowSurnames,
+                },
+                {
+                  label: t('game.ui.targetSelectionModeTitle'),
+                  desc: t('game.ui.targetSelectionModeDescription'),
+                  checked: (game.targetSelectionMode ?? 'random') === 'chronological',
+                  onChange: handleToggleTargetMode,
+                },
+              ].map(({ label, desc, checked, onChange }) => (
+                <label key={label} className="flex items-center justify-between gap-4 cursor-pointer">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={onChange}
+                    className="w-5 h-5 accent-game-green"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+
+          {isAdmin ? (
             <button
               type="button"
               onClick={handleStartGame}
               disabled={game.participants.length < 2 || isStarting || loading}
-              className="w-full bg-game-green text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity mt-6"
+              className="w-full bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {loading || isStarting ? t('common.loading') || 'Starting...' : t('game.startGame') || 'Start Game'}
+              {loading || isStarting ? t('common.loading') : t('game.ui.startGame')}
             </button>
-          </div>
+          ) : (
+            <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
+              {t('game.ui.waitingForAdminStart')}
+            </p>
+          )}
+        </div>
+
+        {game.scores && Object.keys(game.scores).length > 0 && (
+          <Leaderboard
+            participants={game.participants}
+            scores={game.scores}
+            guessResults={game.guessResults}
+            title={t('game.ui.leaderboardTitle')}
+          />
         )}
       </div>
-
-      <Leaderboard
-        participants={game.participants}
-        scores={game.scores}
-        guessResults={game.guessResults}
-        maxHeight="max-h-80"
-      />
-    </div>
+    </>
   );
 };

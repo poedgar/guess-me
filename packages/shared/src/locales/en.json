@@ -118,6 +118,7 @@
       "leftGameTitle": "You left the game",
       "leaveGameFailed": "Could not leave the game.",
       "startGameFailed": "Could not start the game.",
+      "startGuessingPhaseFailed": "Could not start the guessing phase.",
       "commentEmpty": "Please enter a comment.",
       "submitCommentFailed": "Could not submit the comment.",
       "showCommentsFailed": "Could not show comments.",

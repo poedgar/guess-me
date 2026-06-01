@@ -3,6 +3,7 @@ import { Game } from '@mirror/shared';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
+import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { t } from '@/i18n';
 
@@ -22,6 +23,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     startGuessingPhase,
   } = useGame();
   const { playSound } = useSound();
+  const { showAlert, AlertModal } = useAlert();
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
@@ -51,7 +53,6 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
   const maxPoints = Math.max(1, game.participants.length - 1);
 
-  // Mirror the exact check from startGuessingPhase in GameContext
   const completedPlayers = game.playersWhoCompletedPostCommentPhase ?? [];
   const nonTargetPlayers = game.participants.filter(p => {
     if (p.userId === targetUserId) return false;
@@ -64,15 +65,20 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
+    if (!commentText.trim()) {
+      showAlert(t('common.error'), t('game.alerts.commentEmpty'));
+      return;
+    }
     try {
       setIsSubmittingComment(true);
       await submitComment(commentText.trim());
       setCommentText('');
       await playSound('success');
     } catch (error) {
-      console.error('Error submitting comment:', error);
-      await playSound('error');
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.submitCommentFailed'),
+      );
     } finally {
       setIsSubmittingComment(false);
     }
@@ -83,7 +89,10 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
       await showComments();
       await playSound('notification');
     } catch (error) {
-      console.error('Error showing comments:', error);
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.showCommentsFailed'),
+      );
     }
   };
 
@@ -92,7 +101,10 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
       await startGuessingPhase();
       await playSound('gameStart');
     } catch (error) {
-      console.error('Error starting guessing:', error);
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.startGuessingPhaseFailed') || 'Failed to start guessing phase',
+      );
     }
   };
 
@@ -103,7 +115,10 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
       setPointsGiven(prev => ({ ...prev, [commentId]: 1 }));
       await playSound('points');
     } catch (error) {
-      console.error('Error awarding points:', error);
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.pointsAwardFailed'),
+      );
     } finally {
       setGivingPoints(prev => ({ ...prev, [commentId]: false }));
     }
@@ -114,204 +129,232 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
       await finishAwardingPoints();
       await playSound('success');
     } catch (error) {
-      console.error('Error finishing points:', error);
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.finishPointsFailed'),
+      );
     }
   };
 
   const handleGivePointsToTarget = async (points: number) => {
-    try {
-      setGivingPointsToTarget(true);
-      await givePointsToTarget(currentRound.targetUserId, points);
-      await playSound('success');
-    } catch (error) {
-      console.error('Error giving points to target:', error);
-    } finally {
-      setGivingPointsToTarget(false);
-    }
+    showAlert(
+      t('game.alerts.confirmTitle'),
+      points === 0
+        ? t('game.alerts.confirmSkipPoints')
+        : t('game.alerts.confirmGivePoints', { count: points }),
+      [
+        {
+          text: t('common.cancel'),
+          onPress: () => {},
+          style: 'secondary',
+        },
+        {
+          text: t('common.yes'),
+          onPress: async () => {
+            try {
+              setGivingPointsToTarget(true);
+              await givePointsToTarget(currentRound.targetUserId, points);
+              await playSound('success');
+            } catch (error) {
+              showAlert(
+                t('common.error'),
+                (error instanceof Error && error.message) || t('game.alerts.targetPointsAwardFailed'),
+              );
+            } finally {
+              setGivingPointsToTarget(false);
+            }
+          },
+          style: 'primary',
+        },
+      ],
+    );
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-green">
-        <div className="text-center mb-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Round {currentRound.roundNumber}</p>
-          <p className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('game.ui.target')}: {currentRound.targetUserName}
-          </p>
+    <>
+      {AlertModal}
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-green">
+          <div className="text-center mb-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Round {currentRound.roundNumber}</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('game.ui.target')}: {currentRound.targetUserName}
+            </p>
+          </div>
+
+          {/* Admin controls */}
+          {isAdmin && (
+            <div className="flex justify-center gap-3 mb-6">
+              {!commentsVisible && (
+                <button
+                  type="button"
+                  onClick={handleShowComments}
+                  disabled={loading || (currentRound.comments?.length ?? 0) === 0}
+                  className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {loading ? t('common.loading') : t('game.ui.showComments')}
+                </button>
+              )}
+              {commentsVisible && (
+                <button
+                  type="button"
+                  onClick={handleStartGuessing}
+                  disabled={loading || !targetFinishedPoints || !allPlayersCompletedPointsPhase}
+                  className="bg-game-purple text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {loading ? t('common.loading') : t('game.ui.startGuessingPhase')}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Target player view */}
+          {isTarget && (
+            <div>
+              {!commentsVisible ? (
+                <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                  {t('game.ui.waitingForCommentsAboutYou')}
+                </p>
+              ) : !targetFinishedPoints ? (
+                <div>
+                  <p className="font-semibold text-center mb-4">{t('game.ui.commentsAboutYou')}</p>
+                  <div className="space-y-3">
+                    {currentRound.comments?.map(comment => (
+                      <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                        <p className="text-gray-900 dark:text-white mb-3">{comment.text}</p>
+                        {comment.points === undefined && !pointsGiven[comment.id] ? (
+                          <button
+                            type="button"
+                            onClick={() => handleGivePoints(comment.id)}
+                            disabled={!!givingPoints[comment.id] || loading}
+                            className="bg-game-green text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                          >
+                            {givingPoints[comment.id] ? t('common.loading') : '+ 1 point'}
+                          </button>
+                        ) : (
+                          <p className="text-game-green text-sm font-semibold">
+                            {t('game.ui.pointsAwarded')} {comment.points ?? pointsGiven[comment.id] ?? 1}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-center mt-4">
+                    <button
+                      type="button"
+                      onClick={handleFinishGivingPoints}
+                      disabled={loading}
+                      className="bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    >
+                      {loading ? t('common.loading') : t('game.ui.finishAwardingPoints')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                  {t('game.ui.finishedAwardingPointsWaitAdmin')}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Non-target player view */}
+          {!isTarget && (
+            <div>
+              {!commentsVisible ? (
+                <>
+                  {!userComment && shouldWriteComments ? (
+                    <form onSubmit={handleSubmitComment} className="space-y-3">
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {t('game.ui.writeAnonymousCommentAbout', { name: currentRound.targetUserName })}
+                      </p>
+                      <textarea
+                        value={commentText}
+                        onChange={e => setCommentText(e.target.value)}
+                        placeholder={t('game.ui.commentPlaceholder')}
+                        maxLength={500}
+                        rows={4}
+                        disabled={isSubmittingComment}
+                        className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-green bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none disabled:opacity-50"
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className={`text-sm ${commentText.length >= 450 ? 'text-red-500' : 'text-gray-500'}`}>
+                          {commentText.length}/500
+                        </span>
+                        <button
+                          type="submit"
+                          disabled={!commentText.trim() || isSubmittingComment}
+                          className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                        >
+                          {isSubmittingComment ? t('common.loading') : t('game.ui.submitComment')}
+                        </button>
+                      </div>
+                    </form>
+                  ) : !shouldWriteComments ? (
+                    <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                      {t('game.ui.adminNotParticipating')}
+                    </p>
+                  ) : (
+                    <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                      {t('game.ui.commentSentWaitingShow')}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div>
+                  <p className="font-semibold text-center mb-4">{t('game.ui.allComments')}</p>
+                  <div className="space-y-3">
+                    {currentRound.comments?.map(comment => (
+                      <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                        <p className="text-gray-900 dark:text-white mb-2">{comment.text}</p>
+                        {comment.points !== undefined && (
+                          <p className="text-game-green text-sm font-semibold">
+                            {t('game.ui.points')} {comment.points}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {targetFinishedPoints && !hasCompletedPhase && !alreadyGaveTargetPoints && (
+                    <div className="mt-6">
+                      <p className="text-center font-semibold mb-3 text-gray-900 dark:text-white">
+                        {t('game.awardPointsToTarget')}
+                      </p>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {Array.from({ length: maxPoints + 1 }, (_, i) => i).map(points => (
+                          <button
+                            key={points}
+                            type="button"
+                            onClick={() => handleGivePointsToTarget(points)}
+                            disabled={givingPointsToTarget || loading}
+                            className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-600 border-2 border-gray-300 dark:border-gray-500 text-lg font-semibold hover:border-game-gold hover:bg-game-gold/10 disabled:opacity-50 transition-all"
+                          >
+                            {points}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {(hasCompletedPhase || alreadyGaveTargetPoints) && targetFinishedPoints && (
+                    <p className="text-center text-game-green font-semibold mt-4">
+                      {t('game.pointsFinalized')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Admin controls */}
-        {isAdmin && (
-          <div className="flex justify-center gap-3 mb-6">
-            {!commentsVisible && (
-              <button
-                type="button"
-                onClick={handleShowComments}
-                disabled={loading || (currentRound.comments?.length ?? 0) === 0}
-                className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {loading ? t('common.loading') : t('game.ui.showComments')}
-              </button>
-            )}
-            {commentsVisible && (
-              <button
-                type="button"
-                onClick={handleStartGuessing}
-                disabled={loading || !targetFinishedPoints || !allPlayersCompletedPointsPhase}
-                className="bg-game-purple text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {loading ? t('common.loading') : t('game.ui.startGuessingPhase')}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Target player view */}
-        {isTarget && (
-          <div>
-            {!commentsVisible ? (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-                {t('game.ui.waitingForCommentsAboutYou')}
-              </p>
-            ) : !targetFinishedPoints ? (
-              <div>
-                <p className="font-semibold text-center mb-4">{t('game.ui.commentsAboutYou')}</p>
-                <div className="space-y-3">
-                  {currentRound.comments?.map(comment => (
-                    <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <p className="text-gray-900 dark:text-white mb-3">{comment.text}</p>
-                      {comment.points === undefined && !pointsGiven[comment.id] ? (
-                        <button
-                          type="button"
-                          onClick={() => handleGivePoints(comment.id)}
-                          disabled={!!givingPoints[comment.id] || loading}
-                          className="bg-game-green text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                        >
-                          {givingPoints[comment.id] ? t('common.loading') : '+ 1 point'}
-                        </button>
-                      ) : (
-                        <p className="text-game-green text-sm font-semibold">
-                          {t('game.ui.pointsAwarded')} {comment.points ?? pointsGiven[comment.id] ?? 1}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-center mt-4">
-                  <button
-                    type="button"
-                    onClick={handleFinishGivingPoints}
-                    disabled={loading}
-                    className="bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                  >
-                    {loading ? t('common.loading') : t('game.ui.finishAwardingPoints')}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-                {t('game.ui.finishedAwardingPointsWaitAdmin')}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Non-target player view */}
-        {!isTarget && (
-          <div>
-            {!commentsVisible ? (
-              <>
-                {!userComment && shouldWriteComments ? (
-                  <form onSubmit={handleSubmitComment} className="space-y-3">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('game.ui.writeAnonymousCommentAbout', { name: currentRound.targetUserName })}
-                    </p>
-                    <textarea
-                      value={commentText}
-                      onChange={e => setCommentText(e.target.value)}
-                      placeholder={t('game.ui.commentPlaceholder')}
-                      maxLength={500}
-                      rows={4}
-                      disabled={isSubmittingComment}
-                      className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-green bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none disabled:opacity-50"
-                    />
-                    <div className="flex justify-between items-center">
-                      <span className={`text-sm ${commentText.length >= 450 ? 'text-red-500' : 'text-gray-500'}`}>
-                        {commentText.length}/500
-                      </span>
-                      <button
-                        type="submit"
-                        disabled={!commentText.trim() || isSubmittingComment}
-                        className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                      >
-                        {isSubmittingComment ? t('common.loading') : t('game.ui.submitComment')}
-                      </button>
-                    </div>
-                  </form>
-                ) : !shouldWriteComments ? (
-                  <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-                    {t('game.ui.adminNotParticipating')}
-                  </p>
-                ) : (
-                  <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-                    {t('game.ui.commentSentWaitingShow')}
-                  </p>
-                )}
-              </>
-            ) : (
-              <div>
-                <p className="font-semibold text-center mb-4">{t('game.ui.allComments')}</p>
-                <div className="space-y-3">
-                  {currentRound.comments?.map(comment => (
-                    <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <p className="text-gray-900 dark:text-white mb-2">{comment.text}</p>
-                      {comment.points !== undefined && (
-                        <p className="text-game-green text-sm font-semibold">
-                          {t('game.ui.points')} {comment.points}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {targetFinishedPoints && !hasCompletedPhase && !alreadyGaveTargetPoints && (
-                  <div className="mt-6">
-                    <p className="text-center font-semibold mb-3 text-gray-900 dark:text-white">
-                      {t('game.awardPointsToTarget')}
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {Array.from({ length: maxPoints + 1 }, (_, i) => i).map(points => (
-                        <button
-                          key={points}
-                          type="button"
-                          onClick={() => handleGivePointsToTarget(points)}
-                          disabled={givingPointsToTarget || loading}
-                          className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-600 border-2 border-gray-300 dark:border-gray-500 text-lg font-semibold hover:border-game-gold hover:bg-game-gold/10 disabled:opacity-50 transition-all"
-                        >
-                          {points}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {(hasCompletedPhase || alreadyGaveTargetPoints) && targetFinishedPoints && (
-                  <p className="text-center text-game-green font-semibold mt-4">
-                    {t('game.pointsFinalized')}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        <Leaderboard
+          participants={game.participants}
+          scores={game.scores}
+          guessResults={game.guessResults}
+          maxHeight="max-h-80"
+        />
       </div>
-
-      <Leaderboard
-        participants={game.participants}
-        scores={game.scores}
-        guessResults={game.guessResults}
-        maxHeight="max-h-80"
-      />
-    </div>
+    </>
   );
 };

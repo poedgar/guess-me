@@ -119,6 +119,7 @@
       "leftGameTitle": "Ви вийшли з гри",
       "leaveGameFailed": "Не вдалося вийти з гри.",
       "startGameFailed": "Не вдалося почати гру.",
+      "startGuessingPhaseFailed": "Не вдалося почати фазу вгадування.",
       "commentEmpty": "Введіть, будь ласка, коментар.",
       "submitCommentFailed": "Не вдалося відправити коментар.",
       "showCommentsFailed": "Не вдалося показати коментарі.",
