@@ -1,8 +1,8 @@
 import React from 'react';
-import { Game, Participant } from '@mirror/shared';
+import { Participant } from '@mirror/shared';
 import { PlayerAvatar } from '../ui/PlayerAvatar';
 import { useAuth } from '../../contexts/AuthContext';
-import { t } from '@/i18n';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface LeaderboardProps {
   participants: Participant[];
@@ -20,6 +20,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
   title,
 }) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const ranked = [...participants]
     .map(p => {
@@ -52,7 +53,6 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                     : 'bg-gray-50 dark:bg-gray-700'
               }`}
             >
-              {/* Rank */}
               <div className="w-9 text-center flex-shrink-0">
                 {idx < 3 ? (
                   <span className="text-2xl">{medals[idx]}</span>
@@ -84,7 +84,6 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                 </div>
               </div>
 
-              {/* Total */}
               <div className="text-right flex-shrink-0">
                 <p className="text-xl font-bold text-game-green">{p.totalPoints}</p>
                 <p className="text-xs text-gray-400">{t('game.ui.pointsTotal')}</p>

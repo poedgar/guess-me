@@ -1,10 +1,11 @@
+import { useLanguage } from '../../contexts/LanguageContext';
 import React from 'react';
 import { Game } from '@mirror/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import { HeaderLogo } from '../ui/HeaderLogo';
 import { LanguageSelector } from '../ui/LanguageSelector';
 import { SoundToggle } from '../ui/SoundToggle';
-import { t } from '@/i18n';
+
 
 interface GameHeaderProps {
   game: Game;
@@ -24,6 +25,7 @@ const statusColorMap: Record<string, string> = {
 
 export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = user?.uid === game.adminId;
 
   return (

@@ -1,15 +1,17 @@
+import { useLanguage } from '../../contexts/LanguageContext';
 import React, { useState } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../hooks/useAlert';
 import { HeaderLogo } from '../ui/HeaderLogo';
 import { LiquidLoader } from '../ui/LiquidLoader';
-import { t } from '@/i18n';
+
 
 export const JoinScreen: React.FC = () => {
   const { enterGame } = useGame();
   const { signOut } = useAuth();
   const { showAlert, AlertModal } = useAlert();
+  const { t } = useLanguage();
   const [gameInput, setGameInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 

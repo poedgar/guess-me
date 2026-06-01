@@ -1,10 +1,11 @@
+import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
 import { Game } from '@mirror/shared';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
-import { t } from '@/i18n';
+
 
 interface WaitingPhaseProps {
   game: Game;
@@ -20,6 +21,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
     updateTargetSelectionMode,
   } = useGame();
   const { showAlert, AlertModal } = useAlert();
+  const { t } = useLanguage();
   const [isStarting, setIsStarting] = useState(false);
 
   const isAdmin = user?.uid === game.adminId;

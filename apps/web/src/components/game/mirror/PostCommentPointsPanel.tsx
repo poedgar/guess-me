@@ -1,9 +1,10 @@
+import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
 import { Game } from '@mirror/shared';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
-import { t } from '@/i18n';
+
 
 interface PostCommentPointsPanelProps {
   game: Game;
@@ -13,6 +14,7 @@ export const PostCommentPointsPanel: React.FC<PostCommentPointsPanelProps> = ({ 
   const { user } = useAuth();
   const { awardCommentPoints, finishAwardingPoints, skipPostCommentPhase, givePointsToTarget } = useGame();
   const { playSound } = useSound();
+  const { t } = useLanguage();
   const [commentPoints, setCommentPoints] = useState<{ [commentId: string]: number }>({});
   const [targetPoints, setTargetPoints] = useState(5);
   const [isSubmitting, setIsSubmitting] = useState(false);

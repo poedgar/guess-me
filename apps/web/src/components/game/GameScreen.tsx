@@ -1,3 +1,4 @@
+import { useLanguage } from '../../contexts/LanguageContext';
 import React, { useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
 import { useAlert } from '../../hooks/useAlert';
@@ -7,11 +8,12 @@ import { WaitingPhase } from './mirror/WaitingPhase';
 import { ActivePhase } from './mirror/ActivePhase';
 import { GuessingPhase } from './mirror/GuessingPhase';
 import { ResultsPhase } from './mirror/ResultsPhase';
-import { t } from '@/i18n';
+
 
 export const GameScreen: React.FC = () => {
   const { currentGame, leaveGame } = useGame();
   const { showAlert, AlertModal } = useAlert();
+  const { t } = useLanguage();
   const adminLeftAlertShownForGame = useRef<string | null>(null);
 
   // Show alert when admin leaves the game

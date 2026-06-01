@@ -1,5 +1,6 @@
+import { useLanguage } from '../contexts/LanguageContext';
 import React from 'react';
-import { t } from '@/i18n';
+
 
 const stepColors = [
   'bg-game-green',
@@ -27,6 +28,7 @@ const adminFeatures = ['feature1', 'feature2', 'feature3', 'feature4'];
 const tips = ['tip1', 'tip2', 'tip3', 'tip4', 'tip5'];
 
 export function RulesPage() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-5">
       {/* Overview */}

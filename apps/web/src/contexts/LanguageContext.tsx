@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { i18n, type SupportedLocale } from '@/i18n';
 
 interface LanguageContextType {
   locale: SupportedLocale;
   setLocale: (locale: SupportedLocale) => void;
+  t: (scope: string, options?: Record<string, any>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -29,6 +30,13 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     localStorage.setItem('app_locale', newLocale);
   };
 
+  // Re-created on every locale change — forces consumers to re-render
+  const t = useCallback(
+    (scope: string, options?: Record<string, any>) => i18n.t(scope, { ...options }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale],
+  );
+
   useEffect(() => {
     const savedLocale = localStorage.getItem('app_locale');
     if (savedLocale && (savedLocale === 'uk' || savedLocale === 'en')) {
@@ -37,7 +45,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   }, []);
 
   return (
-    <LanguageContext.Provider value={{ locale, setLocale }}>
+    <LanguageContext.Provider value={{ locale, setLocale, t }}>
       {children}
     </LanguageContext.Provider>
   );

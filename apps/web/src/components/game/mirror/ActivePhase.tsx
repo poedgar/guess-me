@@ -1,3 +1,4 @@
+import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
 import { Game } from '@mirror/shared';
 import { useGame } from '../../../contexts/GameContext';
@@ -5,7 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
-import { t } from '@/i18n';
+
 
 interface ActivePhaseProps {
   game: Game;
@@ -24,6 +25,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   } = useGame();
   const { playSound } = useSound();
   const { showAlert, AlertModal } = useAlert();
+  const { t } = useLanguage();
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});

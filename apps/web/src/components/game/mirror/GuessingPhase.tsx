@@ -1,3 +1,4 @@
+import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
 import { Game, Comment } from '@mirror/shared';
 import { useGame } from '../../../contexts/GameContext';
@@ -5,7 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
-import { t } from '@/i18n';
+
 
 interface GuessingPhaseProps {
   game: Game;
@@ -16,6 +17,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
   const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound } = useGame();
   const { playSound } = useSound();
   const { showAlert, AlertModal } = useAlert();
+  const { t } = useLanguage();
   const [selections, setSelections] = useState<{ [commentId: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);

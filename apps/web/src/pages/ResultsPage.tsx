@@ -1,12 +1,14 @@
+import { useLanguage } from '../contexts/LanguageContext';
 import React from 'react';
 import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
-import { t } from '@/i18n';
+
 import { sortParticipantsByJoin } from '@mirror/shared';
 
 export function ResultsPage() {
   const { currentGame } = useGame();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const participantsByJoin = sortParticipantsByJoin(currentGame?.participants || []);
 

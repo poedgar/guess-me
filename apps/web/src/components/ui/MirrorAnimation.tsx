@@ -9,7 +9,7 @@ export const MirrorAnimation: React.FC<MirrorAnimationProps> = ({ style }) => (
   <LottieAnimation
     source="/animations/Mirror.json"
     autoPlay
-    loop
+    loop={false}
     style={style}
   />
 );

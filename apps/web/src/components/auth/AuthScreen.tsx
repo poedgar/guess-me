@@ -1,13 +1,15 @@
+import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { HeaderLogo } from '../ui/HeaderLogo';
 import { LanguageSelector } from '../ui/LanguageSelector';
 import { SoundToggle } from '../ui/SoundToggle';
 import { LiquidLoader } from '../ui/LiquidLoader';
-import { t } from '@/i18n';
+
 
 export const AuthScreen: React.FC = () => {
   const { signIn } = useAuth();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

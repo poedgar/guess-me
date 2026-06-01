@@ -1,13 +1,15 @@
+import { useLanguage } from '../../../contexts/LanguageContext';
 import React from 'react';
 import { Game, calculateSimilarPairs } from '@mirror/shared';
 import { Leaderboard } from '../Leaderboard';
-import { t } from '@/i18n';
+
 
 interface ResultsPhaseProps {
   game: Game;
 }
 
 export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
+  const { t } = useLanguage();
   const similarPairs = calculateSimilarPairs(
     game.rounds ?? [],
     game.adminAwards,
