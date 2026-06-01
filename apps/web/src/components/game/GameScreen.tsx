@@ -8,7 +8,7 @@ import { WaitingPhase } from './mirror/WaitingPhase';
 import { ActivePhase } from './mirror/ActivePhase';
 import { GuessingPhase } from './mirror/GuessingPhase';
 import { ResultsPhase } from './mirror/ResultsPhase';
-
+import { BasketScreen } from './basket/BasketScreen';
 
 export const GameScreen: React.FC = () => {
   const { currentGame, leaveGame } = useGame();
@@ -74,9 +74,13 @@ export const GameScreen: React.FC = () => {
         )}
 
         {gameType === 'basket' && (
-          <div className="text-center py-8">
-            <p className="text-gray-600 dark:text-gray-400">Basket mode coming soon...</p>
-          </div>
+          <>
+            {currentGame.status === 'waiting' && <WaitingPhase game={currentGame} />}
+            {(currentGame.status === 'basket_writing' || currentGame.status === 'basket_guessing') && (
+              <BasketScreen game={currentGame} />
+            )}
+            {currentGame.status === 'finished' && <ResultsPhase game={currentGame} />}
+          </>
         )}
 
         {gameType === 'clash' && (

@@ -16,9 +16,11 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const {
     loading,
     startGame,
+    startBasketGame,
     updateAdminWritesComments,
     updateShowSurnames,
     updateTargetSelectionMode,
+    setGameType,
   } = useGame();
   const { showAlert, AlertModal } = useAlert();
   const { t } = useLanguage();
@@ -29,7 +31,11 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const handleStartGame = async () => {
     try {
       setIsStarting(true);
-      await startGame();
+      if (game.gameType === 'basket') {
+        await startBasketGame();
+      } else {
+        await startGame();
+      }
     } catch (error) {
       setIsStarting(false);
       showAlert(
@@ -104,8 +110,28 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             ))}
           </div>
 
-          {/* Admin settings */}
+          {/* Game type selector */}
           {isAdmin && (
+            <div className="flex gap-2 mb-4">
+              {(['mirror', 'basket'] as const).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setGameType(type).catch(() => {})}
+                  className={`flex-1 py-2 rounded-full text-sm font-semibold border-2 transition-all ${
+                    (game.gameType ?? 'mirror') === type
+                      ? 'bg-game-blue border-game-blue text-white'
+                      : 'border-game-blue text-game-blue hover:bg-game-blue/10'
+                  }`}
+                >
+                  {t(`game.ui.gameType${type.charAt(0).toUpperCase() + type.slice(1)}`)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Admin settings */}
+          {isAdmin && (game.gameType ?? 'mirror') === 'mirror' && (
             <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
               {[
                 {
