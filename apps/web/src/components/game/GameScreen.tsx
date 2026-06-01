@@ -1,6 +1,7 @@
 import { useLanguage } from '../../contexts/LanguageContext';
 import React, { useEffect, useRef } from 'react';
 import { useGame } from '../../contexts/GameContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useAlert } from '../../hooks/useAlert';
 import { JoinScreen } from './JoinScreen';
 import { GameHeader } from './GameHeader';
@@ -15,6 +16,7 @@ import { ClashSetupPanel } from './clash/ClashSetupPanel';
 export const GameScreen: React.FC = () => {
   const { currentGame, leaveGame } = useGame();
   const { showAlert, AlertModal } = useAlert();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const adminLeftAlertShownForGame = useRef<string | null>(null);
 
@@ -90,9 +92,11 @@ export const GameScreen: React.FC = () => {
             {currentGame.status === 'waiting' && (
               <>
                 <WaitingPhase game={currentGame} />
-                <div className="mt-4">
-                  <ClashSetupPanel game={currentGame} />
-                </div>
+                {user?.uid === currentGame.adminId && (
+                  <div className="mt-4">
+                    <ClashSetupPanel game={currentGame} />
+                  </div>
+                )}
               </>
             )}
             {(currentGame.status === 'clash_writing' || currentGame.status === 'clash_guessing') && (
