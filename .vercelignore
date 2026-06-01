@@ -11,6 +11,5 @@ coverage/
 ios/
 android/
 apps/expo/
-packages/
 node_modules/
 .env.local
