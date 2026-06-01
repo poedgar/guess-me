@@ -1,0 +1,18 @@
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDEXWXgE_Rx44YPhlnH7fIHMfHwmQsRQhI",
+    authDomain: "spygame-2fce3.firebaseapp.com",
+    projectId: "spygame-2fce3",
+    storageBucket: "spygame-2fce3.appspot.com",
+    messagingSenderId: "841856303776",
+    appId: "1:841856303776:web:b580fb85f1e3e34c573fc5",
+};
+
+const app = initializeApp(firebaseConfig);
+
+export const auth = getAuth(app);
+export const GoogleAuthProviderInstance = GoogleAuthProvider;
+export const db = getFirestore(app);
