@@ -20,6 +20,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
     updateAdminWritesComments,
     updateShowSurnames,
     updateTargetSelectionMode,
+    updateShowGuessResults,
     setGameType,
   } = useGame();
   const { showAlert, AlertModal } = useAlert();
@@ -67,6 +68,10 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const handleToggleTargetMode = makeToggler(
     updateTargetSelectionMode,
     () => (game.targetSelectionMode ?? 'random') === 'random' ? 'chronological' : 'random',
+  );
+  const handleToggleShowGuessResults = makeToggler(
+    updateShowGuessResults,
+    () => !(game.showGuessResults ?? false),
   );
 
   return (
@@ -161,6 +166,12 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                   desc: t('game.ui.targetSelectionModeDescription'),
                   checked: (game.targetSelectionMode ?? 'random') === 'chronological',
                   onChange: handleToggleTargetMode,
+                },
+                {
+                  label: t('game.ui.showGuessResultsTitle'),
+                  desc: t('game.ui.showGuessResultsDescription'),
+                  checked: game.showGuessResults ?? false,
+                  onChange: handleToggleShowGuessResults,
                 },
               ].map(({ label, desc, checked, onChange }) => (
                 <label key={label} className="flex items-center justify-between gap-4 cursor-pointer">
