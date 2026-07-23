@@ -1,7 +1,7 @@
 import { auth, db } from "@/config/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateGameId } from "@/utils/gameIdGenerator";
-import { sortParticipantsByJoin } from "@/utils/participants";
+import { sortParticipantsByJoin, buildJoinIndexById } from "@/utils/participants";
 import { BasketAssignment, BasketRound, generateBasketSchedule } from '@/utils/basketSchedule';
 import { ClashAssignment, ClashRound, generateClashSchedule } from '@/utils/clashSchedule';
 import {
@@ -71,6 +71,9 @@ export interface Game {
   // Admin target control preferences
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
+  // Stable per-participant display numbers, assigned once when the game starts.
+  // Frozen for the lifetime of the game — does not shift if participants later leave.
+  playerNumbers?: { [userId: string]: number };
 }
 
 export interface Participant {
@@ -602,6 +605,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         currentRound: round,
         rounds: [round],
         scores: {},
+        playerNumbers: buildJoinIndexById(currentGame.participants),
       });
     } catch (error: unknown) {
       console.error("Error starting game:", error);
