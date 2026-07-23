@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
+import { getPlayerNumber } from '../../../utils/playerNumbers';
 
 
 interface ActivePhaseProps {
@@ -64,6 +65,9 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   const allPlayersCompletedPointsPhase = nonTargetPlayers.every(p =>
     completedPlayers.includes(p.userId)
   );
+
+  const submittedAuthorIds = new Set(currentRound.comments?.map(c => c.authorId) ?? []);
+  const submittedCount = nonTargetPlayers.filter(p => submittedAuthorIds.has(p.userId)).length;
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,27 +190,64 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
           {/* Admin controls */}
           {isAdmin && (
-            <div className="flex justify-center gap-3 mb-6">
+            <div className="mb-6">
               {!commentsVisible && (
-                <button
-                  type="button"
-                  onClick={handleShowComments}
-                  disabled={loading || (currentRound.comments?.length ?? 0) === 0}
-                  className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                >
-                  {loading ? t('common.loading') : t('game.ui.showComments')}
-                </button>
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-center text-gray-700 dark:text-gray-300 mb-1">
+                    {t('game.ui.commentersStatusTitle')}
+                  </p>
+                  <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">
+                    {t('game.ui.commentsProgress', { received: submittedCount, required: nonTargetPlayers.length })}
+                  </p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {nonTargetPlayers.map(p => {
+                      const hasSubmitted = submittedAuthorIds.has(p.userId);
+                      return (
+                        <div
+                          key={p.userId}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700"
+                        >
+                          <span className="text-sm text-gray-500 dark:text-gray-400 w-6">
+                            {getPlayerNumber(game, p.userId)}.
+                          </span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
+                            {p.userName}
+                          </span>
+                          <span
+                            className={`text-xs font-semibold ${
+                              hasSubmitted ? 'text-game-green' : 'text-gray-400'
+                            }`}
+                          >
+                            {hasSubmitted ? `✅ ${t('game.ui.submitted')}` : `⏳ ${t('game.ui.pending')}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
-              {commentsVisible && (
-                <button
-                  type="button"
-                  onClick={handleStartGuessing}
-                  disabled={loading || !targetFinishedPoints || !allPlayersCompletedPointsPhase}
-                  className="bg-game-purple text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                >
-                  {loading ? t('common.loading') : t('game.ui.startGuessingPhase')}
-                </button>
-              )}
+              <div className="flex justify-center gap-3">
+                {!commentsVisible && (
+                  <button
+                    type="button"
+                    onClick={handleShowComments}
+                    disabled={loading || (currentRound.comments?.length ?? 0) === 0}
+                    className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {loading ? t('common.loading') : t('game.ui.showComments')}
+                  </button>
+                )}
+                {commentsVisible && (
+                  <button
+                    type="button"
+                    onClick={handleStartGuessing}
+                    disabled={loading || !targetFinishedPoints || !allPlayersCompletedPointsPhase}
+                    className="bg-game-purple text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {loading ? t('common.loading') : t('game.ui.startGuessingPhase')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
