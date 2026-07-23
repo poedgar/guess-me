@@ -1,4 +1,4 @@
-import { auth, db, generateGameId, sortParticipantsByJoin, generateBasketSchedule, generateClashSchedule } from '@mirror/shared';
+import { auth, db, generateGameId, sortParticipantsByJoin, buildJoinIndexById, generateBasketSchedule, generateClashSchedule } from '@mirror/shared';
 import type { BasketAssignment, BasketRound, ClashAssignment, ClashRound } from '@mirror/shared';
 import { useAuth } from './AuthContext';
 import {
@@ -68,6 +68,9 @@ export interface Game {
   // Admin target control preferences
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
+  // Stable per-participant display numbers, assigned once when the game starts.
+  // Frozen for the lifetime of the game — does not shift if participants later leave.
+  playerNumbers?: { [userId: string]: number };
 }
 
 export interface Participant {
@@ -600,6 +603,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         currentRound: round,
         rounds: [round],
         scores: {},
+        playerNumbers: buildJoinIndexById(currentGame.participants),
       });
     } catch (error: unknown) {
       console.error("Error starting game:", error);

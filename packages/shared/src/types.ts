@@ -36,6 +36,9 @@ export interface Game {
   clashData?: ClashData;
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
+  // Stable per-participant display numbers, assigned once when the game starts.
+  // Frozen for the lifetime of the game — does not shift if participants later leave.
+  playerNumbers?: { [userId: string]: number };
 }
 
 export interface Participant {

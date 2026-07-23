@@ -3,7 +3,7 @@ export * from './firebase';
 export { i18n, t, SUPPORTED_LOCALES, type SupportedLocale } from './i18n';
 export { GameColors, Colors, StatusColors, ModalStyles } from './constants/gameColors';
 export { generateGameId } from './utils/gameIdGenerator';
-export { sortParticipantsByJoin } from './utils/participants';
+export { sortParticipantsByJoin, buildJoinIndexById } from './utils/participants';
 export { generateBasketSchedule, type BasketAssignment, type BasketRound } from './utils/basketSchedule';
 export { generateClashSchedule, type ClashAssignment, type ClashRound } from './utils/clashSchedule';
 export { toSafeDate } from './utils/dates';
