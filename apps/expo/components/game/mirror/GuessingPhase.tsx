@@ -38,6 +38,7 @@ interface Props {
   user: { uid: string } | null;
   participantsByJoin: Participant[];
   joinIndexById: Record<string, number>;
+  playerNumbers?: Record<string, number>;
   getDisplayName: (name: string) => string;
   commentsForPlayer: Comment[];
   showFancyAlert: ShowFancyAlertFn;
@@ -50,6 +51,7 @@ export const GuessingPhase: React.FC<Props> = ({
   user,
   participantsByJoin,
   joinIndexById,
+  playerNumbers,
   getDisplayName,
   commentsForPlayer,
   showFancyAlert,
@@ -357,7 +359,10 @@ export const GuessingPhase: React.FC<Props> = ({
                             styles.authorName,
                             selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName,
                           ]}>
-                            {joinIndexById[author.userId] ? `${joinIndexById[author.userId]}. ` : ''}{getDisplayName(author.userName)}
+                            {(() => {
+                              const numbers = playerNumbers ?? joinIndexById;
+                              return numbers[author.userId] ? `${numbers[author.userId]}. ` : '';
+                            })()}{getDisplayName(author.userName)}
                           </ThemedText>
                         </TouchableOpacity>
                       ))}

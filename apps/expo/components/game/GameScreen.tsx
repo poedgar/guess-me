@@ -120,6 +120,13 @@ export const GameScreen: React.FC = () => {
     [participantsByJoin],
   );
 
+  // Frozen-at-start numbers for the admin checklist and guess-picker only.
+  // Falls back to the live joinIndexById for games created before this field existed.
+  const playerNumbers = useMemo(
+    () => currentGame?.playerNumbers ?? joinIndexById,
+    [currentGame?.playerNumbers, joinIndexById],
+  );
+
   const commentsForPlayer = currentGame?.guessingData?.commentsByTarget?.[user?.uid || ''] || [];
 
   const handleCopyGameId = async () => {
@@ -170,6 +177,7 @@ export const GameScreen: React.FC = () => {
     user,
     participantsByJoin,
     joinIndexById,
+    playerNumbers,
     getDisplayName,
     showFancyAlert,
     showFaceMessage,
