@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
+import { getPlayerNumber } from '../../../utils/playerNumbers';
 
 
 interface GuessingPhaseProps {
@@ -209,7 +210,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                             : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-900 dark:text-white hover:border-game-blue'
                         }`}
                       >
-                        {author.userName}
+                        {getPlayerNumber(game, author.userId)}. {author.userName}
                       </button>
                     ))}
                   </div>
