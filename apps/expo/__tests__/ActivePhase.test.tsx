@@ -86,9 +86,9 @@ const TARGET_UID = 'target-1';
 const TARGET_NAME = 'Bob Smith';
 
 const participants = [
-  { userId: 'admin-1', displayName: 'Admin User', joinedAt: 0 },
-  { userId: PLAYER_UID, displayName: 'Alice Player', joinedAt: 1 },
-  { userId: TARGET_UID, displayName: TARGET_NAME, joinedAt: 2 },
+  { userId: 'admin-1', userName: 'Admin User', displayName: 'Admin User', joinedAt: 0 },
+  { userId: PLAYER_UID, userName: 'Alice Player', displayName: 'Alice Player', joinedAt: 1 },
+  { userId: TARGET_UID, userName: TARGET_NAME, displayName: TARGET_NAME, joinedAt: 2 },
 ];
 
 const joinIndexById: Record<string, number> = {
@@ -233,5 +233,121 @@ describe('ActivePhase — 6.1 loading text uses i18n key', () => {
     expect(queryByText('Завантаження...')).toBeNull();
     // The i18n key (returned as-is by the t() mock) must be present
     expect(getByText('common.loading')).toBeTruthy();
+  });
+});
+
+// ─── admin comment-completion checklist ──────────────────────────────────────
+
+describe('ActivePhase — admin comment-completion checklist', () => {
+  function makeWritingPhaseGame(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'game-1',
+      adminId: 'admin-1',
+      adminName: 'Admin User',
+      status: 'active',
+      adminWritesComments: true,
+      showSurnames: true,
+      participants,
+      playersWhoCompletedPostCommentPhase: [],
+      scores: {},
+      postGuessingPointPhase: false,
+      currentRound: {
+        roundNumber: 1,
+        targetUserId: TARGET_UID,
+        targetUserName: TARGET_NAME,
+        // Only player-1 has submitted so far; admin-1 (expected, since
+        // adminWritesComments is true) has not.
+        comments: [
+          { id: 'c1', text: 'Nice work', authorId: PLAYER_UID },
+        ],
+        commentsVisible: false,
+        pointsGiven: false,
+        targetPointsGivenBy: [],
+      },
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    mockGivePointsToTarget = jest.fn().mockResolvedValue(undefined);
+  });
+
+  it('shows the checklist with progress count and per-player status while writing', () => {
+    const { getByText } = render(
+      <ActivePhase
+        game={makeWritingPhaseGame()}
+        isAdmin
+        user={{ uid: 'admin-1' }}
+        participantsByJoin={participants}
+        joinIndexById={joinIndexById}
+        playerNumbers={joinIndexById}
+        getDisplayName={(name: string) => name.split(' ')[0]}
+        showFancyAlert={jest.fn()}
+        showFaceMessage={jest.fn()}
+        locale="en"
+        isDark={false}
+      />
+    );
+
+    expect(getByText('game.ui.commentersStatusTitle')).toBeTruthy();
+    // received=1, required=2 (admin-1 and player-1 are expected; target-1 excluded)
+    expect(getByText('game.ui.commentsProgress[1:2]')).toBeTruthy();
+    // player-1 already submitted
+    expect(getByText(`✅ game.ui.submitted`)).toBeTruthy();
+    // admin-1 has not
+    expect(getByText(`⏳ game.ui.pending`)).toBeTruthy();
+  });
+
+  it('does not show the checklist once comments are visible', () => {
+    const { queryByText } = render(
+      <ActivePhase
+        game={makeWritingPhaseGame({
+          currentRound: {
+            roundNumber: 1,
+            targetUserId: TARGET_UID,
+            targetUserName: TARGET_NAME,
+            comments: [
+              { id: 'c1', text: 'Nice work', authorId: PLAYER_UID },
+              { id: 'c2', text: 'Great too', authorId: 'admin-1' },
+            ],
+            commentsVisible: true,
+            pointsGiven: false,
+            targetPointsGivenBy: [],
+          },
+        })}
+        isAdmin
+        user={{ uid: 'admin-1' }}
+        participantsByJoin={participants}
+        joinIndexById={joinIndexById}
+        playerNumbers={joinIndexById}
+        getDisplayName={(name: string) => name.split(' ')[0]}
+        showFancyAlert={jest.fn()}
+        showFaceMessage={jest.fn()}
+        locale="en"
+        isDark={false}
+      />
+    );
+
+    expect(queryByText('game.ui.commentersStatusTitle')).toBeNull();
+  });
+
+  it('is not shown to non-admin players', () => {
+    const { queryByText } = render(
+      <ActivePhase
+        game={makeWritingPhaseGame()}
+        isAdmin={false}
+        user={{ uid: PLAYER_UID }}
+        participantsByJoin={participants}
+        joinIndexById={joinIndexById}
+        playerNumbers={joinIndexById}
+        getDisplayName={(name: string) => name.split(' ')[0]}
+        showFancyAlert={jest.fn()}
+        showFaceMessage={jest.fn()}
+        locale="en"
+        isDark={false}
+      />
+    );
+
+    expect(queryByText('game.ui.commentersStatusTitle')).toBeNull();
   });
 });

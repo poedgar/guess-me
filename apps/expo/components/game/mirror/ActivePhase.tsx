@@ -27,9 +27,10 @@ interface Props {
   user: { uid: string } | null;
   participantsByJoin: Participant[];
   joinIndexById: Record<string, number>;
+  playerNumbers?: Record<string, number>;
   getDisplayName: (name: string) => string;
   showFancyAlert: ShowFancyAlertFn;
-  showFaceMessage: (message: string, face?: string) => void; 
+  showFaceMessage: (message: string, face?: string) => void;
   locale: string;
   isDark: boolean;
 }
@@ -40,6 +41,7 @@ export const ActivePhase: React.FC<Props> = ({
   user,
   participantsByJoin,
   joinIndexById,
+  playerNumbers,
   getDisplayName,
   showFancyAlert,
   showFaceMessage,
@@ -284,6 +286,15 @@ export const ActivePhase: React.FC<Props> = ({
 
   if (!game.currentRound) return null;
 
+  const numbers = playerNumbers ?? joinIndexById;
+  const expectedCommenters = game.participants.filter(p => {
+    if (p.userId === game.currentRound!.targetUserId) return false;
+    if (p.userId === game.adminId && !game.adminWritesComments) return false;
+    return true;
+  });
+  const submittedAuthorIds = new Set(game.currentRound.comments?.map((c: Comment) => c.authorId) ?? []);
+  const submittedCount = expectedCommenters.filter(p => submittedAuthorIds.has(p.userId)).length;
+
   return (
     <View style={styles.phaseWrapper}>
       {/* Status badge */}
@@ -309,6 +320,30 @@ export const ActivePhase: React.FC<Props> = ({
         {/* Admin controls */}
         {isAdmin && (
           <View style={styles.adminControls}>
+            {!game.currentRound.commentsVisible && (
+              <View style={styles.checklistContainer}>
+                <ThemedText style={styles.checklistTitle}>
+                  {t('game.ui.commentersStatusTitle', { locale })}
+                </ThemedText>
+                <ThemedText style={styles.checklistProgress}>
+                  {t('game.ui.commentsProgress', { locale, received: submittedCount, required: expectedCommenters.length })}
+                </ThemedText>
+                {expectedCommenters.map(p => {
+                  const hasSubmitted = submittedAuthorIds.has(p.userId);
+                  return (
+                    <View key={p.userId} style={styles.checklistRow}>
+                      <ThemedText style={styles.checklistNumber}>
+                        {numbers[p.userId] ? `${numbers[p.userId]}.` : ''}
+                      </ThemedText>
+                      <ThemedText style={styles.checklistName}>{getDisplayName(p.userName)}</ThemedText>
+                      <ThemedText style={hasSubmitted ? styles.checklistStatusDone : styles.checklistStatusPending}>
+                        {hasSubmitted ? `✅ ${t('game.ui.submitted', { locale })}` : `⏳ ${t('game.ui.pending', { locale })}`}
+                      </ThemedText>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
             <View style={styles.adminButtonsRow}>
               {!game.currentRound.commentsVisible && (
                 <TouchableOpacity
@@ -585,6 +620,14 @@ roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
 targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600', fontFamily: Fonts.sans },
 adminControls: { marginTop: 24 },
 adminButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
+checklistContainer: { marginBottom: 12, padding: 12, borderRadius: 8, backgroundColor: GameColors.cardBg },
+checklistTitle: { textAlign: 'center', fontWeight: '600', fontSize: 14, marginBottom: 4, fontFamily: Fonts.sans },
+checklistProgress: { textAlign: 'center', fontSize: 12, opacity: 0.7, marginBottom: 8, fontFamily: Fonts.sans },
+checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+checklistNumber: { width: 20, fontSize: 13, opacity: 0.6, fontFamily: Fonts.sans },
+checklistName: { flex: 1, fontSize: 13, fontWeight: '500', fontFamily: Fonts.sans },
+checklistStatusDone: { fontSize: 12, fontWeight: '600', color: GameColors.green, fontFamily: Fonts.sans },
+checklistStatusPending: { fontSize: 12, fontWeight: '600', opacity: 0.5, fontFamily: Fonts.sans },
 adminButton: { flexDirection: 'row', borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 14, paddingHorizontal: 24, gap: 8, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
 buttonText: { color: GameColors.white, fontWeight: '600', fontSize: 15, fontFamily: Fonts.sans },
 targetView: { marginBottom: 20 },
