@@ -5,6 +5,7 @@ import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 
 
 interface WaitingPhaseProps {
@@ -28,6 +29,10 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const [isStarting, setIsStarting] = useState(false);
 
   const isAdmin = user?.uid === game.adminId;
+
+  const scrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${isAdmin}:${game.gameType ?? 'mirror'}`,
+  );
 
   const handleStartGame = async () => {
     try {
@@ -190,20 +195,22 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             </div>
           )}
 
-          {isAdmin && (game.gameType ?? 'mirror') !== 'clash' ? (
-            <button
-              type="button"
-              onClick={handleStartGame}
-              disabled={game.participants.length < 2 || isStarting || loading}
-              className="w-full bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {loading || isStarting ? t('common.loading') : t('game.ui.startGame')}
-            </button>
-          ) : (
-            <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
-              {t('game.ui.waitingForAdminStart')}
-            </p>
-          )}
+          <div ref={scrollRef}>
+            {isAdmin && (game.gameType ?? 'mirror') !== 'clash' ? (
+              <button
+                type="button"
+                onClick={handleStartGame}
+                disabled={game.participants.length < 2 || isStarting || loading}
+                className="w-full bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+              >
+                {loading || isStarting ? t('common.loading') : t('game.ui.startGame')}
+              </button>
+            ) : (
+              <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
+                {t('game.ui.waitingForAdminStart')}
+              </p>
+            )}
+          </div>
         </div>
 
         {game.scores && Object.keys(game.scores).length > 0 && (

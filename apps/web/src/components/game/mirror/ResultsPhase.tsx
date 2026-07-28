@@ -2,6 +2,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import React from 'react';
 import { Game, calculateSimilarPairs } from '@mirror/shared';
 import { Leaderboard } from '../Leaderboard';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 
 
 interface ResultsPhaseProps {
@@ -17,9 +18,13 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
     3,
   );
 
+  const scrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `finished:${!!game.adminLeft}`,
+  );
+
   if (game.adminLeft) {
     return (
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-gold text-center space-y-2">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-gold text-center space-y-2" ref={scrollRef}>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {t('game.ui.adminLeftTitle')}
         </h2>
@@ -31,7 +36,7 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={scrollRef}>
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-gold text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           {t('game.ui.gameFinishedTitle')}

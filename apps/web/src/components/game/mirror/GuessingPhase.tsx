@@ -7,6 +7,7 @@ import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 
 
 interface GuessingPhaseProps {
@@ -143,6 +144,13 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
 
   const playerResult = game.guessResults?.[user?.uid ?? ''];
 
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${singleTargetId ?? 'legacy'}:${hasSubmitted}`,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${singleTargetId ?? 'legacy'}:${guessingData.allPlayersSubmitted}:${targetSubmitted}`,
+  );
+
   return (
     <>
       {AlertModal}
@@ -160,6 +168,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
           </p>
 
           {/* Player guessing UI */}
+          <div ref={playerScrollRef}>
           {hasSubmitted ? (
             <div className="bg-game-purple/10 border border-game-purple rounded-lg p-4 text-center">
               {playerResult ? (
@@ -235,10 +244,11 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
               {t('game.ui.waitingForAdminToStartGuessing')}
             </p>
           )}
+          </div>
 
           {/* Admin controls */}
           {isAdmin && (
-            <div className="mt-6 flex justify-center">
+            <div className="mt-6 flex justify-center" ref={adminScrollRef}>
               {singleTargetId && targetSubmitted ? (
                 <button
                   type="button"

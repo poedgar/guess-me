@@ -7,6 +7,7 @@ import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 
 
 interface ActivePhaseProps {
@@ -68,6 +69,16 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
   const submittedAuthorIds = new Set(currentRound.comments?.map(c => c.authorId) ?? []);
   const submittedCount = nonTargetPlayers.filter(p => submittedAuthorIds.has(p.userId)).length;
+
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound.roundNumber}:admin:${commentsVisible}`,
+  );
+  const targetScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound.roundNumber}:target:${commentsVisible}:${targetFinishedPoints}`,
+  );
+  const otherScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound.roundNumber}:other:${commentsVisible}:${targetFinishedPoints}:${hasCompletedPhase || alreadyGaveTargetPoints}`,
+  );
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,7 +201,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
           {/* Admin controls */}
           {isAdmin && (
-            <div className="mb-6">
+            <div className="mb-6" ref={adminScrollRef}>
               {!commentsVisible && (
                 <div className="mb-4">
                   <p className="text-sm font-semibold text-center text-gray-700 dark:text-gray-300 mb-1">
@@ -253,7 +264,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
           {/* Target player view */}
           {isTarget && (
-            <div>
+            <div ref={targetScrollRef}>
               {!commentsVisible ? (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-4">
                   {t('game.ui.waitingForCommentsAboutYou')}
@@ -303,7 +314,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
           {/* Non-target player view */}
           {!isTarget && (
-            <div>
+            <div ref={otherScrollRef}>
               {!commentsVisible ? (
                 <>
                   {!userComment && shouldWriteComments ? (
