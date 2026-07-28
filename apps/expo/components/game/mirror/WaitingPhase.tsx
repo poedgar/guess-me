@@ -22,6 +22,8 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import { Leaderboard } from '../Leaderboard';
 import { ShowFancyAlertFn } from '../GameHeader';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
 
 interface Props {
   game: Game;
@@ -382,32 +384,40 @@ export const WaitingPhase: React.FC<Props> = ({
       )}
 
       {/* Start Game / Waiting */}
-      <View style={gameStyles.gameFlowContainer}>
-        {isAdmin && game.gameType !== 'clash' && (
-          <TouchableOpacity
-            style={[
-              styles.startGameButton,
-              { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
-              (loading || game.participants.length < 2) && gameStyles.buttonDisabled,
-            ]}
-            onPress={handleStartGame}
-            disabled={loading || game.participants.length < 2}
-            activeOpacity={0.8}
-            accessibilityLabel={t('game.ui.startGame', { locale })}
-            accessibilityRole="button"
-          >
-            {loading
-              ? <ActivityIndicator size="small" color={GameColors.white} />
-              : <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />}
-            <ThemedText style={styles.buttonText}>{t('game.ui.startGame', { locale })}</ThemedText>
-          </TouchableOpacity>
-        )}
-        {!isAdmin && (
-          <ThemedText style={styles.waitingText}>
-            {t('game.ui.waitingForAdminStart', { locale })}
-          </ThemedText>
-        )}
-      </View>
+      <ScrollIntoView
+        enabled
+        scrollIntoViewKey={`${isAdmin}:${game.gameType ?? 'mirror'}`}
+        align="center"
+        animated
+        insets={SCROLL_INSETS}
+      >
+        <View style={gameStyles.gameFlowContainer}>
+          {isAdmin && game.gameType !== 'clash' && (
+            <TouchableOpacity
+              style={[
+                styles.startGameButton,
+                { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
+                (loading || game.participants.length < 2) && gameStyles.buttonDisabled,
+              ]}
+              onPress={handleStartGame}
+              disabled={loading || game.participants.length < 2}
+              activeOpacity={0.8}
+              accessibilityLabel={t('game.ui.startGame', { locale })}
+              accessibilityRole="button"
+            >
+              {loading
+                ? <ActivityIndicator size="small" color={GameColors.white} />
+                : <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />}
+              <ThemedText style={styles.buttonText}>{t('game.ui.startGame', { locale })}</ThemedText>
+            </TouchableOpacity>
+          )}
+          {!isAdmin && (
+            <ThemedText style={styles.waitingText}>
+              {t('game.ui.waitingForAdminStart', { locale })}
+            </ThemedText>
+          )}
+        </View>
+      </ScrollIntoView>
     </View>
   );
 };

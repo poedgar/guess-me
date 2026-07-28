@@ -20,6 +20,8 @@ import {
 } from 'react-native';
 import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
 
 interface Props {
   game: Game;
@@ -319,6 +321,13 @@ export const ActivePhase: React.FC<Props> = ({
 
         {/* Admin controls */}
         {isAdmin && (
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:admin:${game.currentRound.commentsVisible}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
           <View style={styles.adminControls}>
             {!game.currentRound.commentsVisible && (
               <View style={styles.checklistContainer}>
@@ -381,10 +390,18 @@ export const ActivePhase: React.FC<Props> = ({
               )}
             </View>
           </View>
+          </ScrollIntoView>
         )}
 
         {/* User is the target */}
         {user?.uid === game.currentRound.targetUserId && (
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:target:${game.currentRound.commentsVisible}:${game.currentRound.pointsGiven}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
           <View style={styles.targetView}>
             {!game.currentRound.commentsVisible ? (
               <ThemedText style={styles.waitingText}>
@@ -454,10 +471,18 @@ export const ActivePhase: React.FC<Props> = ({
               </ThemedText>
             )}
           </View>
+          </ScrollIntoView>
         )}
 
         {/* User is not the target */}
         {user?.uid !== game.currentRound.targetUserId && (
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:other:${game.currentRound.commentsVisible}:${game.currentRound.pointsGiven}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
           <View style={styles.commentView}>
             {(() => {
               const shouldUserWriteComments = !(
@@ -585,6 +610,7 @@ export const ActivePhase: React.FC<Props> = ({
               }
             })()}
           </View>
+          </ScrollIntoView>
         )}
       </View>
 

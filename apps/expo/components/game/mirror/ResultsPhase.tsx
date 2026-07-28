@@ -7,6 +7,8 @@ import { calculateSimilarPairs } from '@/utils/playerSimilarity';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Leaderboard } from '../Leaderboard';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
 
 interface Props {
   game: Game;
@@ -25,6 +27,13 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
   );
 
   return (
+    <ScrollIntoView
+      enabled
+      scrollIntoViewKey={`finished:${!!game.adminLeft}`}
+      align="center"
+      animated
+      insets={SCROLL_INSETS}
+    >
     <View style={[gameStyles.gameFlowContainer, styles.phaseWrapper]}>
       {game.adminLeft ? (
         <>
@@ -85,6 +94,7 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
         </>
       )}
     </View>
+    </ScrollIntoView>
   );
 };
 

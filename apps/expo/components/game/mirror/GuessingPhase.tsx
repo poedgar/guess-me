@@ -19,6 +19,8 @@ import {
 } from 'react-native';
 import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
 
 interface GuessResult {
   correct: boolean;
@@ -292,6 +294,13 @@ export const GuessingPhase: React.FC<Props> = ({
           </ThemedText>
         </View>
 
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${singleTargetId ?? 'legacy'}:${hasSubmittedGuesses || game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '')}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
         {(hasSubmittedGuesses || game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '')) ? (
           (() => {
             const playerResult = game.guessResults?.[user?.uid ?? ''];
@@ -411,6 +420,7 @@ export const GuessingPhase: React.FC<Props> = ({
             </ThemedText>
           )
         )}
+        </ScrollIntoView>
 
         {/* Admin Target Control */}
         {isAdmin && (
@@ -421,7 +431,14 @@ export const GuessingPhase: React.FC<Props> = ({
         )}
 
         {isAdmin && (
-          (() => {
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${singleTargetId ?? 'legacy'}:${targetSubmitted}:${game.guessingData.allPlayersSubmitted}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          {(() => {
             const singleTargetId = game.guessingData?.singleRoundTargetId;
             const targetSubmitted = singleTargetId
               ? game.guessingData?.playersWhoSubmittedGuesses?.includes(singleTargetId)
@@ -508,7 +525,8 @@ export const GuessingPhase: React.FC<Props> = ({
                 </TouchableOpacity>
               </View>
             );
-          })()
+          })()}
+          </ScrollIntoView>
         )}
       </View>
 
