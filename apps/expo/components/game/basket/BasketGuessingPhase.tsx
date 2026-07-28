@@ -16,6 +16,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
 
 interface Props {
   game: Game;
@@ -255,6 +257,13 @@ export const BasketGuessingPhase: React.FC<Props> = ({
       </View>
 
       <View style={gameStyles.gameFlowContainer}>
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${currentRoundIndex}:${isDone || showWrong}:${showAuthorPrompt}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
         {isDone || showWrong ? (
           <View style={styles.doneCard}>
             {showWrong && (
@@ -330,8 +339,16 @@ export const BasketGuessingPhase: React.FC<Props> = ({
             )}
           </View>
         )}
+        </ScrollIntoView>
 
         {isAdmin && (
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${currentRoundIndex}:${allGuessersDone}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
           <View style={styles.adminSection}>
             {isLastRound && (
               <ThemedText style={styles.finishLabel}>
@@ -368,6 +385,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({
               </ThemedText>
             </TouchableOpacity>
           </View>
+          </ScrollIntoView>
         )}
       </View>
     </View>

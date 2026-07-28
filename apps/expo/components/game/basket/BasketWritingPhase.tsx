@@ -11,6 +11,8 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
 
 interface Props {
   game: Game;
@@ -97,6 +99,13 @@ export const BasketWritingPhase: React.FC<Props> = ({
       </View>
 
       <View style={gameStyles.gameFlowContainer}>
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${currentRoundIndex}:${alreadySubmitted}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
         {alreadySubmitted ? (
           <View style={styles.waitingCard}>
             <ThemedText style={styles.waitingText}>
@@ -141,8 +150,16 @@ export const BasketWritingPhase: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
         )}
+        </ScrollIntoView>
 
         {isAdmin && (
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${currentRoundIndex}:${submittedCount >= totalCount}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
           <View style={styles.adminSection}>
             <ThemedText style={styles.adminCount}>{submittedCount}/{totalCount}</ThemedText>
             <TouchableOpacity
@@ -162,6 +179,7 @@ export const BasketWritingPhase: React.FC<Props> = ({
               <ThemedText style={styles.wideButtonText}>{t('game.ui.basket.revealComments', { locale })}</ThemedText>
             </TouchableOpacity>
           </View>
+          </ScrollIntoView>
         )}
       </View>
     </View>
