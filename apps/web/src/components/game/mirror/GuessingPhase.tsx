@@ -25,22 +25,39 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [hasSubmittedLocal, setHasSubmittedLocal] = useState(false);
 
-  if (!game.guessingData) return null;
-
+  // Hooks must run unconditionally on every render (Rules of Hooks), so these
+  // are declared before the `!game.guessingData` early return below, with
+  // null-safe trigger-key expressions. Not currently reachable given today's
+  // Firestore write ordering, but kept safe against future ordering changes.
   const guessingData = game.guessingData;
-  const isAdmin = user?.uid === game.adminId;
-  const singleTargetId = guessingData.singleRoundTargetId;
-  const possibleAuthors = guessingData.possibleAuthors ?? [];
-
-  const commentsForPlayer: Comment[] = guessingData.commentsByTarget?.[user?.uid ?? ''] ?? [];
-
+  const singleTargetId = guessingData?.singleRoundTargetId;
   const hasSubmitted =
     hasSubmittedLocal ||
-    guessingData.playersWhoSubmittedGuesses?.includes(user?.uid ?? '');
-
+    (guessingData?.playersWhoSubmittedGuesses?.includes(user?.uid ?? '') ?? false);
+  const commentsForPlayerCount =
+    (guessingData?.commentsByTarget?.[user?.uid ?? ''] ?? []).length;
   const targetSubmitted = singleTargetId
-    ? guessingData.playersWhoSubmittedGuesses?.includes(singleTargetId)
+    ? (guessingData?.playersWhoSubmittedGuesses?.includes(singleTargetId) ?? false)
     : false;
+
+  // `commentsForPlayerCount > 0` is folded into the key so the 3-way branch
+  // (submitted / has comments to guess / waiting for admin to start) is
+  // fully represented, not just the has-submitted boundary.
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${singleTargetId ?? 'legacy'}:${hasSubmitted}:${commentsForPlayerCount > 0}`,
+    'start',
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${singleTargetId ?? 'legacy'}:${guessingData?.allPlayersSubmitted ?? false}:${targetSubmitted}`,
+  );
+
+  if (!game.guessingData) return null;
+
+  const guessingDataResolved = game.guessingData;
+  const isAdmin = user?.uid === game.adminId;
+  const possibleAuthors = guessingDataResolved.possibleAuthors ?? [];
+
+  const commentsForPlayer: Comment[] = guessingDataResolved.commentsByTarget?.[user?.uid ?? ''] ?? [];
 
   const allCommentsSelected =
     commentsForPlayer.length === 0 ||
@@ -144,13 +161,6 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
 
   const playerResult = game.guessResults?.[user?.uid ?? ''];
 
-  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${singleTargetId ?? 'legacy'}:${hasSubmitted}`,
-  );
-  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${singleTargetId ?? 'legacy'}:${guessingData.allPlayersSubmitted}:${targetSubmitted}`,
-  );
-
   return (
     <>
       {AlertModal}
@@ -169,81 +179,81 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
 
           {/* Player guessing UI */}
           <div ref={playerScrollRef}>
-          {hasSubmitted ? (
-            <div className="bg-game-purple/10 border border-game-purple rounded-lg p-4 text-center">
-              {playerResult ? (
-                <div>
-                  <p className="text-game-purple font-semibold text-lg mb-1">
-                    {t('game.ui.guessResultsHeader')}
-                  </p>
-                  <p className="text-gray-700 dark:text-gray-300">
-                    {t('game.ui.guessCorrectCount', {
-                      correct: playerResult.correctGuesses ?? 0,
-                      total: commentsForPlayer.length,
-                    })}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('game.ui.guessPointsEarned', { points: playerResult.correctGuesses ?? 0 })}
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-2xl mb-2">✅</p>
-                  <p className="text-game-purple font-semibold">{t('game.ui.guessResultsTitle')}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('game.ui.waitingForAdminToComplete')}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : commentsForPlayer.length > 0 ? (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('game.ui.guessingInstructions')}
-              </p>
-              {commentsForPlayer.map(comment => (
-                <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <p className="text-gray-900 dark:text-white mb-3 italic">"{comment.text}"</p>
-                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                    {t('game.ui.guessPrompt')}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {possibleAuthors.map(author => (
-                      <button
-                        key={author.userId}
-                        type="button"
-                        onClick={() => handleSelect(comment.id, author.userId)}
-                        className={`px-3 py-1.5 rounded-full border-2 font-semibold text-sm transition-all ${
-                          selections[comment.id] === author.userId
-                            ? 'bg-game-blue border-game-blue text-white'
-                            : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-900 dark:text-white hover:border-game-blue'
-                        }`}
-                      >
-                        {getPlayerNumber(game, author.userId)}. {author.userName}
-                      </button>
-                    ))}
+            {hasSubmitted ? (
+              <div className="bg-game-purple/10 border border-game-purple rounded-lg p-4 text-center">
+                {playerResult ? (
+                  <div>
+                    <p className="text-game-purple font-semibold text-lg mb-1">
+                      {t('game.ui.guessResultsHeader')}
+                    </p>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      {t('game.ui.guessCorrectCount', {
+                        correct: playerResult.correctGuesses ?? 0,
+                        total: commentsForPlayer.length,
+                      })}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('game.ui.guessPointsEarned', { points: playerResult.correctGuesses ?? 0 })}
+                    </p>
                   </div>
-                </div>
-              ))}
-              {!allCommentsSelected && (
-                <p className="text-center text-sm text-gray-400">
-                  {t('game.alerts.selectAuthorForEachCommentToEnableSubmit')}
+                ) : (
+                  <div>
+                    <p className="text-2xl mb-2">✅</p>
+                    <p className="text-game-purple font-semibold">{t('game.ui.guessResultsTitle')}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('game.ui.waitingForAdminToComplete')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : commentsForPlayer.length > 0 ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('game.ui.guessingInstructions')}
                 </p>
-              )}
-              <button
-                type="button"
-                onClick={handleSubmitGuesses}
-                disabled={isSubmitting || loading || !allCommentsSelected}
-                className="w-full bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {isSubmitting ? t('common.loading') : t('game.ui.submitGuesses')}
-              </button>
-            </div>
-          ) : (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-              {t('game.ui.waitingForAdminToStartGuessing')}
-            </p>
-          )}
+                {commentsForPlayer.map(comment => (
+                  <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <p className="text-gray-900 dark:text-white mb-3 italic">"{comment.text}"</p>
+                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                      {t('game.ui.guessPrompt')}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {possibleAuthors.map(author => (
+                        <button
+                          key={author.userId}
+                          type="button"
+                          onClick={() => handleSelect(comment.id, author.userId)}
+                          className={`px-3 py-1.5 rounded-full border-2 font-semibold text-sm transition-all ${
+                            selections[comment.id] === author.userId
+                              ? 'bg-game-blue border-game-blue text-white'
+                              : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-900 dark:text-white hover:border-game-blue'
+                          }`}
+                        >
+                          {getPlayerNumber(game, author.userId)}. {author.userName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {!allCommentsSelected && (
+                  <p className="text-center text-sm text-gray-400">
+                    {t('game.alerts.selectAuthorForEachCommentToEnableSubmit')}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSubmitGuesses}
+                  disabled={isSubmitting || loading || !allCommentsSelected}
+                  className="w-full bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {isSubmitting ? t('common.loading') : t('game.ui.submitGuesses')}
+                </button>
+              </div>
+            ) : (
+              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                {t('game.ui.waitingForAdminToStartGuessing')}
+              </p>
+            )}
           </div>
 
           {/* Admin controls */}
@@ -258,7 +268,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                 >
                   {isFinalizing ? t('common.loading') : t('game.ui.nextRound')}
                 </button>
-              ) : guessingData.allPlayersSubmitted ? (
+              ) : guessingDataResolved.allPlayersSubmitted ? (
                 <button
                   type="button"
                   onClick={handleFinalizeOnly}

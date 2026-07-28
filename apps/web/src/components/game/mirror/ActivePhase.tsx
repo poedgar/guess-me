@@ -35,13 +35,32 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   const [pointsGiven, setPointsGiven] = useState<Record<string, number>>({});
 
   const currentRound = game.currentRound;
-  if (!currentRound) return null;
 
-  const targetUserId = currentRound.targetUserId;
+  const targetUserId = currentRound?.targetUserId;
   const isAdmin = user?.uid === game.adminId;
   const isTarget = user?.uid === targetUserId;
-  const commentsVisible = currentRound.commentsVisible ?? false;
-  const targetFinishedPoints = currentRound.pointsGiven ?? false;
+  const commentsVisible = currentRound?.commentsVisible ?? false;
+  const targetFinishedPoints = currentRound?.pointsGiven ?? false;
+
+  // Hooks must run unconditionally on every render (Rules of Hooks), so these
+  // are declared before the `!currentRound` early return below, with
+  // null-safe trigger-key expressions. `adminScrollRef` is declared LAST so
+  // its effect wins when both `isAdmin` and `!isTarget` are true (the admin
+  // is never the round's target in mirror mode, so those two conditions
+  // overlap for every admin, every round).
+  const targetScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound?.roundNumber ?? 'none'}:target:${commentsVisible}:${targetFinishedPoints}`,
+    'start',
+  );
+  const otherScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound?.roundNumber ?? 'none'}:other:${commentsVisible}:${targetFinishedPoints}`,
+    'start',
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound?.roundNumber ?? 'none'}:admin:${commentsVisible}`,
+  );
+
+  if (!currentRound) return null;
 
   const alreadyGaveTargetPoints =
     currentRound.targetPointsGivenBy?.includes(user?.uid ?? '') ?? false;
@@ -69,16 +88,6 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
   const submittedAuthorIds = new Set(currentRound.comments?.map(c => c.authorId) ?? []);
   const submittedCount = nonTargetPlayers.filter(p => submittedAuthorIds.has(p.userId)).length;
-
-  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRound.roundNumber}:admin:${commentsVisible}`,
-  );
-  const targetScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRound.roundNumber}:target:${commentsVisible}:${targetFinishedPoints}`,
-  );
-  const otherScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRound.roundNumber}:other:${commentsVisible}:${targetFinishedPoints}:${hasCompletedPhase || alreadyGaveTargetPoints}`,
-  );
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();

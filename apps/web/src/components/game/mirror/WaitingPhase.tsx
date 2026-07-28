@@ -29,7 +29,13 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const [isStarting, setIsStarting] = useState(false);
 
   const isAdmin = user?.uid === game.adminId;
+  const isClashAdmin = isAdmin && game.gameType === 'clash';
 
+  // Clash admins don't have actionable controls in this section — their
+  // real controls (team assignment, leader selection, start button) live in
+  // ClashSetupPanel, rendered separately below WaitingPhase. Auto-scrolling
+  // them to the "waiting for admin to start" filler here would be actively
+  // wrong, so the ref is only attached for everyone else.
   const scrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${isAdmin}:${game.gameType ?? 'mirror'}`,
   );
@@ -195,7 +201,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             </div>
           )}
 
-          <div ref={scrollRef}>
+          <div ref={isClashAdmin ? undefined : scrollRef}>
             {isAdmin && (game.gameType ?? 'mirror') !== 'clash' ? (
               <button
                 type="button"

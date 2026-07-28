@@ -26,28 +26,19 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
 
-  if (!game.clashData) return null;
-
+  // Hooks must run unconditionally on every render (Rules of Hooks), so these
+  // are declared before the `!game.clashData` early return below, with
+  // null-safe trigger-key expressions. Not currently reachable given today's
+  // Firestore write ordering, but kept safe against future ordering changes.
   const cd = game.clashData;
-  const { currentRoundIndex, teamScores } = cd;
-  const totalRounds = cd.schedule.length;
+  const currentRoundIndex = cd?.currentRoundIndex ?? 0;
+  const currentGroup = cd?.currentGuessingGroup;
   const uid = user?.uid ?? '';
-  const isAdmin = user?.uid === game.adminId;
-  const currentGroup = cd.currentGuessingGroup!;
-  const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+  const activeLeaderId = currentGroup === 'a' ? cd?.groupA.leaderId : cd?.groupB.leaderId;
   const isActiveLeader = uid === activeLeaderId;
-  const activeLeaderName = game.participants.find(p => p.userId === activeLeaderId)?.userName ?? '?';
 
-  const commentsToGuess: any[] = currentGroup === 'a' ? cd.currentRoundCommentsB : cd.currentRoundCommentsA;
-  const ownGroupIds: string[] = currentGroup === 'a' ? cd.groupA.memberIds : cd.groupB.memberIds;
-  const oppositeGroupIds: string[] = currentGroup === 'a' ? cd.groupB.memberIds : cd.groupA.memberIds;
-  const existingGuesses: any[] = currentGroup === 'a' ? cd.currentRoundGuessesA : cd.currentRoundGuessesB;
-
-  const isLastRound = currentRoundIndex + 1 >= totalRounds;
-  const otherGroup: 'a' | 'b' = currentGroup === 'a' ? 'b' : 'a';
-  const otherGuessCount = otherGroup === 'a' ? cd.currentRoundGuessesA.length : cd.currentRoundGuessesB.length;
-  const otherCommentCount = otherGroup === 'a' ? cd.currentRoundCommentsB.length : cd.currentRoundCommentsA.length;
-  const otherGroupDone = otherCommentCount > 0 && otherGuessCount >= otherCommentCount;
+  const commentsToGuess: any[] = currentGroup === 'a' ? (cd?.currentRoundCommentsB ?? []) : (cd?.currentRoundCommentsA ?? []);
+  const existingGuesses: any[] = currentGroup === 'a' ? (cd?.currentRoundGuessesA ?? []) : (cd?.currentRoundGuessesB ?? []);
 
   const currentGroupDone = commentsToGuess.length > 0 && commentsToGuess.every((c: any) => {
     const guess = existingGuesses.find((g: any) => g.commentWriterId === c.writerId);
@@ -55,11 +46,28 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
   });
 
   const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRoundIndex}:${currentGroup}:${isActiveLeader}`,
+    `${currentRoundIndex}:${currentGroup ?? 'none'}:${isActiveLeader}`,
+    'start',
   );
   const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRoundIndex}:${currentGroup}:${currentGroupDone}`,
+    `${currentRoundIndex}:${currentGroup ?? 'none'}:${currentGroupDone}`,
   );
+
+  if (!game.clashData) return null;
+
+  const { teamScores } = cd!;
+  const totalRounds = cd!.schedule.length;
+  const isAdmin = user?.uid === game.adminId;
+  const activeLeaderName = game.participants.find(p => p.userId === activeLeaderId)?.userName ?? '?';
+
+  const ownGroupIds: string[] = currentGroup === 'a' ? cd!.groupA.memberIds : cd!.groupB.memberIds;
+  const oppositeGroupIds: string[] = currentGroup === 'a' ? cd!.groupB.memberIds : cd!.groupA.memberIds;
+
+  const isLastRound = currentRoundIndex + 1 >= totalRounds;
+  const otherGroup: 'a' | 'b' = currentGroup === 'a' ? 'b' : 'a';
+  const otherGuessCount = otherGroup === 'a' ? cd!.currentRoundGuessesA.length : cd!.currentRoundGuessesB.length;
+  const otherCommentCount = otherGroup === 'a' ? cd!.currentRoundCommentsB.length : cd!.currentRoundCommentsA.length;
+  const otherGroupDone = otherCommentCount > 0 && otherGuessCount >= otherCommentCount;
 
   const advanceLabel = otherGroupDone
     ? (isLastRound ? t('game.ui.clash.finishGame') : t('game.ui.clash.nextRound'))
@@ -169,84 +177,84 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
         <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} />
 
         <div ref={playerScrollRef}>
-        {!isActiveLeader ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              {t('game.ui.clash.leaderGuessing', { name: activeLeaderName })}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {commentsToGuess.map((comment: any) => {
-              const phase = getCardPhase(comment.writerId);
-              return (
-                <div key={comment.writerId}>
-                  <button
-                    type="button"
-                    onClick={() => handleCardPress(comment.writerId)}
-                    disabled={phase !== 'idle' || isSubmitting || loading}
-                    className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-colors ${
-                      phase === 'correct' || phase === 'done'
-                        ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
-                        : phase === 'wrong'
-                          ? 'border-red-400 bg-red-50 dark:bg-red-900/20 opacity-60'
-                          : phase === 'subject_picking'
-                            ? 'border-game-blue bg-white dark:bg-gray-800'
-                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-game-blue'
-                    } disabled:cursor-default`}
-                  >
-                    <p className="text-gray-900 dark:text-white">{comment.text}</p>
-                  </button>
+          {!isActiveLeader ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
+              <p className="text-gray-500 dark:text-gray-400">
+                {t('game.ui.clash.leaderGuessing', { name: activeLeaderName })}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {commentsToGuess.map((comment: any) => {
+                const phase = getCardPhase(comment.writerId);
+                return (
+                  <div key={comment.writerId}>
+                    <button
+                      type="button"
+                      onClick={() => handleCardPress(comment.writerId)}
+                      disabled={phase !== 'idle' || isSubmitting || loading}
+                      className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-colors ${
+                        phase === 'correct' || phase === 'done'
+                          ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
+                          : phase === 'wrong'
+                            ? 'border-red-400 bg-red-50 dark:bg-red-900/20 opacity-60'
+                            : phase === 'subject_picking'
+                              ? 'border-game-blue bg-white dark:bg-gray-800'
+                              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-game-blue'
+                      } disabled:cursor-default`}
+                    >
+                      <p className="text-gray-900 dark:text-white">{comment.text}</p>
+                    </button>
 
-                  {phase === 'subject_picking' && (
-                    <div className="mt-2 ml-4 space-y-2">
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('game.ui.clash.whichMember')}</p>
-                      {ownGroupIds.map(memberId => {
-                        const p = game.participants.find(pt => pt.userId === memberId);
-                        const name = p?.userName ?? memberId;
-                        return (
-                          <button key={memberId} type="button"
-                            onClick={() => handleSubjectSelect(comment.writerId, memberId, name)}
-                            disabled={isSubmitting}
-                            className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-white hover:border-game-blue disabled:opacity-50 transition-colors">
-                            {name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                    {phase === 'subject_picking' && (
+                      <div className="mt-2 ml-4 space-y-2">
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('game.ui.clash.whichMember')}</p>
+                        {ownGroupIds.map(memberId => {
+                          const p = game.participants.find(pt => pt.userId === memberId);
+                          const name = p?.userName ?? memberId;
+                          return (
+                            <button key={memberId} type="button"
+                              onClick={() => handleSubjectSelect(comment.writerId, memberId, name)}
+                              disabled={isSubmitting}
+                              className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-white hover:border-game-blue disabled:opacity-50 transition-colors">
+                              {name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
 
-                  {phase === 'wrong' && (
-                    <p className="mt-1 ml-4 text-sm font-bold text-red-500">{t('game.ui.clash.wrong')}</p>
-                  )}
+                    {phase === 'wrong' && (
+                      <p className="mt-1 ml-4 text-sm font-bold text-red-500">{t('game.ui.clash.wrong')}</p>
+                    )}
 
-                  {phase === 'correct' && (
-                    <div className="mt-2 ml-4 space-y-2">
-                      <p className="text-sm font-bold text-green-600">{t('game.ui.clash.correct')}</p>
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('game.ui.clash.whoWroteIt')}</p>
-                      {oppositeGroupIds.map(authorId => {
-                        const p = game.participants.find(pt => pt.userId === authorId);
-                        const name = p?.userName ?? authorId;
-                        return (
-                          <button key={authorId} type="button"
-                            onClick={() => handleAuthorSelect(comment.writerId, authorId, name)}
-                            disabled={isSubmitting}
-                            className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-white hover:border-game-green disabled:opacity-50 transition-colors">
-                            {name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                    {phase === 'correct' && (
+                      <div className="mt-2 ml-4 space-y-2">
+                        <p className="text-sm font-bold text-green-600">{t('game.ui.clash.correct')}</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('game.ui.clash.whoWroteIt')}</p>
+                        {oppositeGroupIds.map(authorId => {
+                          const p = game.participants.find(pt => pt.userId === authorId);
+                          const name = p?.userName ?? authorId;
+                          return (
+                            <button key={authorId} type="button"
+                              onClick={() => handleAuthorSelect(comment.writerId, authorId, name)}
+                              disabled={isSubmitting}
+                              className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-white hover:border-game-green disabled:opacity-50 transition-colors">
+                              {name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
 
-                  {phase === 'done' && (
-                    <p className="mt-1 ml-4 text-sm font-bold text-green-600">{t('game.ui.clash.correctAuthor')}</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    {phase === 'done' && (
+                      <p className="mt-1 ml-4 text-sm font-bold text-green-600">{t('game.ui.clash.correctAuthor')}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {isAdmin && (

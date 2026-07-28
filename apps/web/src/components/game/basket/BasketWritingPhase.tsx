@@ -38,7 +38,7 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
     `${currentRoundIndex}:${alreadySubmitted}`,
   );
   const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRoundIndex}:${submittedCount >= totalCount}`,
+    `${currentRoundIndex}:${totalCount > 0 && submittedCount >= totalCount}`,
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,43 +82,43 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
         </div>
 
         <div ref={playerScrollRef}>
-        {alreadySubmitted ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              {t('game.ui.basket.waitingForOthers', { count: submittedCount, total: totalCount })}
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Subject card */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center">
-              <p className="text-xs text-gray-400 mb-1">{t('game.ui.basket.yourSubject')}</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{subjectName}</p>
+          {alreadySubmitted ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
+              <p className="text-gray-500 dark:text-gray-400">
+                {t('game.ui.basket.waitingForOthers', { count: submittedCount, total: totalCount })}
+              </p>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {/* Subject card */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center">
+                <p className="text-xs text-gray-400 mb-1">{t('game.ui.basket.yourSubject')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{subjectName}</p>
+              </div>
 
-            <textarea
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              placeholder={t('game.ui.basket.writeComment')}
-              maxLength={500}
-              rows={4}
-              disabled={isSubmitting}
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-blue bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none disabled:opacity-50"
-            />
-            <div className="flex justify-between items-center">
-              <span className={`text-sm ${commentText.length >= 450 ? 'text-red-500' : 'text-gray-400'}`}>
-                {commentText.length}/500
-              </span>
-              <button
-                type="submit"
-                disabled={!commentText.trim() || isSubmitting}
-                className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {isSubmitting ? t('common.loading') : t('game.ui.basket.submit')}
-              </button>
-            </div>
-          </form>
-        )}
+              <textarea
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                placeholder={t('game.ui.basket.writeComment')}
+                maxLength={500}
+                rows={4}
+                disabled={isSubmitting}
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-blue bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none disabled:opacity-50"
+              />
+              <div className="flex justify-between items-center">
+                <span className={`text-sm ${commentText.length >= 450 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {commentText.length}/500
+                </span>
+                <button
+                  type="submit"
+                  disabled={!commentText.trim() || isSubmitting}
+                  className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {isSubmitting ? t('common.loading') : t('game.ui.basket.submit')}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {isAdmin && (

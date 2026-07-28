@@ -8,6 +8,7 @@ import { useEffect, useRef } from 'react';
  */
 export function useScrollIntoViewOnChange<T extends HTMLElement>(
   triggerKey: string | number,
+  align: ScrollLogicalPosition = 'center',
 ) {
   const ref = useRef<T>(null);
   const lastKey = useRef<string | number | null>(null);
@@ -15,8 +16,15 @@ export function useScrollIntoViewOnChange<T extends HTMLElement>(
   useEffect(() => {
     if (lastKey.current === triggerKey) return;
     lastKey.current = triggerKey;
-    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [triggerKey]);
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    ref.current?.scrollIntoView({
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      block: align,
+    });
+  }, [triggerKey, align]);
 
   return ref;
 }

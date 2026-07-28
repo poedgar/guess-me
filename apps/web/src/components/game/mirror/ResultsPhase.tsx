@@ -20,6 +20,7 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
 
   const scrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `finished:${!!game.adminLeft}`,
+    'start',
   );
 
   if (game.adminLeft) {
