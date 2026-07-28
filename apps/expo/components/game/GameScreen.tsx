@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActivityIndicator, Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { wrapScrollView } from 'react-native-scroll-into-view';
 import { ActivePhase } from '@/components/game/mirror/ActivePhase';
 import { BasketScreen } from '@/components/game/basket/BasketScreen';
 import { ClashScreen } from '@/components/game/clash/ClashScreen';
@@ -23,6 +24,18 @@ import { GuessingPhase } from '@/components/game/mirror/GuessingPhase';
 import { JoinScreen } from './JoinScreen';
 import { ResultsPhase } from '@/components/game/mirror/ResultsPhase';
 import { WaitingPhase } from '@/components/game/mirror/WaitingPhase';
+
+// wrapScrollView reads the passed component's `.displayName`/`.name` as soon as it's
+// called. Passing the `ScrollView` import binding directly would force React Native's
+// lazily-exported `ScrollView` getter to resolve at module-import time, which (in this
+// RN/jest-expo setup) breaks React Native Testing Library's own lazy `Switch` detection
+// in every test file that imports this module. Wrapping it in a local forwardRef defers
+// the real `ScrollView` reference to render time, same as the pre-existing JSX usage did.
+const RawScrollView = React.forwardRef<ScrollView, React.ComponentProps<typeof ScrollView>>(
+  (props, ref) => <ScrollView ref={ref} {...props} />
+);
+RawScrollView.displayName = 'RawScrollView';
+const GameScrollView = wrapScrollView(RawScrollView);
 
 export const GameScreen: React.FC = () => {
   const { user, isSignedIn } = useAuth();
@@ -187,7 +200,7 @@ export const GameScreen: React.FC = () => {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]} showsVerticalScrollIndicator={false}>
+      <GameScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]} showsVerticalScrollIndicator={false}>
         {!isSignedIn || !currentGame ? (
           <JoinScreen isSignedIn={isSignedIn} isDark={isDark} showFancyAlert={showFancyAlert} showFaceMessage={showFaceMessage} />
         ) : (
@@ -265,7 +278,7 @@ export const GameScreen: React.FC = () => {
             </TouchableOpacity>
           </>
         )}
-      </ScrollView>
+      </GameScrollView>
 
       <FancyAlert
         visible={fancyVisible}
