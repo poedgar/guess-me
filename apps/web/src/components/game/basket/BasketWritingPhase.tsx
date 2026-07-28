@@ -5,6 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import type { BasketAssignment } from '@mirror/shared';
 
 interface Props {
@@ -32,6 +33,13 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
   const alreadySubmitted = submitted || currentRoundComments.some((c: any) => c.writerId === user?.uid);
   const submittedCount = currentRoundComments.length;
   const totalCount = currentRound?.assignments.length ?? 0;
+
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${alreadySubmitted}`,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${submittedCount >= totalCount}`,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +81,7 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
           </span>
         </div>
 
+        <div ref={playerScrollRef}>
         {alreadySubmitted ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
             <p className="text-gray-500 dark:text-gray-400">
@@ -110,9 +119,10 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
             </div>
           </form>
         )}
+        </div>
 
         {isAdmin && (
-          <div className="flex flex-col items-center gap-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+          <div className="flex flex-col items-center gap-2 pt-2 border-t border-blue-200 dark:border-blue-800" ref={adminScrollRef}>
             <p className="text-sm text-gray-400">{submittedCount}/{totalCount}</p>
             <button
               type="button"

@@ -5,6 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 
 interface Props {
   game: Game;
@@ -57,6 +58,13 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
     const guess = currentRoundGuesses.find((g: any) => g.guesserId === subjectId);
     return guess !== undefined && (!guess.commentCorrect || guess.authorGuessId !== undefined);
   });
+
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${isDone || showWrong}:${showAuthorPrompt}`,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${allGuessersDone}`,
+  );
 
   const handleCommentSelect = async (commentWriterId: string) => {
     showAlert(
@@ -139,6 +147,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
           </span>
         </div>
 
+        <div ref={playerScrollRef}>
         {isDone || showWrong ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center space-y-2">
             {showWrong && (
@@ -187,9 +196,10 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
             ))}
           </div>
         )}
+        </div>
 
         {isAdmin && (
-          <div className="flex flex-col items-center gap-2 pt-2 border-t border-purple-200 dark:border-purple-800">
+          <div className="flex flex-col items-center gap-2 pt-2 border-t border-purple-200 dark:border-purple-800" ref={adminScrollRef}>
             {isLastRound && (
               <p className="text-sm font-semibold text-game-green">{t('game.ui.basket.finishGame')}</p>
             )}
