@@ -5,6 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { ClashScoreboard } from './ClashScoreboard';
 import type { ClashAssignment } from '@mirror/shared';
 
@@ -42,6 +43,13 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
   const countA = currentRoundCommentsA.length;
   const countB = currentRoundCommentsB.length;
   const allSubmitted = countA >= groupSize && countB >= groupSize;
+
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${alreadySubmitted}`,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${allSubmitted}`,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,6 +91,7 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
           </span>
         </div>
 
+        <div ref={playerScrollRef}>
         {alreadySubmitted ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
             <p className="text-gray-500 dark:text-gray-400">
@@ -115,9 +124,10 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
             </div>
           </form>
         )}
+        </div>
 
         {isAdmin && (
-          <div className="flex flex-col items-center gap-2 pt-2 border-t border-orange-200 dark:border-orange-800">
+          <div className="flex flex-col items-center gap-2 pt-2 border-t border-orange-200 dark:border-orange-800" ref={adminScrollRef}>
             <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} />
             <p className="text-sm text-gray-400">{countA}/{groupSize} · {countB}/{groupSize}</p>
             <button type="button" onClick={handleReveal}

@@ -5,6 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { ClashScoreboard } from './ClashScoreboard';
 
 type CardPhase = 'idle' | 'subject_picking' | 'correct' | 'wrong' | 'author_picking' | 'done';
@@ -52,6 +53,13 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
     const guess = existingGuesses.find((g: any) => g.commentWriterId === c.writerId);
     return guess !== undefined && (!guess.subjectCorrect || guess.guessedAuthorId !== undefined);
   });
+
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${currentGroup}:${isActiveLeader}`,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${currentGroup}:${currentGroupDone}`,
+  );
 
   const advanceLabel = otherGroupDone
     ? (isLastRound ? t('game.ui.clash.finishGame') : t('game.ui.clash.nextRound'))
@@ -160,6 +168,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
 
         <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} />
 
+        <div ref={playerScrollRef}>
         {!isActiveLeader ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
             <p className="text-gray-500 dark:text-gray-400">
@@ -238,9 +247,10 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
             })}
           </div>
         )}
+        </div>
 
         {isAdmin && (
-          <div className="flex justify-center pt-2 border-t border-red-200 dark:border-red-800">
+          <div className="flex justify-center pt-2 border-t border-red-200 dark:border-red-800" ref={adminScrollRef}>
             <button type="button" onClick={handleAdvance}
               disabled={isAdvancing || loading || !currentGroupDone}
               className={`px-6 py-3 rounded-full text-white font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity ${
