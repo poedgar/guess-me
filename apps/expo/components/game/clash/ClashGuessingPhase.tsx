@@ -200,7 +200,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({
         <ScrollIntoView
           enabled
           scrollIntoViewKey={`${currentRoundIndex}:${currentGroup}:${isActiveLeader}`}
-          align="center"
+          align="top"
           animated
           insets={SCROLL_INSETS}
         >

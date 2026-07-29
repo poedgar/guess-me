@@ -297,7 +297,7 @@ export const GuessingPhase: React.FC<Props> = ({
         <ScrollIntoView
           enabled
           scrollIntoViewKey={`${singleTargetId ?? 'legacy'}:${hasSubmittedGuesses || game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '')}`}
-          align="center"
+          align="top"
           animated
           insets={SCROLL_INSETS}
         >
@@ -439,11 +439,6 @@ export const GuessingPhase: React.FC<Props> = ({
             insets={SCROLL_INSETS}
           >
           {(() => {
-            const singleTargetId = game.guessingData?.singleRoundTargetId;
-            const targetSubmitted = singleTargetId
-              ? game.guessingData?.playersWhoSubmittedGuesses?.includes(singleTargetId)
-              : false;
-
             if (singleTargetId && targetSubmitted) {
               return (
                 <View style={styles.adminControls}>

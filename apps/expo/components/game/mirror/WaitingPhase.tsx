@@ -330,14 +330,22 @@ export const WaitingPhase: React.FC<Props> = ({
 
       {/* Clash group setup */}
       {isAdmin && game.gameType === 'clash' && (
-        <ClashSetupPanel
-          game={game}
-          locale={locale}
-          isDark={isDark}
-          getDisplayName={getDisplayName}
-          isAdmin={isAdmin}
-          showFancyAlert={showFancyAlert}
-        />
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`clashSetup:${game.gameType}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
+          <ClashSetupPanel
+            game={game}
+            locale={locale}
+            isDark={isDark}
+            getDisplayName={getDisplayName}
+            isAdmin={isAdmin}
+            showFancyAlert={showFancyAlert}
+          />
+        </ScrollIntoView>
       )}
 
       {/* Participants list */}
@@ -384,8 +392,10 @@ export const WaitingPhase: React.FC<Props> = ({
       )}
 
       {/* Start Game / Waiting */}
+      {/* Clash admins have their own controls in ClashSetupPanel above (wrapped separately) —
+          this section renders an empty box for them, so keep it out of the auto-scroll pass. */}
       <ScrollIntoView
-        enabled
+        enabled={!(isAdmin && game.gameType === 'clash')}
         scrollIntoViewKey={`${isAdmin}:${game.gameType ?? 'mirror'}`}
         align="center"
         animated

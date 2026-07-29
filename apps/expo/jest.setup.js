@@ -115,6 +115,18 @@ jest.mock('react-native-reanimated', () => ({
   View: 'View',
 }));
 
+// Mock react-native-scroll-into-view
+// jest-expo's RN mock doesn't implement UIManager.measureInWindow, which this
+// library calls internally (via measureElement -> ContainerBase.scrollIntoView).
+// Mocking only measureInWindow isn't enough — the library then calls
+// getScrollResponder() on the mock ScrollView next and fails one step later.
+// Mock the whole module: wrapScrollView is a no-op passthrough, and
+// ScrollIntoView just renders its children without any scroll behavior.
+jest.mock('react-native-scroll-into-view', () => ({
+  wrapScrollView: (C) => C,
+  ScrollIntoView: ({ children }) => children,
+}));
+
 // Mock theme-related dependencies
 jest.mock('@/hooks/use-theme-color', () => ({
   useThemeColor: jest.fn(() => '#000000'),

@@ -398,7 +398,7 @@ export const ActivePhase: React.FC<Props> = ({
           <ScrollIntoView
             enabled
             scrollIntoViewKey={`${game.currentRound.roundNumber}:target:${game.currentRound.commentsVisible}:${game.currentRound.pointsGiven}`}
-            align="center"
+            align="top"
             animated
             insets={SCROLL_INSETS}
           >
@@ -479,7 +479,7 @@ export const ActivePhase: React.FC<Props> = ({
           <ScrollIntoView
             enabled
             scrollIntoViewKey={`${game.currentRound.roundNumber}:other:${game.currentRound.commentsVisible}:${game.currentRound.pointsGiven}`}
-            align="center"
+            align="top"
             animated
             insets={SCROLL_INSETS}
           >
