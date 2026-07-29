@@ -11,6 +11,8 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
 
 interface Props {
   game: Game;
@@ -195,6 +197,13 @@ export const ClashGuessingPhase: React.FC<Props> = ({
       <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} locale={locale} />
 
       <View style={gameStyles.gameFlowContainer}>
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${currentRoundIndex}:${currentGroup}:${isActiveLeader}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
         {!isActiveLeader ? (
           <View style={styles.waitingCard}>
             <ThemedText style={styles.waitingText}>
@@ -272,8 +281,16 @@ export const ClashGuessingPhase: React.FC<Props> = ({
             {isSubmitting && <ActivityIndicator style={{ marginTop: 8 }} color={GameColors.blue} />}
           </View>
         )}
+        </ScrollIntoView>
 
         {isAdmin && (
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${currentRoundIndex}:${currentGroup}:${currentGroupDone}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
           <View style={styles.adminSection}>
             <TouchableOpacity
               style={[styles.wideButton, { backgroundColor: otherGroupDone && isLastRound ? GameColors.green : GameColors.blue, shadowColor: GameColors.shadow }, (isAdvancing || !currentGroupDone) && gameStyles.buttonDisabled]}
@@ -288,6 +305,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({
               <ThemedText style={styles.wideButtonText}>{advanceLabel}</ThemedText>
             </TouchableOpacity>
           </View>
+          </ScrollIntoView>
         )}
       </View>
     </View>

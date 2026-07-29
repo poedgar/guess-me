@@ -11,6 +11,8 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
 
 interface Props {
   game: Game;
@@ -106,6 +108,13 @@ export const ClashWritingPhase: React.FC<Props> = ({
       </View>
 
       <View style={gameStyles.gameFlowContainer}>
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${currentRoundIndex}:${alreadySubmitted}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
         {alreadySubmitted ? (
           <View style={styles.waitingCard}>
             <ThemedText style={styles.waitingText}>
@@ -146,8 +155,16 @@ export const ClashWritingPhase: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
         )}
+        </ScrollIntoView>
 
         {isAdmin && (
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${currentRoundIndex}:${allSubmitted}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
           <View style={styles.adminSection}>
             <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} locale={locale} />
             <ThemedText style={styles.adminCount}>{countA}/{groupSize} · {countB}/{groupSize}</ThemedText>
@@ -164,6 +181,7 @@ export const ClashWritingPhase: React.FC<Props> = ({
               <ThemedText style={styles.wideButtonText}>{t('game.ui.clash.revealComments', { locale })}</ThemedText>
             </TouchableOpacity>
           </View>
+          </ScrollIntoView>
         )}
       </View>
     </View>
