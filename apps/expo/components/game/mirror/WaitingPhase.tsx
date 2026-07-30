@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Platform,
   ScrollView,
   StyleSheet,
@@ -24,6 +25,7 @@ import { Leaderboard } from '../Leaderboard';
 import { ShowFancyAlertFn } from '../GameHeader';
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -56,6 +58,9 @@ export const WaitingPhase: React.FC<Props> = ({
   const [isCopied, setIsCopied] = useState(false);
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
+
+  const clashSetupPulse = usePulseBorderOnChange(`clashSetup:${game.gameType}`, GameColors.admin);
+  const waitingPulse = usePulseBorderOnChange(`${isAdmin}:${game.gameType ?? 'mirror'}`, GameColors.admin);
 
   const handleCopyGameId = async () => {
     await onCopyGameId();
@@ -337,14 +342,16 @@ export const WaitingPhase: React.FC<Props> = ({
           animated
           insets={SCROLL_INSETS}
         >
-          <ClashSetupPanel
-            game={game}
-            locale={locale}
-            isDark={isDark}
-            getDisplayName={getDisplayName}
-            isAdmin={isAdmin}
-            showFancyAlert={showFancyAlert}
-          />
+          <Animated.View style={clashSetupPulse}>
+            <ClashSetupPanel
+              game={game}
+              locale={locale}
+              isDark={isDark}
+              getDisplayName={getDisplayName}
+              isAdmin={isAdmin}
+              showFancyAlert={showFancyAlert}
+            />
+          </Animated.View>
         </ScrollIntoView>
       )}
 
@@ -401,7 +408,7 @@ export const WaitingPhase: React.FC<Props> = ({
         animated
         insets={SCROLL_INSETS}
       >
-        <View style={gameStyles.gameFlowContainer}>
+        <Animated.View style={[gameStyles.gameFlowContainer, waitingPulse]}>
           {isAdmin && game.gameType !== 'clash' && (
             <TouchableOpacity
               style={[
@@ -426,7 +433,7 @@ export const WaitingPhase: React.FC<Props> = ({
               {t('game.ui.waitingForAdminStart', { locale })}
             </ThemedText>
           )}
-        </View>
+        </Animated.View>
       </ScrollIntoView>
     </View>
   );

@@ -183,6 +183,21 @@ jest.mock('@/constants/theme', () => ({
   themedInput: () => ({ style: {}, placeholderTextColor: '#999' }),
 }));
 
+// Restore AccessibilityInfo.isReduceMotionEnabled's implementation before every test.
+// jest.config.js sets `resetMocks: true`, which calls jest.resetAllMocks() before each
+// test — this strips the implementation off ALL jest.fn()s, including the ones defined
+// in react-native's own jest manual mock for AccessibilityInfo
+// (node_modules/react-native/jest/mocks/AccessibilityInfo.js), turning
+// `isReduceMotionEnabled` into a bare `jest.fn()` that returns undefined instead of a
+// Promise. usePulseBorderOnChange (apps/expo/hooks/usePulseBorderOnChange.ts) calls
+// `AccessibilityInfo.isReduceMotionEnabled().then(...)` on mount, so any component that
+// uses it would crash with "Cannot read properties of undefined (reading 'then')" on
+// every test after the first in a file. Reassert a stable implementation each time.
+const { AccessibilityInfo } = require('react-native');
+beforeEach(() => {
+  AccessibilityInfo.isReduceMotionEnabled.mockImplementation(() => Promise.resolve(false));
+});
+
 // Extend jest-native matchers - do this after jest-expo setup completes
 // Using a try-catch to avoid breaking if jest-expo hasn't finished setup
 try {

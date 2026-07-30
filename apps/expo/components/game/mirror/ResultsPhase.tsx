@@ -5,10 +5,11 @@ import { Game } from '@/contexts/GameContext';
 import { t } from '@/i18n';
 import { calculateSimilarPairs } from '@/utils/playerSimilarity';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { Leaderboard } from '../Leaderboard';
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -26,6 +27,8 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
     3,
   );
 
+  const pulse = usePulseBorderOnChange(`finished:${!!game.adminLeft}`, GameColors.gold);
+
   return (
     <ScrollIntoView
       enabled
@@ -34,7 +37,7 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
       animated
       insets={SCROLL_INSETS}
     >
-    <View style={[gameStyles.gameFlowContainer, styles.phaseWrapper]}>
+    <Animated.View style={[gameStyles.gameFlowContainer, styles.phaseWrapper, pulse]}>
       {game.adminLeft ? (
         <>
           <ThemedText type="title" style={styles.finishedTitle}>
@@ -93,7 +96,7 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
           </View>
         </>
       )}
-    </View>
+    </Animated.View>
     </ScrollIntoView>
   );
 };

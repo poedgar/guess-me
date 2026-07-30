@@ -12,6 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Platform,
   StyleSheet,
   TextInput,
@@ -22,6 +23,7 @@ import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -286,6 +288,19 @@ export const ActivePhase: React.FC<Props> = ({
     void doStartGuessingPhase();
   };
 
+  const adminPulse = usePulseBorderOnChange(
+    `${game.currentRound?.roundNumber ?? 'none'}:admin:${game.currentRound?.commentsVisible ?? false}`,
+    GameColors.green,
+  );
+  const targetPulse = usePulseBorderOnChange(
+    `${game.currentRound?.roundNumber ?? 'none'}:target:${game.currentRound?.commentsVisible ?? false}:${game.currentRound?.pointsGiven ?? false}`,
+    GameColors.green,
+  );
+  const otherPulse = usePulseBorderOnChange(
+    `${game.currentRound?.roundNumber ?? 'none'}:other:${game.currentRound?.commentsVisible ?? false}:${game.currentRound?.pointsGiven ?? false}`,
+    GameColors.green,
+  );
+
   if (!game.currentRound) return null;
 
   const numbers = playerNumbers ?? joinIndexById;
@@ -328,7 +343,7 @@ export const ActivePhase: React.FC<Props> = ({
             animated
             insets={SCROLL_INSETS}
           >
-          <View style={styles.adminControls}>
+          <Animated.View style={[styles.adminControls, adminPulse]}>
             {!game.currentRound.commentsVisible && (
               <View style={styles.checklistContainer}>
                 <ThemedText style={styles.checklistTitle}>
@@ -389,7 +404,7 @@ export const ActivePhase: React.FC<Props> = ({
                 </TouchableOpacity>
               )}
             </View>
-          </View>
+          </Animated.View>
           </ScrollIntoView>
         )}
 
@@ -402,7 +417,7 @@ export const ActivePhase: React.FC<Props> = ({
             animated
             insets={SCROLL_INSETS}
           >
-          <View style={styles.targetView}>
+          <Animated.View style={[styles.targetView, targetPulse]}>
             {!game.currentRound.commentsVisible ? (
               <ThemedText style={styles.waitingText}>
                 {t('game.ui.waitingForCommentsAboutYou', { locale })}
@@ -470,7 +485,7 @@ export const ActivePhase: React.FC<Props> = ({
                 {t('game.ui.finishedAwardingPointsWaitAdmin', { locale })}
               </ThemedText>
             )}
-          </View>
+          </Animated.View>
           </ScrollIntoView>
         )}
 
@@ -483,7 +498,7 @@ export const ActivePhase: React.FC<Props> = ({
             animated
             insets={SCROLL_INSETS}
           >
-          <View style={styles.commentView}>
+          <Animated.View style={[styles.commentView, otherPulse]}>
             {(() => {
               const shouldUserWriteComments = !(
                 user?.uid === game.adminId &&
@@ -609,7 +624,7 @@ export const ActivePhase: React.FC<Props> = ({
                 );
               }
             })()}
-          </View>
+          </Animated.View>
           </ScrollIntoView>
         )}
       </View>

@@ -11,6 +11,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     Platform,
     ScrollView,
     StyleSheet,
@@ -21,6 +22,7 @@ import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface GuessResult {
   correct: boolean;
@@ -263,6 +265,15 @@ export const GuessingPhase: React.FC<Props> = ({
     }
   };
 
+  const playerPulse = usePulseBorderOnChange(
+    `${singleTargetId ?? 'legacy'}:${hasSubmittedGuesses || (game.guessingData?.playersWhoSubmittedGuesses?.includes(user?.uid || '') ?? false)}`,
+    GameColors.purple,
+  );
+  const adminPulse = usePulseBorderOnChange(
+    `${singleTargetId ?? 'legacy'}:${targetSubmitted}:${game.guessingData?.allPlayersSubmitted ?? false}`,
+    GameColors.purple,
+  );
+
   if (!game.guessingData) return null;
 
   return (
@@ -301,6 +312,7 @@ export const GuessingPhase: React.FC<Props> = ({
           animated
           insets={SCROLL_INSETS}
         >
+        <Animated.View style={playerPulse}>
         {(hasSubmittedGuesses || game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '')) ? (
           (() => {
             const playerResult = game.guessResults?.[user?.uid ?? ''];
@@ -420,6 +432,7 @@ export const GuessingPhase: React.FC<Props> = ({
             </ThemedText>
           )
         )}
+        </Animated.View>
         </ScrollIntoView>
 
         {/* Admin Target Control */}
@@ -438,6 +451,7 @@ export const GuessingPhase: React.FC<Props> = ({
             animated
             insets={SCROLL_INSETS}
           >
+          <Animated.View style={adminPulse}>
           {(() => {
             if (singleTargetId && targetSubmitted) {
               return (
@@ -521,6 +535,7 @@ export const GuessingPhase: React.FC<Props> = ({
               </View>
             );
           })()}
+          </Animated.View>
           </ScrollIntoView>
         )}
       </View>
