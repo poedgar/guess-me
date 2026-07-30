@@ -6,6 +6,7 @@ import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
 import type { BasketAssignment } from '@mirror/shared';
 
 interface Props {
@@ -36,9 +37,13 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
 
   const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${currentRoundIndex}:${alreadySubmitted}`,
+    'center',
+    PULSE_COLORS.blue,
   );
   const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${currentRoundIndex}:${totalCount > 0 && submittedCount >= totalCount}`,
+    'center',
+    PULSE_COLORS.blue,
   );
 
   const handleSubmit = async (e: React.FormEvent) => {

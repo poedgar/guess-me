@@ -6,6 +6,7 @@ import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 interface Props {
   game: Game;
@@ -57,9 +58,13 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
 
   const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${currentRoundIndex}:${isDone || showWrong}:${showAuthorPrompt}`,
+    'center',
+    PULSE_COLORS.purple,
   );
   const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${currentRoundIndex}:${allGuessersDone}`,
+    'center',
+    PULSE_COLORS.purple,
   );
 
   if (!game.basketData) return null;
