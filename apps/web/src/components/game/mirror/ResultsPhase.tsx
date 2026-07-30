@@ -3,6 +3,7 @@ import React from 'react';
 import { Game, calculateSimilarPairs } from '@mirror/shared';
 import { Leaderboard } from '../Leaderboard';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
 interface ResultsPhaseProps {
@@ -21,6 +22,7 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
   const scrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `finished:${!!game.adminLeft}`,
     'start',
+    PULSE_COLORS.gold,
   );
 
   if (game.adminLeft) {

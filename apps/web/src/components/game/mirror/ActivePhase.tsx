@@ -8,6 +8,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
 interface ActivePhaseProps {
@@ -51,13 +52,17 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   const targetScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${currentRound?.roundNumber ?? 'none'}:target:${commentsVisible}:${targetFinishedPoints}`,
     'start',
+    PULSE_COLORS.green,
   );
   const otherScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${currentRound?.roundNumber ?? 'none'}:other:${commentsVisible}:${targetFinishedPoints}`,
     'start',
+    PULSE_COLORS.green,
   );
   const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${currentRound?.roundNumber ?? 'none'}:admin:${commentsVisible}`,
+    'center',
+    PULSE_COLORS.green,
   );
 
   if (!currentRound) return null;

@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
 interface WaitingPhaseProps {
@@ -38,6 +39,8 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   // wrong, so the ref is only attached for everyone else.
   const scrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${isAdmin}:${game.gameType ?? 'mirror'}`,
+    'center',
+    PULSE_COLORS.orange,
   );
 
   const handleStartGame = async () => {

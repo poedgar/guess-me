@@ -8,6 +8,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
 interface GuessingPhaseProps {
@@ -46,9 +47,12 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
   const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${singleTargetId ?? 'legacy'}:${hasSubmitted}:${commentsForPlayerCount > 0}`,
     'start',
+    PULSE_COLORS.purple,
   );
   const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
     `${singleTargetId ?? 'legacy'}:${guessingData?.allPlayersSubmitted ?? false}:${targetSubmitted}`,
+    'center',
+    PULSE_COLORS.purple,
   );
 
   if (!game.guessingData) return null;
