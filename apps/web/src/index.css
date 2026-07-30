@@ -26,5 +26,4 @@ body {
 
 .active-section-pulse {
   animation: active-section-pulse-glow 0.9s ease-out;
-  border-radius: 0.5rem;
 }

@@ -30,12 +30,18 @@ export function useScrollIntoViewOnChange<T extends HTMLElement>(
       block: align,
     });
     if (prefersReducedMotion || !ref.current) return;
-    ref.current.style.setProperty('--pulse-color', pulseColor);
-    ref.current.classList.add('active-section-pulse');
+    const el = ref.current;
+    el.classList.remove('active-section-pulse');
+    void el.offsetWidth; // force reflow so the animation restarts even if the class was already present
+    el.style.setProperty('--pulse-color', pulseColor);
+    el.classList.add('active-section-pulse');
     const timeoutId = window.setTimeout(() => {
-      ref.current?.classList.remove('active-section-pulse');
+      el.classList.remove('active-section-pulse');
     }, 900);
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      window.clearTimeout(timeoutId);
+      el.classList.remove('active-section-pulse');
+    };
   }, [triggerKey, align, pulseColor]);
 
   return ref;
