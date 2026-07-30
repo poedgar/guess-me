@@ -4,11 +4,16 @@ import { useEffect, useRef } from 'react';
  * Returns a ref to attach to the DOM node that represents "the current
  * section for this viewer". Scrolls that node into view once whenever
  * triggerKey changes — including on first mount — and never re-fires for
- * a re-render with the same key (e.g. new list content arriving).
+ * a re-render with the same key (e.g. new list content arriving). Also
+ * plays a brief, one-time accent-color pulse on the same node at the same
+ * moment (see the `.active-section-pulse` keyframe in index.css) — skipped
+ * entirely, like the scroll's smooth behavior, when the user prefers
+ * reduced motion.
  */
 export function useScrollIntoViewOnChange<T extends HTMLElement>(
   triggerKey: string | number,
   align: ScrollLogicalPosition = 'center',
+  pulseColor: string = 'rgba(0, 122, 255, 0.55)',
 ) {
   const ref = useRef<T>(null);
   const lastKey = useRef<string | number | null>(null);
@@ -24,7 +29,14 @@ export function useScrollIntoViewOnChange<T extends HTMLElement>(
       behavior: prefersReducedMotion ? 'auto' : 'smooth',
       block: align,
     });
-  }, [triggerKey, align]);
+    if (prefersReducedMotion || !ref.current) return;
+    ref.current.style.setProperty('--pulse-color', pulseColor);
+    ref.current.classList.add('active-section-pulse');
+    const timeoutId = window.setTimeout(() => {
+      ref.current?.classList.remove('active-section-pulse');
+    }, 900);
+    return () => window.clearTimeout(timeoutId);
+  }, [triggerKey, align, pulseColor]);
 
   return ref;
 }
