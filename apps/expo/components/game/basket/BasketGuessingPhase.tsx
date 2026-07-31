@@ -64,8 +64,14 @@ export const BasketGuessingPhase: React.FC<Props> = ({
     [],
   );
 
-  const playerPulse = usePulseBorderOnChange(`${game.basketData?.currentRoundIndex ?? 0}`, GameColors.purple);
-  const adminPulse = usePulseBorderOnChange(`${game.basketData?.currentRoundIndex ?? 0}`, GameColors.purple);
+  const playerPulse = usePulseBorderOnChange(
+    `${game.basketData?.currentRoundIndex ?? 0}:${authorSubmitted}:${isCommentCorrect}:${selectedWriterId !== null}`,
+    GameColors.purple,
+  );
+  const adminPulse = usePulseBorderOnChange(
+    `${game.basketData?.currentRoundIndex ?? 0}:${game.basketData?.currentRoundGuesses.length ?? 0}`,
+    GameColors.purple,
+  );
 
   if (!game.basketData) return null;
   const {

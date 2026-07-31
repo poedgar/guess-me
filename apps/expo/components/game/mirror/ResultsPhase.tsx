@@ -37,7 +37,8 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
       animated
       insets={SCROLL_INSETS}
     >
-    <Animated.View style={[gameStyles.gameFlowContainer, styles.phaseWrapper, pulse]}>
+    <Animated.View style={pulse}>
+    <View style={[gameStyles.gameFlowContainer, styles.phaseWrapper]}>
       {game.adminLeft ? (
         <>
           <ThemedText type="title" style={styles.finishedTitle}>
@@ -96,6 +97,7 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
           </View>
         </>
       )}
+    </View>
     </Animated.View>
     </ScrollIntoView>
   );
