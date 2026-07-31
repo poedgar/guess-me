@@ -39,6 +39,12 @@ export interface Game {
   // Stable per-participant display numbers, assigned once when the game starts.
   // Frozen for the lifetime of the game — does not shift if participants later leave.
   playerNumbers?: { [userId: string]: number };
+  // Snapshot of scores/guessResults taken the instant the current round began.
+  // Leaderboard displays use these (not the live scores/guessResults fields)
+  // while a round is in progress, so round-in-progress scoring stays hidden
+  // until the round ends and a fresh snapshot is taken.
+  roundStartScores?: { [userId: string]: number };
+  roundStartGuessResults?: { [userId: string]: { correctGuesses: number } };
 }
 
 export interface Participant {
