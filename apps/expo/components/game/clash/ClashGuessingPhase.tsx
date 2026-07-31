@@ -10,9 +10,10 @@ import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -40,6 +41,15 @@ export const ClashGuessingPhase: React.FC<Props> = ({
 
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
+
+  const playerPulse = usePulseBorderOnChange(
+    `${game.clashData?.currentRoundIndex ?? 0}:${game.clashData?.currentGuessingGroup ?? 'none'}`,
+    GameColors.danger,
+  );
+  const adminPulse = usePulseBorderOnChange(
+    `${game.clashData?.currentRoundIndex ?? 0}:${game.clashData?.currentGuessingGroup ?? 'none'}`,
+    GameColors.danger,
+  );
 
   if (!game.clashData) return null;
   const cd = game.clashData;
@@ -204,6 +214,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({
           animated
           insets={SCROLL_INSETS}
         >
+        <Animated.View style={playerPulse}>
         {!isActiveLeader ? (
           <View style={styles.waitingCard}>
             <ThemedText style={styles.waitingText}>
@@ -281,6 +292,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({
             {isSubmitting && <ActivityIndicator style={{ marginTop: 8 }} color={GameColors.blue} />}
           </View>
         )}
+        </Animated.View>
         </ScrollIntoView>
 
         {isAdmin && (
@@ -291,7 +303,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({
             animated
             insets={SCROLL_INSETS}
           >
-          <View style={styles.adminSection}>
+          <Animated.View style={[styles.adminSection, adminPulse]}>
             <TouchableOpacity
               style={[styles.wideButton, { backgroundColor: otherGroupDone && isLastRound ? GameColors.green : GameColors.blue, shadowColor: GameColors.shadow }, (isAdvancing || !currentGroupDone) && gameStyles.buttonDisabled]}
               onPress={handleAdvance}
@@ -304,7 +316,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({
                 : <IconSymbol name={otherGroupDone && isLastRound ? 'flag.checkered' : 'forward.end.fill'} size={16} color={GameColors.white} />}
               <ThemedText style={styles.wideButtonText}>{advanceLabel}</ThemedText>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
           </ScrollIntoView>
         )}
       </View>
