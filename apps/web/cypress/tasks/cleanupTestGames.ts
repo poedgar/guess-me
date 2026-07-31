@@ -1,11 +1,15 @@
 import admin from 'firebase-admin';
+import { readFileSync } from 'node:fs';
 
 let cachedApp: admin.app.App | null = null;
 
 function getAdminApp(serviceAccountPath: string): admin.app.App {
   if (cachedApp) return cachedApp;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const serviceAccount = require(serviceAccountPath);
+  // `apps/web/package.json` sets `"type": "module"`, so cypress.config.ts
+  // (and everything it imports) loads as ESM under ts-node — `require` is
+  // not defined in that scope. Read and parse the JSON file directly
+  // instead of relying on CommonJS's `require`.
+  const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf-8'));
   cachedApp = admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
