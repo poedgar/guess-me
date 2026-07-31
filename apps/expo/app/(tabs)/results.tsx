@@ -18,9 +18,18 @@ export default function TabTwoScreen() {
 
   const joinIndexById = buildJoinIndexById(participantsByJoin);
 
+  const displayedScores =
+    currentGame?.status === 'finished'
+      ? currentGame?.scores
+      : (currentGame?.roundStartScores ?? currentGame?.scores);
+  const displayedGuessResults =
+    currentGame?.status === 'finished'
+      ? currentGame?.guessResults
+      : (currentGame?.roundStartGuessResults ?? currentGame?.guessResults);
+
   const participantsWithScores = (currentGame?.participants || []).map(p => {
-    const gamePoints = currentGame?.scores?.[p.userId] || 0;
-    const guessPoints = currentGame?.guessResults?.[p.userId]?.correctGuesses || 0;
+    const gamePoints = displayedScores?.[p.userId] || 0;
+    const guessPoints = displayedGuessResults?.[p.userId]?.correctGuesses || 0;
     return { ...p, gamePoints, guessPoints, totalPoints: gamePoints + guessPoints };
   }).sort((a, b) => b.totalPoints - a.totalPoints);
 
