@@ -251,10 +251,17 @@ export const GuessingPhase: React.FC<Props> = ({
       playSound('roundComplete').catch(() => {});
       try {
         await startNextRound();
-      } catch (e) {
-        console.warn('startNextRound after finalize failed or game finished', e);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      } catch (error: unknown) {
+        // startNextRound() resolves normally (no throw) when the game
+        // legitimately ends — a throw here is always a real failure
+        // (e.g. network/Firestore error), so surface it rather than
+        // swallowing it. ActivePhase shows a retry control for this state.
+        // Do not fire the success haptic below on this path.
+        if (isMounted.current) {
+          showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.startNextRoundFailed', { locale }));
+        }
       }
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (error: unknown) {
       if (!isMounted.current) return;
       playSound('error').catch(() => {});

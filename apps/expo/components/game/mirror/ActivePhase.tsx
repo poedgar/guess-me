@@ -62,7 +62,10 @@ export const ActivePhase: React.FC<Props> = ({
     givePointsToTarget,
     startGuessingPhase,
     skipPostCommentPhase,
+    startNextRound,
   } = useGame();
+
+  const [isStartingNextRound, setIsStartingNextRound] = useState(false);
 
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
@@ -301,7 +304,54 @@ export const ActivePhase: React.FC<Props> = ({
     GameColors.green,
   );
 
-  if (!game.currentRound) return null;
+  const doStartNextRound = async () => {
+    setIsStartingNextRound(true);
+    try {
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await startNextRound();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch (error: unknown) {
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.startNextRoundFailed', { locale }));
+    } finally {
+      if (isMounted.current) setIsStartingNextRound(false);
+    }
+  };
+
+  if (!game.currentRound) {
+    // The round transition between guessing and the next round is two
+    // sequential awaits (finalizeGuessingPhase then startNextRound) — if
+    // the second one fails (e.g. a network blip), the game is left here:
+    // status 'active' with no currentRound. Give the admin a retry control
+    // instead of leaving the game silently stuck.
+    return (
+      <View style={styles.phaseWrapper}>
+        {isAdmin ? (
+          <TouchableOpacity
+            style={[
+              styles.adminButton,
+              { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
+              isStartingNextRound && gameStyles.buttonDisabled,
+            ]}
+            onPress={doStartNextRound}
+            disabled={isStartingNextRound}
+            activeOpacity={0.8}
+            accessibilityLabel={t('game.nextRound', { locale })}
+            accessibilityRole="button"
+          >
+            {isStartingNextRound
+              ? <ActivityIndicator size="small" color={GameColors.white} />
+              : <IconSymbol name="forward.end.fill" size={16} color={GameColors.white} />}
+            <ThemedText style={styles.buttonText}>{t('game.nextRound', { locale })}</ThemedText>
+          </TouchableOpacity>
+        ) : (
+          <ThemedText style={styles.waitingText}>{t('game.waitingForAdmin', { locale })}</ThemedText>
+        )}
+      </View>
+    );
+  }
 
   const numbers = playerNumbers ?? joinIndexById;
   const expectedCommenters = game.participants.filter(p => {

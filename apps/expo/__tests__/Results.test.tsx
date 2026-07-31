@@ -156,8 +156,10 @@ describe('Results screen — frozen leaderboard mid-round', () => {
 
   it('shows the round-start snapshot totals, not the live in-progress scores', () => {
     const { getByText, queryByText } = renderScreen();
-    // Alice: 10 + 2 = 12 (frozen), NOT 100 + 9 = 109 (live)
-    expect(getByText(/12/)).toBeTruthy();
+    // Alice: 10 + 2 = 12 (frozen), NOT 100 + 9 = 109 (live). Anchored to the
+    // start so this can't false-positive against an unrelated "112"-style
+    // number elsewhere in the fixture.
+    expect(getByText(/^12/)).toBeTruthy();
     expect(queryByText(/109/)).toBeNull();
   });
 
@@ -190,8 +192,9 @@ describe('Results screen — finished game shows live final totals', () => {
 
   it('shows the live final total, not the stale round-start snapshot', () => {
     const { getByText, queryByText } = renderScreen();
-    // Alice: 50 + 4 = 54 (live final), NOT 10 + 1 = 11 (stale snapshot)
-    expect(getByText(/54/)).toBeTruthy();
+    // Alice: 50 + 4 = 54 (live final), NOT 10 + 1 = 11 (stale snapshot).
+    // Anchored to the start, consistent with the frozen-leaderboard test above.
+    expect(getByText(/^54/)).toBeTruthy();
     expect(queryByText(/^11$/)).toBeNull();
   });
 });

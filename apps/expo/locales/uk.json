@@ -47,6 +47,8 @@
     "gameOver": "Гра закінчена",
     "youWin": "Ви перемогли!",
     "tryAgain": "Спробуйте знову",
+    "nextRound": "Наступний раунд",
+    "waitingForAdmin": "Очікування адміна для початку наступного раунду...",
     "alerts": {
       "updateSettingsFailed": "Не вдалося оновити налаштування.",
       "loginRequiredTitle": "Потрібно ввійти",

@@ -47,6 +47,8 @@
     "gameOver": "Game over",
     "youWin": "You win!",
     "tryAgain": "Try again",
+    "nextRound": "Next Round",
+    "waitingForAdmin": "Waiting for admin to start next round...",
     "alerts": {
       "updateSettingsFailed": "Failed to update settings.",
       "loginRequiredTitle": "Sign in required",

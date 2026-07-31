@@ -123,8 +123,15 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
       await playSound('roundComplete');
       try {
         await startNextRound();
-      } catch {
-        // game finished — no more rounds
+      } catch (error) {
+        // startNextRound() resolves normally (no throw) when the game
+        // legitimately ends — a throw here is always a real failure
+        // (e.g. network/Firestore error), so surface it rather than
+        // swallowing it. ActivePhase shows a retry control for this state.
+        showAlert(
+          t('common.error'),
+          (error instanceof Error && error.message) || t('game.alerts.startNextRoundFailed'),
+        );
       }
     } catch (error) {
       showAlert(

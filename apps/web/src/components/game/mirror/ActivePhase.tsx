@@ -25,6 +25,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     finishAwardingPoints,
     givePointsToTarget,
     startGuessingPhase,
+    startNextRound,
   } = useGame();
   const { playSound } = useSound();
   const { showAlert, AlertModal } = useAlert();
@@ -34,6 +35,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
   const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
   const [pointsGiven, setPointsGiven] = useState<Record<string, number>>({});
+  const [isStartingNextRound, setIsStartingNextRound] = useState(false);
 
   const currentRound = game.currentRound;
 
@@ -65,7 +67,46 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     PULSE_COLORS.green,
   );
 
-  if (!currentRound) return null;
+  const handleStartNextRound = async () => {
+    setIsStartingNextRound(true);
+    try {
+      await startNextRound();
+    } catch (error) {
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.startNextRoundFailed'),
+      );
+    } finally {
+      setIsStartingNextRound(false);
+    }
+  };
+
+  if (!currentRound) {
+    // The round transition between guessing and the next round is two
+    // sequential awaits (finalizeGuessingPhase then startNextRound) — if
+    // the second one fails (e.g. a network blip), the game is left here:
+    // status 'active' with no currentRound. Give the admin a retry control
+    // instead of leaving the game silently stuck.
+    return (
+      <>
+        {AlertModal}
+        <div className="text-center py-12">
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={handleStartNextRound}
+              disabled={isStartingNextRound}
+              className="bg-game-green text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isStartingNextRound ? t('common.loading') : t('game.nextRound')}
+            </button>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 text-sm">{t('game.waitingForAdmin')}</p>
+          )}
+        </div>
+      </>
+    );
+  }
 
   const alreadyGaveTargetPoints =
     currentRound.targetPointsGivenBy?.includes(user?.uid ?? '') ?? false;
