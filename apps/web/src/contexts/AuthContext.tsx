@@ -1,6 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, GoogleAuthProviderInstance } from '@mirror/shared';
-import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, User } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut as firebaseSignOut, User } from 'firebase/auth';
+
+// Exposes email/password sign-in on `window` for Cypress E2E tests. The
+// production UI only offers Google sign-in (Cypress can't drive a real
+// Google OAuth popup reliably), so this is the hook tests use instead.
+// This adds no capability beyond what signInWithEmailAndPassword already
+// does — no bypass, no elevated access — it's just not surfaced in the UI.
+declare global {
+  interface Window {
+    __cypressSignInWithEmail?: (email: string, password: string) => Promise<void>;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.__cypressSignInWithEmail = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+}
 
 interface AuthContextType {
   user: User | null;
