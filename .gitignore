@@ -44,3 +44,9 @@ app-example
 
 # superpowers scratch (sdd workspaces, brainstorm mockups)
 .superpowers/
+
+# Cypress (apps/web) — local secrets and machine-specific run artifacts
+apps/web/cypress.env.json
+apps/web/cypress/videos/
+apps/web/cypress/screenshots/
+apps/web/cypress/downloads/
