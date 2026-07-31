@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Platform,
   StyleSheet,
   TouchableOpacity,
@@ -18,6 +19,7 @@ import {
 } from "react-native";
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -61,6 +63,9 @@ export const BasketGuessingPhase: React.FC<Props> = ({
     },
     [],
   );
+
+  const playerPulse = usePulseBorderOnChange(`${game.basketData?.currentRoundIndex ?? 0}`, GameColors.purple);
+  const adminPulse = usePulseBorderOnChange(`${game.basketData?.currentRoundIndex ?? 0}`, GameColors.purple);
 
   if (!game.basketData) return null;
   const {
@@ -264,6 +269,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({
           animated
           insets={SCROLL_INSETS}
         >
+        <Animated.View style={playerPulse}>
         {isDone || showWrong ? (
           <View style={styles.doneCard}>
             {showWrong && (
@@ -339,6 +345,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({
             )}
           </View>
         )}
+        </Animated.View>
         </ScrollIntoView>
 
         {isAdmin && (
@@ -349,7 +356,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({
             animated
             insets={SCROLL_INSETS}
           >
-          <View style={styles.adminSection}>
+          <Animated.View style={[styles.adminSection, adminPulse]}>
             {isLastRound && (
               <ThemedText style={styles.finishLabel}>
                 {t("game.ui.basket.finishGame", { locale })}
@@ -384,7 +391,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({
                 {t("game.ui.basket.nextRound", { locale })}
               </ThemedText>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
           </ScrollIntoView>
         )}
       </View>
