@@ -297,8 +297,8 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
 
         <Leaderboard
           participants={game.participants}
-          scores={game.scores}
-          guessResults={game.guessResults}
+          scores={game.roundStartScores ?? game.scores}
+          guessResults={game.roundStartGuessResults ?? game.guessResults}
           maxHeight="max-h-80"
         />
       </div>

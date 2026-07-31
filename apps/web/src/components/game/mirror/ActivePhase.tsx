@@ -418,8 +418,8 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
         <Leaderboard
           participants={game.participants}
-          scores={game.scores}
-          guessResults={game.guessResults}
+          scores={game.roundStartScores ?? game.scores}
+          guessResults={game.roundStartGuessResults ?? game.guessResults}
           maxHeight="max-h-80"
         />
       </div>
