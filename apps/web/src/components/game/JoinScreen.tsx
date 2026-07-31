@@ -59,11 +59,13 @@ export const JoinScreen: React.FC = () => {
                 value={gameInput}
                 onChange={e => setGameInput(e.target.value)}
                 placeholder={t('game.gameIdPlaceholder')}
+                data-cy="game-input"
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-blue bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               />
               <button
                 type="submit"
                 disabled={isLoading}
+                data-cy="game-input-submit"
                 className="w-full bg-game-blue text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {t('game.join')}

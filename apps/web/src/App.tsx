@@ -26,7 +26,7 @@ function NavBar() {
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-around">
       <NavLink to="/" className={linkClass}>Home</NavLink>
       {hasResults && (
-        <NavLink to="/results" className={linkClass}>Results</NavLink>
+        <NavLink to="/results" className={linkClass} data-cy="nav-results">Results</NavLink>
       )}
       <NavLink to="/rules" className={linkClass}>Rules</NavLink>
     </nav>

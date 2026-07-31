@@ -60,6 +60,8 @@ export function ResultsPage() {
           {participantsWithScores.map((p, idx) => (
             <div
               key={p.userId}
+              data-cy="results-leaderboard-row"
+              data-cy-user-id={p.userId}
               className={`flex items-center gap-3 px-4 py-3 ${
                 idx === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20' :
                 p.userId === user?.uid ? 'bg-blue-50 dark:bg-blue-900/20' : ''
@@ -77,7 +79,7 @@ export function ResultsPage() {
                   {t('game.ui.pointsGame')}: {p.gamePoints} · {t('game.ui.pointsGuessing')}: {p.guessPoints}
                 </p>
               </div>
-              <span className="text-lg font-bold text-game-green">{p.totalPoints}</span>
+              <span className="text-lg font-bold text-game-green" data-cy="results-leaderboard-total-points">{p.totalPoints}</span>
             </div>
           ))}
         </div>

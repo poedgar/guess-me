@@ -52,6 +52,8 @@ export const FancyAlert: React.FC<FancyAlertProps> = ({
                 button.onPress();
                 onDismiss?.();
               }}
+              data-cy="alert-button"
+              data-cy-style={button.style ?? 'primary'}
               className={`py-3 px-4 rounded-lg font-semibold transition-opacity ${
                 button.style === 'danger'
                   ? 'bg-game-danger text-white hover:opacity-90'

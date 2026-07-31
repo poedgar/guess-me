@@ -50,6 +50,7 @@ export const AuthScreen: React.FC = () => {
         ) : (
           <button type="button"
             onClick={handleSignIn}
+            data-cy="google-signin-button"
             className="w-full bg-game-blue text-white px-6 py-4 rounded-lg font-semibold hover:opacity-90 transition-opacity mb-8 text-lg"
           >
             {t('auth.signInGoogle') || 'Sign in with Google'}

@@ -45,6 +45,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
           return (
             <div
               key={p.userId}
+              data-cy="leaderboard-row"
+              data-cy-user-id={p.userId}
               className={`flex items-center gap-3 p-3 rounded-lg ${
                 idx === 0
                   ? 'bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-600'
@@ -85,7 +87,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
               </div>
 
               <div className="text-right flex-shrink-0">
-                <p className="text-xl font-bold text-game-green">{p.totalPoints}</p>
+                <p className="text-xl font-bold text-game-green" data-cy="leaderboard-total-points">{p.totalPoints}</p>
                 <p className="text-xs text-gray-400">{t('game.ui.pointsTotal')}</p>
               </div>
             </div>

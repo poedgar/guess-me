@@ -124,6 +124,8 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             {game.participants?.map((p, idx) => (
               <div
                 key={p.userId}
+                data-cy="participant-row"
+                data-cy-user-id={p.userId}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
                   p.userId === game.adminId
                     ? 'bg-game-orange/10 border border-game-orange/30'
@@ -210,6 +212,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                 type="button"
                 onClick={handleStartGame}
                 disabled={game.participants.length < 2 || isStarting || loading}
+                data-cy="start-game-button"
                 className="w-full bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
               >
                 {loading || isStarting ? t('common.loading') : t('game.ui.startGame')}

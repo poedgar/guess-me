@@ -298,6 +298,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                     type="button"
                     onClick={handleShowComments}
                     disabled={loading || (currentRound.comments?.length ?? 0) === 0}
+                    data-cy="show-comments-button"
                     className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                   >
                     {loading ? t('common.loading') : t('game.ui.showComments')}
@@ -308,6 +309,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                     type="button"
                     onClick={handleStartGuessing}
                     disabled={loading || !targetFinishedPoints || !allPlayersCompletedPointsPhase}
+                    data-cy="start-guessing-button"
                     className="bg-game-purple text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                   >
                     {loading ? t('common.loading') : t('game.ui.startGuessingPhase')}
@@ -336,6 +338,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                             type="button"
                             onClick={() => handleGivePoints(comment.id)}
                             disabled={!!givingPoints[comment.id] || loading}
+                            data-cy="award-comment-points-button"
                             className="bg-game-green text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                           >
                             {givingPoints[comment.id] ? t('common.loading') : '+ 1 point'}
@@ -353,6 +356,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                       type="button"
                       onClick={handleFinishGivingPoints}
                       disabled={loading}
+                      data-cy="finish-awarding-points-button"
                       className="bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                     >
                       {loading ? t('common.loading') : t('game.ui.finishAwardingPoints')}
@@ -384,6 +388,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                         maxLength={500}
                         rows={4}
                         disabled={isSubmittingComment}
+                        data-cy="comment-input"
                         className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-green bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none disabled:opacity-50"
                       />
                       <div className="flex justify-between items-center">
@@ -393,6 +398,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                         <button
                           type="submit"
                           disabled={!commentText.trim() || isSubmittingComment}
+                          data-cy="submit-comment-button"
                           className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                         >
                           {isSubmittingComment ? t('common.loading') : t('game.ui.submitComment')}
@@ -437,6 +443,8 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                             type="button"
                             onClick={() => handleGivePointsToTarget(points)}
                             disabled={givingPointsToTarget || loading}
+                            data-cy="give-points-to-target-button"
+                            data-cy-points={points}
                             className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-600 border-2 border-gray-300 dark:border-gray-500 text-lg font-semibold hover:border-game-gold hover:bg-game-gold/10 disabled:opacity-50 transition-all"
                           >
                             {points}

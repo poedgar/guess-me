@@ -234,6 +234,8 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                           key={author.userId}
                           type="button"
                           onClick={() => handleSelect(comment.id, author.userId)}
+                          data-cy="guess-author-button"
+                          data-cy-author-id={author.userId}
                           className={`px-3 py-1.5 rounded-full border-2 font-semibold text-sm transition-all ${
                             selections[comment.id] === author.userId
                               ? 'bg-game-blue border-game-blue text-white'
@@ -255,6 +257,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                   type="button"
                   onClick={handleSubmitGuesses}
                   disabled={isSubmitting || loading || !allCommentsSelected}
+                  data-cy="submit-guesses-button"
                   className="w-full bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isSubmitting ? t('common.loading') : t('game.ui.submitGuesses')}
@@ -275,6 +278,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                   type="button"
                   onClick={handleFinalizeAndNextRound}
                   disabled={isFinalizing || loading}
+                  data-cy="finalize-button"
                   className="bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isFinalizing ? t('common.loading') : t('game.ui.nextRound')}
@@ -284,6 +288,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                   type="button"
                   onClick={handleFinalizeOnly}
                   disabled={isFinalizing || loading}
+                  data-cy="finalize-button"
                   className="bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isFinalizing ? t('common.loading') : t('game.ui.finalize')}
@@ -293,6 +298,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                   type="button"
                   onClick={handleForceFinalize}
                   disabled={isFinalizing || loading}
+                  data-cy="finalize-button"
                   className="bg-game-neutral text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isFinalizing ? t('common.loading') : t('game.ui.finalize')}
