@@ -109,9 +109,11 @@ SoundProvider
 ### Admin Password
 
 Creating a game requires entering the admin password stored in Firestore at:
-`password/YR20RZ67FKy88HQVF6yW` (the `value` field).
+`password/YR20RZ67FKy88HQVF6yW` (the `password` field — not `value`).
 
-The current admin password is: **YR20RZ67FKy88HQVF6yW**
+The current admin password is: **YR20RZ67FKy88HQVF6yW3**
+
+Note the doc ID and the password value are similar but distinct strings — the value has a trailing `3` that the doc ID does not.
 
 Non-admins join by entering a game ID directly.
 

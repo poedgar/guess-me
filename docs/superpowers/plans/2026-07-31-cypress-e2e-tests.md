@@ -1119,14 +1119,14 @@ describe('Smoke tests', () => {
 
   it('creating a game with the admin password reaches the waiting room', () => {
     cy.signInAsTestUser('test1');
-    cy.get('[data-cy=game-input]').type('YR20RZ67FKy88HQVF6yW');
+    cy.get('[data-cy=game-input]').type('YR20RZ67FKy88HQVF6yW3');
     cy.get('[data-cy=game-input-submit]').click();
     cy.get('[data-cy=start-game-button]').should('be.visible');
   });
 
   it('a second test account can join the game the first created', () => {
     cy.signInAsTestUser('test1');
-    cy.get('[data-cy=game-input]').type('YR20RZ67FKy88HQVF6yW');
+    cy.get('[data-cy=game-input]').type('YR20RZ67FKy88HQVF6yW3');
     cy.get('[data-cy=game-input-submit]').click();
 
     // The game ID is shown as the page's own <h1>-adjacent button text in
@@ -1184,7 +1184,7 @@ describe('Full mirror-mode round', () => {
   it('plays one round end-to-end and shows correct results after it ends', () => {
     // ── Set up: admin creates the game, both players join ──────────────
     cy.signInAsTestUser('test1');
-    cy.get('[data-cy=game-input]').type('YR20RZ67FKy88HQVF6yW');
+    cy.get('[data-cy=game-input]').type('YR20RZ67FKy88HQVF6yW3');
     cy.get('[data-cy=game-input-submit]').click();
     cy.url().should('match', /\/game\/[^/]+$/);
 
