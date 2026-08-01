@@ -36,8 +36,23 @@ const getPersistedFirebaseAuthEmail = (win: Window): Promise<string | null> =>
       const tx = db.transaction('firebaseLocalStorage', 'readonly');
       const getAllRequest = tx.objectStore('firebaseLocalStorage').getAll();
       getAllRequest.onsuccess = () => {
-        const records = getAllRequest.result as Array<{ value?: { email?: string } }>;
-        const email = records.find((r) => r?.value?.email)?.value?.email ?? null;
+        const records = getAllRequest.result as Array<{
+          fbase_key?: string;
+          value?: { email?: string };
+        }>;
+        // Match on the record's own key, not merely "the first record that
+        // happens to carry an email". @firebase/auth stores each record under
+        // the keyPath `fbase_key` (DB_DATA_KEYPATH) with the name built by
+        // `_persistenceKeyName(key, apiKey, appName)` =>
+        // `firebase:<key>:<apiKey>:<appName>`. The signed-in user lives under
+        // key `authUser`, but sibling records in the same object store also
+        // hold a user object with an `email` — notably `firebase:redirectUser:…`
+        // — and a second Firebase app instance would add more. Picking the
+        // wrong one here would silently defeat this whole check, whose only
+        // job is to detect that the persisted account is not the expected one.
+        const email =
+          records.find((r) => String(r?.fbase_key ?? '').startsWith('firebase:authUser:'))?.value
+            ?.email ?? null;
         db.close();
         resolve(email);
       };
