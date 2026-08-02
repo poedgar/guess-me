@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'apps/web/**'
+      - 'packages/shared/**'
   workflow_dispatch: {}
 
 concurrency:
@@ -24,29 +25,58 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Cache Cypress binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-binary-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
         run: npm ci
 
       - name: Write Firebase service account key
         env:
           SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        run: echo "$SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/service-account.json"
+        run: |
+          if [ -z "$SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::Repository secret FIREBASE_SERVICE_ACCOUNT_JSON is not set — add it in Settings > Secrets and variables > Actions before running this workflow."
+            exit 1
+          fi
+          printf '%s' "$SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/service-account.json"
 
       - name: Write cypress.env.json
         working-directory: apps/web
         env:
           TEST_PASSWORD: ${{ secrets.CYPRESS_TEST_PASSWORD }}
         run: |
-          cat > cypress.env.json <<EOF
-          {
-            "testAccounts": {
-              "test1": { "email": "test1@example.com", "password": "$TEST_PASSWORD" },
-              "test2": { "email": "test2@example.com", "password": "$TEST_PASSWORD" },
-              "test3": { "email": "test3@example.com", "password": "$TEST_PASSWORD" }
-            },
-            "firebaseServiceAccountPath": "${{ runner.temp }}/service-account.json"
-          }
-          EOF
+          if [ -z "$TEST_PASSWORD" ]; then
+            echo "::error::Repository secret CYPRESS_TEST_PASSWORD is not set — add it in Settings > Secrets and variables > Actions before running this workflow."
+            exit 1
+          fi
+          jq -n \
+            --arg pw "$TEST_PASSWORD" \
+            --arg sa "$RUNNER_TEMP/service-account.json" \
+            '{
+              testAccounts: {
+                test1: { email: "test1@example.com", password: $pw },
+                test2: { email: "test2@example.com", password: $pw },
+                test3: { email: "test3@example.com", password: $pw }
+              },
+              firebaseServiceAccountPath: $sa
+            }' > cypress.env.json
+
+      - name: Wait for Vercel deploy to finish
+        # The same push that triggers this workflow also triggers a Vercel
+        # deploy of the same commit, and this workflow's own setup steps
+        # (checkout, npm ci, Cypress binary) are not guaranteed to take
+        # longer than that deploy. Without a wait, this run could hit the
+        # live URL before the new deploy is up and end up testing the
+        # *previous* commit's code instead of the one that triggered it.
+        # A fixed wait isn't a guarantee (an unusually slow Vercel build
+        # could still outlast it), but it's cheap and meaningfully closes
+        # the usual-case race without adding a deployment-status polling
+        # mechanism.
+        run: sleep 90
 
       - name: Run Cypress
         uses: cypress-io/github-action@v6
