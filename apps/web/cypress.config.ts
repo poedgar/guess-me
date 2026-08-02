@@ -21,12 +21,25 @@ export default defineConfig({
       openMode: 0,
     },
     setupNodeEvents(on, config) {
-      on('after:run', async () => {
+      // Sweeps any leftover test games out of production Firestore. Registered
+      // on both before:run and after:run: after:run only fires on a run that
+      // completes naturally, so a run that's killed mid-spec (or `cypress open`
+      // closed without finishing) would otherwise leave a test game behind
+      // until some later run's after:run happened to sweep it up. Running the
+      // same sweep at the start of every run means each run cleans up after
+      // whatever the previous one left, regardless of how that one ended.
+      const runCleanup = async (label: string) => {
         const serviceAccountPath = config.env.firebaseServiceAccountPath as string;
         const adminEmail = (config.env.testAccounts as { test1: { email: string } }).test1.email;
         const result = await cleanupTestGames(serviceAccountPath, adminEmail);
         // eslint-disable-next-line no-console
-        console.log(`[cleanupTestGames] Deleted ${result.deleted} test game(s).`);
+        console.log(`[cleanupTestGames:${label}] Deleted ${result.deleted} test game(s).`);
+      };
+      on('before:run', async () => {
+        await runCleanup('before:run');
+      });
+      on('after:run', async () => {
+        await runCleanup('after:run');
       });
     },
   },

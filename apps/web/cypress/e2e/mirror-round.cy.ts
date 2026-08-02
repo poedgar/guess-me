@@ -173,11 +173,16 @@ describe('Full mirror-mode round', () => {
         // ── Results tab shows round 1's real totals ─────────────────────
         cy.get('[data-cy=nav-results]').click();
         cy.get('[data-cy=results-leaderboard-row]').should('have.length', 3);
-        // The commenter earned 1 comment point; the target earned 1 point
-        // from the commenter plus 1 guess point for the correct guess.
-        // ResultsPage.tsx computes totalPoints as gamePoints + guessPoints
-        // per participant — assert at least one row is now above 0,
-        // proving round 1's results made it through.
+        // The commenter earned 1 comment point (awarded by the target); the
+        // target earned 2 points (1 given by the commenter for reacting well
+        // plus 1 guess point for correctly identifying the comment's author);
+        // the admin earned 0 (didn't participate in comments or guessing in
+        // this scenario). ResultsPage.tsx computes totalPoints as gamePoints
+        // + guessPoints per participant — assert the exact multiset of
+        // totals, sorted descending, so the test doesn't need to correlate
+        // each leaderboard row back to a specific participant (row order
+        // isn't asserted elsewhere). This proves the guess above was
+        // actually scored as correct, not just that some points landed.
         // Use the retrying `.should()` callback form, not `.then()`: there is
         // a brief documented window between finalizeGuessingPhase() resolving
         // and startNextRound()'s round-start snapshot write landing, during
@@ -188,8 +193,8 @@ describe('Full mirror-mode round', () => {
         // never retried, so it fails outright if it happens to land in that
         // window.
         cy.get('[data-cy=results-leaderboard-total-points]').should(($points) => {
-          const values = $points.toArray().map((el) => Number(el.textContent));
-          expect(values.some((v) => v > 0)).to.eq(true);
+          const values = $points.toArray().map((el) => Number(el.textContent)).sort((a, b) => b - a);
+          expect(values).to.deep.equal([2, 1, 0]);
         });
       });
     });
