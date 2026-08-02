@@ -168,37 +168,42 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
               {[
                 {
+                  id: 'admin-writes-comments',
                   label: t('game.ui.adminWritesCommentsTitle'),
                   desc: t('game.ui.adminWritesCommentsDescription'),
                   checked: game.adminWritesComments ?? false,
                   onChange: handleToggleAdminComments,
                 },
                 {
+                  id: 'show-surnames',
                   label: t('game.ui.showSurnamesTitle'),
                   desc: t('game.ui.showSurnamesDescription'),
                   checked: game.showSurnames ?? false,
                   onChange: handleToggleShowSurnames,
                 },
                 {
+                  id: 'target-selection-mode',
                   label: t('game.ui.targetSelectionModeTitle'),
                   desc: t('game.ui.targetSelectionModeDescription'),
                   checked: (game.targetSelectionMode ?? 'random') === 'chronological',
                   onChange: handleToggleTargetMode,
                 },
                 {
+                  id: 'show-guess-results',
                   label: t('game.ui.showGuessResultsTitle'),
                   desc: t('game.ui.showGuessResultsDescription'),
                   checked: game.showGuessResults ?? false,
                   onChange: handleToggleShowGuessResults,
                 },
-              ].map(({ label, desc, checked, onChange }) => (
-                <label key={label} className="flex items-center justify-between gap-4 cursor-pointer">
+              ].map(({ id, label, desc, checked, onChange }) => (
+                <label key={id} className="flex items-center justify-between gap-4 cursor-pointer">
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
                   </div>
                   <input
                     type="checkbox"
+                    data-cy={`${id}-toggle`}
                     checked={checked}
                     onChange={onChange}
                     className="w-5 h-5 accent-game-green"
