@@ -9,6 +9,7 @@ import { HomePage } from './pages/HomePage';
 import { GameJoinPage } from './pages/GameJoinPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { RulesPage } from './pages/RulesPage';
+import { AdminCleanupPage } from './pages/AdminCleanupPage';
 import './App.css';
 
 function NavBar() {
@@ -47,6 +48,7 @@ export default function App() {
                     <Route path="/game/:gameId" element={<GameJoinPage />} />
                     <Route path="/results" element={<ResultsPage />} />
                     <Route path="/rules" element={<RulesPage />} />
+                    <Route path="/admin/cleanup" element={<AdminCleanupPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </main>
