@@ -1704,7 +1704,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw new Error("Only the admin can reveal comments");
     }
     const submitted = currentGame.basketData?.currentRoundComments?.length ?? 0;
-    const total = currentGame.participants.length;
+    // Compare against this round's writers, not every participant — the
+    // admin is never a writer unless adminWritesComments is on, so
+    // comparing against participants.length made this unreachable whenever
+    // it was off (the default): submitted could never reach a total that
+    // included a non-writing admin.
+    const total =
+      currentGame.basketData?.schedule[currentGame.basketData.currentRoundIndex]
+        ?.assignments.length ?? 0;
     if (submitted < total) {
       throw new Error(`Not all players have submitted (${submitted}/${total})`);
     }
