@@ -3,8 +3,11 @@ import type { BasketAssignment, BasketRound, ClashAssignment, ClashRound } from 
 import { useAuth } from './AuthContext';
 import {
   arrayUnion,
+  collection,
+  deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   runTransaction,
   serverTimestamp,
@@ -255,6 +258,21 @@ interface GameContextType {
     awards: { recipientId: string; points: number }[],
   ) => Promise<void>;
   skipPostCommentPhase: () => Promise<void>;
+  /**
+   * Fetches every document in the `games` collection, unscoped to the
+   * signed-in user — the only place in this app that reads across all
+   * users' data. Used solely by the hidden /admin/cleanup page.
+   */
+  listAllGames: () => Promise<Game[]>;
+  /** Deletes each listed game document outright. No subcollections exist
+   * for this app's data model (comments/guesses/rounds are nested arrays
+   * inside the game document itself), so nothing else needs cleaning up. */
+  deleteGames: (gameIds: string[]) => Promise<void>;
+  /** Checks a candidate string against the real admin password stored in
+   * Firestore, the same doc/field enterGame() already reads. Returns
+   * true/false rather than throwing, so callers can show an inline error
+   * instead of a thrown-exception flow. */
+  checkAdminPassword: (input: string) => Promise<boolean>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -2222,6 +2240,24 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const listAllGames = async (): Promise<Game[]> => {
+    const snapshot = await getDocs(collection(db, "games"));
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Game);
+  };
+
+  const deleteGames = async (gameIds: string[]): Promise<void> => {
+    await Promise.all(gameIds.map((id) => deleteDoc(doc(db, "games", id))));
+  };
+
+  const checkAdminPassword = async (input: string): Promise<boolean> => {
+    const passwordRef = doc(db, "password", "YR20RZ67FKy88HQVF6yW");
+    const pwDoc = await getDoc(passwordRef);
+    const realPassword = pwDoc.exists()
+      ? (pwDoc.data() as { password?: string }).password
+      : null;
+    return !!realPassword && input === realPassword;
+  };
+
   const value: GameContextType = useMemo(
     () => ({
       currentGame,
@@ -2266,6 +2302,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       setNextRoundTarget,
       skipNextRoundTarget,
       resetTargetControls,
+      listAllGames,
+      deleteGames,
+      checkAdminPassword,
     }),
     [currentGame, loading, user],
   ); // eslint-disable-line react-hooks/exhaustive-deps
