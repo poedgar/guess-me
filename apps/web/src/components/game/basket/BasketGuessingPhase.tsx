@@ -181,6 +181,8 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
                 <button
                   key={p.userId}
                   type="button"
+                  data-cy="basket-guess-author-button"
+                  data-cy-user-id={p.userId}
                   onClick={() => handleAuthorSelect(p.userId, p.userName)}
                   disabled={isSubmittingAuthor || loading}
                   className="w-full text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 font-medium text-gray-900 dark:text-white hover:border-game-purple disabled:opacity-50 transition-colors"
@@ -196,6 +198,8 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
                 <button
                   key={comment.writerId}
                   type="button"
+                  data-cy="basket-guess-comment-button"
+                  data-cy-writer-id={comment.writerId}
                   onClick={() => handleCommentSelect(comment.writerId)}
                   disabled={selectedWriterId !== null || isSubmittingGuess || loading}
                   className={`w-full text-left bg-white dark:bg-gray-800 border-2 rounded-lg px-4 py-3 text-gray-900 dark:text-white hover:border-game-blue disabled:opacity-50 transition-colors ${
@@ -218,6 +222,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
             )}
             <button
               type="button"
+              data-cy="basket-next-round-button"
               onClick={handleNextRound}
               disabled={isAdvancing || loading || !allGuessersDone}
               className={`px-6 py-3 rounded-full text-white font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity ${

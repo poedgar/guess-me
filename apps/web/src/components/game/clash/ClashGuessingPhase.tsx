@@ -195,6 +195,8 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
                   <div key={comment.writerId}>
                     <button
                       type="button"
+                      data-cy="clash-guess-comment-button"
+                      data-cy-writer-id={comment.writerId}
                       onClick={() => handleCardPress(comment.writerId)}
                       disabled={phase !== 'idle' || isSubmitting || loading}
                       className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-colors ${
@@ -218,6 +220,8 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
                           const name = p?.userName ?? memberId;
                           return (
                             <button key={memberId} type="button"
+                              data-cy="clash-guess-subject-button"
+                              data-cy-user-id={memberId}
                               onClick={() => handleSubjectSelect(comment.writerId, memberId, name)}
                               disabled={isSubmitting}
                               className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-white hover:border-game-blue disabled:opacity-50 transition-colors">
@@ -241,6 +245,8 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
                           const name = p?.userName ?? authorId;
                           return (
                             <button key={authorId} type="button"
+                              data-cy="clash-guess-author-button"
+                              data-cy-user-id={authorId}
                               onClick={() => handleAuthorSelect(comment.writerId, authorId, name)}
                               disabled={isSubmitting}
                               className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-900 dark:text-white hover:border-game-green disabled:opacity-50 transition-colors">
@@ -263,7 +269,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
 
         {isAdmin && (
           <div className="flex justify-center pt-2 border-t border-red-200 dark:border-red-800" ref={adminScrollRef}>
-            <button type="button" onClick={handleAdvance}
+            <button type="button" data-cy="clash-advance-button" onClick={handleAdvance}
               disabled={isAdvancing || loading || !currentGroupDone}
               className={`px-6 py-3 rounded-full text-white font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity ${
                 otherGroupDone && isLastRound ? 'bg-game-green' : 'bg-game-blue'

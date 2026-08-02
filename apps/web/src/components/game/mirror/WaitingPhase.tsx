@@ -148,6 +148,8 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                 <button
                   key={type}
                   type="button"
+                  data-cy="game-type-button"
+                  data-cy-type={type}
                   onClick={() => setGameType(type).catch(() => {})}
                   className={`flex-1 py-2 rounded-full text-xs font-semibold border-2 transition-all ${
                     (game.gameType ?? 'mirror') === type

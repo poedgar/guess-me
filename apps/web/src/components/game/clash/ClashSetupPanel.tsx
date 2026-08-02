@@ -98,9 +98,9 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
       <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-white truncate">{participant.userName}</span>
       {isAdmin && (
         <div className="flex gap-1">
-          <button type="button" onClick={() => assignToGroup(participant.userId, 'a')}
+          <button type="button" data-cy="clash-assign-button" data-cy-group="a" data-cy-user-id={participant.userId} onClick={() => assignToGroup(participant.userId, 'a')}
             className="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">A</button>
-          <button type="button" onClick={() => assignToGroup(participant.userId, 'b')}
+          <button type="button" data-cy="clash-assign-button" data-cy-group="b" data-cy-user-id={participant.userId} onClick={() => assignToGroup(participant.userId, 'b')}
             className="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">B</button>
         </div>
       )}
@@ -173,6 +173,7 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
           <div className="flex flex-col items-center gap-1 pt-2">
             <button
               type="button"
+              data-cy="clash-start-game-button"
               onClick={handleStart}
               disabled={!canStart || isStarting || loading}
               className="bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"

@@ -102,6 +102,7 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
               </div>
 
               <textarea
+                data-cy="basket-comment-input"
                 value={commentText}
                 onChange={e => setCommentText(e.target.value)}
                 placeholder={t('game.ui.basket.writeComment')}
@@ -116,6 +117,7 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
                 </span>
                 <button
                   type="submit"
+                  data-cy="basket-submit-comment-button"
                   disabled={!commentText.trim() || isSubmitting}
                   className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
@@ -131,6 +133,7 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
             <p className="text-sm text-gray-400">{submittedCount}/{totalCount}</p>
             <button
               type="button"
+              data-cy="basket-reveal-comments-button"
               onClick={handleReveal}
               disabled={isRevealing || loading || submittedCount < totalCount}
               className="bg-game-orange text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"

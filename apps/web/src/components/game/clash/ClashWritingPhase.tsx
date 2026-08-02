@@ -110,6 +110,7 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{subjectName}</p>
               </div>
               <textarea
+                data-cy="clash-comment-input"
                 value={commentText}
                 onChange={e => setCommentText(e.target.value)}
                 placeholder={t('game.ui.clash.writeComment')}
@@ -122,7 +123,7 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
                 <span className={`text-sm ${commentText.length >= 450 ? 'text-red-500' : 'text-gray-400'}`}>
                   {commentText.length}/500
                 </span>
-                <button type="submit" disabled={!commentText.trim() || isSubmitting}
+                <button type="submit" data-cy="clash-submit-comment-button" disabled={!commentText.trim() || isSubmitting}
                   className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
                   {isSubmitting ? t('common.loading') : t('game.ui.clash.submit')}
                 </button>
@@ -135,7 +136,7 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
           <div className="flex flex-col items-center gap-2 pt-2 border-t border-orange-200 dark:border-orange-800" ref={adminScrollRef}>
             <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} />
             <p className="text-sm text-gray-400">{countA}/{groupSize} · {countB}/{groupSize}</p>
-            <button type="button" onClick={handleReveal}
+            <button type="button" data-cy="clash-reveal-comments-button" onClick={handleReveal}
               disabled={isRevealing || loading || !allSubmitted}
               className="bg-game-orange text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
               {isRevealing ? t('common.loading') : t('game.ui.clash.revealComments')}
