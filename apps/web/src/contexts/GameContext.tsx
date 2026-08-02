@@ -264,10 +264,15 @@ interface GameContextType {
    * users' data. Used solely by the hidden /admin/cleanup page.
    */
   listAllGames: () => Promise<Game[]>;
-  /** Deletes each listed game document outright. No subcollections exist
-   * for this app's data model (comments/guesses/rounds are nested arrays
-   * inside the game document itself), so nothing else needs cleaning up. */
-  deleteGames: (gameIds: string[]) => Promise<void>;
+  /** Deletes each listed game document. No subcollections exist for this
+   * app's data model (comments/guesses/rounds are nested arrays inside the
+   * game document itself), so nothing else needs cleaning up. Uses
+   * Promise.allSettled (not Promise.all) so one failed delete doesn't mask
+   * the others that succeeded — callers must reconcile using the returned
+   * succeeded/failed lists rather than assuming all-or-nothing. */
+  deleteGames: (
+    gameIds: string[],
+  ) => Promise<{ succeededIds: string[]; failedIds: string[] }>;
   /** Checks a candidate string against the real admin password stored in
    * Firestore, the same doc/field enterGame() already reads. Returns
    * true/false rather than throwing, so callers can show an inline error
@@ -2242,11 +2247,25 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
   const listAllGames = async (): Promise<Game[]> => {
     const snapshot = await getDocs(collection(db, "games"));
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Game);
+    return snapshot.docs.map((d) => ({ ...d.data(), id: d.id }) as Game);
   };
 
-  const deleteGames = async (gameIds: string[]): Promise<void> => {
-    await Promise.all(gameIds.map((id) => deleteDoc(doc(db, "games", id))));
+  const deleteGames = async (
+    gameIds: string[],
+  ): Promise<{ succeededIds: string[]; failedIds: string[] }> => {
+    const results = await Promise.allSettled(
+      gameIds.map((id) => deleteDoc(doc(db, "games", id))),
+    );
+    const succeededIds: string[] = [];
+    const failedIds: string[] = [];
+    results.forEach((result, i) => {
+      if (result.status === "fulfilled") {
+        succeededIds.push(gameIds[i]);
+      } else {
+        failedIds.push(gameIds[i]);
+      }
+    });
+    return { succeededIds, failedIds };
   };
 
   const checkAdminPassword = async (input: string): Promise<boolean> => {

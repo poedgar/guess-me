@@ -24,11 +24,13 @@ export function AdminCleanupPage() {
   const [gateError, setGateError] = useState<string | null>(null);
 
   const [threshold, setThreshold] = useState(4);
+  const [adminEmailFilter, setAdminEmailFilter] = useState('');
   const [scanning, setScanning] = useState(false);
   const [candidates, setCandidates] = useState<Game[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   if (!isSignedIn) {
     return <AuthScreen />;
@@ -67,6 +69,7 @@ export function AdminCleanupPage() {
               value={passwordInput}
               onChange={(e) => setPasswordInput(e.target.value)}
               placeholder="Admin password"
+              data-cy="admin-cleanup-password-input"
               className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-blue bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
             {gateError && (
@@ -75,6 +78,7 @@ export function AdminCleanupPage() {
             <button
               type="submit"
               disabled={checkingPassword || !passwordInput.trim()}
+              data-cy="admin-cleanup-unlock-button"
               className="w-full bg-game-blue text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {checkingPassword ? 'Checking...' : 'Unlock'}
@@ -88,7 +92,12 @@ export function AdminCleanupPage() {
   const handleScan = async () => {
     setScanning(true);
     setScanError(null);
+    setDeleteError(null);
     setSelectedIds(new Set());
+    // Drop the previous result set for the duration of the scan, so there
+    // is nothing rendered/clickable that could be checked against a table
+    // that's about to be replaced by a different, unrelated result set.
+    setCandidates(null);
     try {
       const allGames = await listAllGames();
       const filtered = allGames
@@ -115,6 +124,19 @@ export function AdminCleanupPage() {
     }
   };
 
+  const visibleCandidates =
+    candidates?.filter((g) => {
+      const filter = adminEmailFilter.trim().toLowerCase();
+      if (!filter) return true;
+      return (g.adminEmail ?? '').toLowerCase().includes(filter);
+    }) ?? null;
+
+  const visibleSelectedIds = new Set(
+    (visibleCandidates ?? [])
+      .map((g) => g.id)
+      .filter((id) => selectedIds.has(id)),
+  );
+
   const toggleSelected = (gameId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -127,8 +149,19 @@ export function AdminCleanupPage() {
     });
   };
 
+  const handleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      (visibleCandidates ?? []).forEach((g) => next.add(g.id));
+      return next;
+    });
+  };
+
   const handleDeleteSelected = () => {
-    const idsToDelete = Array.from(selectedIds);
+    // Only ever delete what's actually visible right now — never trust
+    // selectedIds alone, since it can outlive the row it was checked
+    // against (a new scan, or the admin-email filter narrowing the table).
+    const idsToDelete = Array.from(visibleSelectedIds);
     if (idsToDelete.length === 0) return;
 
     showAlert(
@@ -141,14 +174,24 @@ export function AdminCleanupPage() {
           style: 'danger',
           onPress: async () => {
             setDeleting(true);
+            setDeleteError(null);
             try {
-              await deleteGames(idsToDelete);
+              const { succeededIds, failedIds } = await deleteGames(idsToDelete);
               setCandidates(
-                (prev) => prev?.filter((g) => !selectedIds.has(g.id)) ?? null,
+                (prev) => prev?.filter((g) => !succeededIds.includes(g.id)) ?? null,
               );
-              setSelectedIds(new Set());
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                succeededIds.forEach((id) => next.delete(id));
+                return next;
+              });
+              if (failedIds.length > 0) {
+                setDeleteError(
+                  `${failedIds.length} game(s) could not be deleted. They're still shown below — try again.`,
+                );
+              }
             } catch (err) {
-              setScanError(
+              setDeleteError(
                 (err instanceof Error && err.message) || 'Could not delete games.',
               );
             } finally {
@@ -168,7 +211,7 @@ export function AdminCleanupPage() {
           Admin Cleanup
         </h1>
 
-        <div className="flex items-end gap-3">
+        <div className="flex items-end gap-3 flex-wrap">
           <div>
             <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
               Fewer than this many participants
@@ -178,6 +221,7 @@ export function AdminCleanupPage() {
               min={1}
               value={threshold}
               onChange={(e) => setThreshold(Number(e.target.value) || 1)}
+              data-cy="admin-cleanup-threshold-input"
               className="w-24 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
@@ -185,6 +229,7 @@ export function AdminCleanupPage() {
             type="button"
             onClick={handleScan}
             disabled={scanning}
+            data-cy="admin-cleanup-scan-button"
             className="bg-game-blue text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
             {scanning ? 'Scanning...' : 'Scan'}
@@ -197,32 +242,66 @@ export function AdminCleanupPage() {
 
         {candidates && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {candidates.length} game(s) found
-              </p>
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                disabled={deleting || selectedIds.size === 0}
-                className="bg-game-danger text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {deleting
-                  ? 'Deleting...'
-                  : `Delete selected (${selectedIds.size})`}
-              </button>
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                Filter by admin email
+              </label>
+              <input
+                type="text"
+                value={adminEmailFilter}
+                onChange={(e) => setAdminEmailFilter(e.target.value)}
+                placeholder="e.g. your own test-account email"
+                data-cy="admin-cleanup-email-filter-input"
+                className="w-full max-w-sm px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
             </div>
 
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {visibleCandidates?.length ?? 0} of {candidates.length} game(s) shown
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAllVisible}
+                  disabled={(visibleCandidates?.length ?? 0) === 0}
+                  data-cy="admin-cleanup-select-all-button"
+                  className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  Select all shown
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  disabled={deleting || visibleSelectedIds.size === 0}
+                  data-cy="admin-cleanup-delete-button"
+                  className="bg-game-danger text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {deleting
+                    ? 'Deleting...'
+                    : `Delete selected (${visibleSelectedIds.size})`}
+                </button>
+              </div>
+            </div>
+
+            {deleteError && (
+              <p className="text-sm text-game-danger">{deleteError}</p>
+            )}
+
             <div className="space-y-3">
-              {candidates.map((game) => (
+              {visibleCandidates?.map((game) => (
                 <div
                   key={game.id}
+                  data-cy="admin-cleanup-game-row"
+                  data-cy-game-id={game.id}
                   className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex gap-3"
                 >
                   <input
                     type="checkbox"
                     checked={selectedIds.has(game.id)}
                     onChange={() => toggleSelected(game.id)}
+                    disabled={scanning}
+                    data-cy="admin-cleanup-game-checkbox"
                     className="w-5 h-5 mt-1 accent-game-danger flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0 text-sm">
