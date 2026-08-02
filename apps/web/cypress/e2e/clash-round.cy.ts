@@ -30,8 +30,15 @@ describe('Full clash-mode round', () => {
       cy.get('[data-cy=participant-row]').should('have.length', 3);
       cy.wait(SETTLE_MS);
 
-      // ── Admin assigns groups: test2 → Team A (auto-leader, sole member),
-      // test3 → Team B (auto-leader, sole member). test1 (admin) is never
+      // ── Admin assigns groups: whichever eligible participant is first in
+      // the pool goes to Team A (auto-leader, sole member), and whichever is
+      // first afterward goes to Team B (auto-leader, sole member) — pool
+      // ordering isn't guaranteed to put test2 in A and test3 in B, but the
+      // test's flow is symmetric either way: the last submitter's team always
+      // guesses first, and every downstream assertion is a length-1/value
+      // check that doesn't depend on which specific account ended up on
+      // which team. So correctness here only depends on the two teams ending
+      // up distinct, not on a specific pool order. test1 (admin) is never
       // eligible while adminWritesComments is off, so it never appears in
       // ClashSetupPanel's pool at all — no assignment action needed for it.
       // generateClashSchedule requires equal group sizes, so 1v1 is the only
@@ -39,9 +46,12 @@ describe('Full clash-mode round', () => {
       cy.signInAsTestUser('test1');
       cy.get('[data-cy=game-input]').type(gameId);
       cy.get('[data-cy=game-input-submit]').click();
-      cy.get(`[data-cy=clash-assign-button][data-cy-group=a][data-cy-user-id]`).first().click();
-      cy.wait(500);
-      cy.get(`[data-cy=clash-assign-button][data-cy-group=b][data-cy-user-id]`).first().click();
+      cy.get('[data-cy=clash-assign-button][data-cy-group=a][data-cy-user-id]').first().click();
+      // assignToGroup is a synchronous local state update in ClashSetupPanel
+      // that immediately re-renders, moving the assigned participant out of
+      // the pool — assert that instead of an arbitrary fixed delay.
+      cy.get('[data-cy=clash-assign-button][data-cy-group=a]').should('have.length', 1);
+      cy.get('[data-cy=clash-assign-button][data-cy-group=b][data-cy-user-id]').first().click();
       cy.get('[data-cy=clash-start-game-button]').should('not.be.disabled');
       cy.wait(SETTLE_MS);
       cy.get('[data-cy=clash-start-game-button]').click();
@@ -99,6 +109,12 @@ describe('Full clash-mode round', () => {
       cy.get('[data-cy=clash-guess-author-button]').should('not.exist');
       cy.wait(SETTLE_MS);
 
+      // ── Team B (test3) just scored 2 (correct subject + correct author
+      // guess); Team A hasn't gone yet, so clashData.teamScores should show
+      // a=0, b=2. Asserts the team-level score, not just the individual
+      // leaderboard totals asserted at the end. ───────────────────────────────
+      cy.get('[data-cy=clash-team-score]').should('have.attr', 'data-cy-a', '0').and('have.attr', 'data-cy-b', '2');
+
       // ── Admin advances — Team A hasn't guessed yet, so this only switches
       // the active leader (test2 next), it does not finish the round. ────────
       cy.signInAsTestUser('test1');
@@ -123,6 +139,10 @@ describe('Full clash-mode round', () => {
       cy.get('[data-cy=alert-button][data-cy-style=primary]').click();
       cy.get('[data-cy=clash-guess-author-button]').should('not.exist');
       cy.wait(SETTLE_MS);
+
+      // ── Team A (test2) just scored 2 as well, so clashData.teamScores
+      // should now show a=2, b=2. ──────────────────────────────────────────────
+      cy.get('[data-cy=clash-team-score]').should('have.attr', 'data-cy-a', '2').and('have.attr', 'data-cy-b', '2');
 
       // ── Admin advances again — Team B is already done and this is the
       // schedule's only round (groupA.length === 1 → n === 1), so this flips

@@ -14,6 +14,14 @@ describe('Full basket-mode round', () => {
     cy.get('[data-cy=game-input-submit]').click();
     cy.url().should('match', /\/game\/[^/]+$/);
     cy.get('[data-cy=game-type-button][data-cy-type=basket]').click();
+    // Same in-flight-write-cancellation risk documented in
+    // clash-round.cy.ts's comment here: signInAsTestUser's hard cy.visit('/')
+    // for test2 below can race and cancel this type-switch write before it
+    // reaches the server, leaving the game on the default 'mirror' type. This
+    // is suspected to be the root cause of an observed intermittent flake
+    // where this spec fails at the basket-comment-input step in full-suite
+    // runs.
+    cy.wait(SETTLE_MS);
 
     cy.url().then((url) => {
       const gameId = decodeURIComponent(url.split('/game/')[1]);
@@ -102,9 +110,10 @@ describe('Full basket-mode round', () => {
       cy.get('[data-cy=basket-guess-comment-button]').should('have.length', 2);
       cy.get('[data-cy=basket-guess-comment-button]').contains('encouraging').click();
       cy.get('[data-cy=alert-button][data-cy-style=primary]').click();
-      // Wrong guess: no author-guess step follows; the card shows "wrong" and
-      // basket-guess-author-button never appears for test3 this round.
-      cy.get('[data-cy=basket-guess-author-button]').should('not.exist');
+      // Wrong guess: the comment-picking buttons are replaced by the "wrong"
+      // message (BasketGuessingPhase's showWrong branch), proving the UI
+      // actually transitioned to the wrong-guess state.
+      cy.get('[data-cy=basket-guess-comment-button]').should('not.exist');
       cy.wait(SETTLE_MS);
 
       // ── Admin advances — this is the schedule's only round (2 writers →
