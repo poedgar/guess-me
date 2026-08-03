@@ -39,7 +39,7 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
   }
 
   return (
-    <div className="space-y-6" ref={scrollRef}>
+    <div className="space-y-6" ref={scrollRef} data-cy="game-finished">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-gold text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
           {t('game.ui.gameFinishedTitle')}

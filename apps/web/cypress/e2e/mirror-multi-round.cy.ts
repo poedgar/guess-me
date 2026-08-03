@@ -9,6 +9,7 @@ describe('Mirror mode wrong guess and multi-round completion', () => {
     cy.get('[data-cy=game-input-submit]').click();
     cy.url().should('match', /\/game\/[^/]+$/);
     cy.get('[data-cy=target-selection-mode-toggle]').click();
+    cy.get('[data-cy=target-selection-mode-toggle]').should('be.checked');
     cy.wait(SETTLE_MS);
 
     cy.url().then((url) => {
@@ -43,6 +44,12 @@ describe('Mirror mode wrong guess and multi-round completion', () => {
       // target selection: sign in as test2 and check which UI renders.
       // comment-input present means test2 is the commenter/non-target for
       // round 1; its absence means test2 is the target.
+      //
+      // Note: because target detection is now done at runtime regardless of
+      // mode, the toggle click above no longer needs to succeed for this
+      // test's correctness — but it's kept anyway because it still biases
+      // target order toward chronological (worth exercising) and exercises
+      // the admin-settings write path end to end.
       cy.signInAsTestUser('test2');
       cy.get('[data-cy=game-input]').type(gameId);
       cy.get('[data-cy=game-input-submit]').click();
@@ -204,6 +211,18 @@ describe('Mirror mode wrong guess and multi-round completion', () => {
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=finalize-button]').click();
         cy.wait(SETTLE_MS);
+
+        // ── Confirm the game actually reached 'finished'. In mirror mode
+        // (unlike basket/clash), the leaderboard-row/leaderboard-total-points
+        // selectors also render during active/guessing_phase (they show a
+        // live leaderboard from game.roundStartScores ?? game.scores in
+        // ActivePhase.tsx/GuessingPhase.tsx). Since roundStartScores snapshots
+        // at round start, an unexpected round 3 starting could still show the
+        // same [3, 2, 0] values and let the leaderboard assertions below pass
+        // green without the game ever reaching 'finished'. This selector only
+        // renders in the finished-state container in ResultsPhase.tsx, so it
+        // proves the round cascade actually terminated. ───────────────────────
+        cy.get('[data-cy=game-finished]').should('exist');
 
         // ── Finished: round 2's target earned 3 (1 comment point in round 1
         // as round 1's commenter, + 1 reciprocal point in round 2 + 1

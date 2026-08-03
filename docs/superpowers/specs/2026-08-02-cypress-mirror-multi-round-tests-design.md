@@ -11,7 +11,7 @@
 
 ### Prerequisite: one `data-cy` attribute
 
-Add `data-cy="target-selection-mode-toggle"` to the `targetSelectionMode` checkbox input in `apps/web/src/components/game/mirror/WaitingPhase.tsx` (inside the admin settings block, currently one of 4 undifferentiated `<input type="checkbox">` elements built from a shared `.map()` — this is the only one of the 4 this chunk needs; the other 3, `adminWritesComments`/`showSurnames`/`showGuessResults`, are Chunk C's concern and are left untouched here).
+Add `data-cy="target-selection-mode-toggle"` to the `targetSelectionMode` checkbox input in `apps/web/src/components/game/mirror/WaitingPhase.tsx` (inside the admin settings block, one of 4 undifferentiated `<input type="checkbox">` elements built from a shared `.map()`). In practice, all 4 toggles get a `data-cy` attribute as a natural consequence of the shared render code (see the implementation plan's Task 1 for why — special-casing just one of the 4 out of the shared `.map()` would have been more awkward than giving all 4 a `data-cy`), but this chunk's test only uses `target-selection-mode-toggle` — the other 3 (`adminWritesComments`/`showSurnames`/`showGuessResults`) remain available for Chunk C to use directly.
 
 ### `mirror-multi-round.cy.ts`
 
