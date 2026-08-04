@@ -65,8 +65,8 @@ describe('Reload mid-game auto-rejoins via the URL', () => {
           cy.get('[data-cy=game-input]').type(gameId);
           cy.get('[data-cy=game-input-submit]').click();
           cy.get('[data-cy=comment-input]').should('exist');
-          cy.wait(SETTLE_MS);
         }
+        cy.wait(SETTLE_MS);
 
         // ── Reload mid-'active' phase — this is the test's central claim:
         // GameJoinPage's auto-rejoin must resume the actual current phase

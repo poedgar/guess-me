@@ -57,6 +57,11 @@ The `status` field on the game document drives all UI changes. Every client reac
 | `targetSelectionMode` | `'random'` — admin picks random participant each round; `'chronological'` — cycles by join order |
 | `showGuessResults` | Show guess accuracy results to the target after guessing |
 
+**Known gaps:**
+- `showSurnames` and `showGuessResults` are stored in Firestore and toggleable from the admin UI in `apps/web`, but currently have no effect anywhere in `apps/web`'s rendering — only the toggle itself and the context getter/setter reference them there.
+- `showSurnames` works correctly in `apps/expo` (see `apps/expo/components/game/GameScreen.tsx`, which formats participant names based on it). Its lack of effect in `apps/web` is a web-port gap, not an intentional design decision.
+- `showGuessResults` appears unimplemented on both platforms — it's stored and toggleable in `apps/expo` too, but nothing reads it to actually gate guess-result visibility.
+
 **Game ID:**
 - Game IDs are generated from Ukrainian words (see `utils/gameIdGenerator.ts`).
 - Participants can join by typing the ID or scanning a QR code.

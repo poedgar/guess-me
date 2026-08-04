@@ -134,6 +134,17 @@ describe('adminWritesComments toggled on', () => {
           const values = $points.toArray().map((el) => Number(el.textContent)).sort((a, b) => b - a);
           expect(values).to.deep.equal([2, 1]);
         });
+
+        // ── Directly confirm round 2's target (round 1's commenter — which
+        // in the test1-commenter branch is test1, the admin) does NOT see
+        // the commenter's writing UI. Combined with the comment-input
+        // assertion above (proving round 2's commenter role), this makes
+        // the admin-as-target claim directly observable in the browser in
+        // both runtime branches, not just provable by elimination logic. ──
+        cy.signInAsTestUser(round1CommenterRole);
+        cy.get('[data-cy=game-input]').type(gameId);
+        cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=comment-input]').should('not.exist');
       });
     });
   });
