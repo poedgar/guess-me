@@ -183,6 +183,8 @@
       "targetSelectionModeDescription": "Оберіть, як обираються цілі: випадково або за порядком приєднання",
       "showGuessResultsTitle": "Показувати результати вгадування",
       "showGuessResultsDescription": "Показувати, чи правильно цілі впізнали коментаторів",
+      "ideaIncognitoModeTitle": "Анонімні оцінки",
+      "ideaIncognitoModeDescription": "Коли увімкнено, оцінки та коментарі залишаються анонімними. Коли вимкнено, оцінки підписані і немає поля для коментаря — обговорюйте вголос",
       "guessCorrect": "Ваш вибір був правильним!",
       "guessIncorrect": "Ваш вибір був неправильним.",
       "guessCorrectDetails": "Правильно! %{actual} справді написав цей коментар.",
@@ -309,6 +311,7 @@
       "gameTypeMirror": "В дзеркалі",
       "gameTypeBasket": "Кошик",
       "gameTypeClash": "Стінка на стінку",
+      "gameTypeIdeas": "Групові ідеї",
       "gameTypeSoon": "Незабаром",
       "basket": {
         "round": "Раунд %{current} з %{total}",
@@ -358,6 +361,24 @@
         "emptyGroup": "поки немає гравців",
         "confirmSubjectGuess": "Цей коментар про %{name}?",
         "confirmAuthorGuess": "%{name} написав(ла) цей коментар?"
+      },
+      "ideas": {
+        "yourIdeas": "Ваші ідеї",
+        "writeIdea": "Напишіть ідею...",
+        "addIdea": "Додати ідею",
+        "submittedCount": "Подано ідей: %{count}",
+        "waitingForOthers": "Очікування, поки інші закінчать писати...",
+        "startRating": "Почати оцінювання",
+        "round": "Раунд %{current} з %{total}",
+        "rateThisIdea": "Оцініть цю ідею",
+        "pointsLabel": "Бали (0-5)",
+        "commentPlaceholder": "Необов'язковий коментар...",
+        "submitRating": "Надіслати оцінку",
+        "waitingForRatings": "Оцінено: %{count}/%{total}",
+        "nextRound": "Наступний раунд",
+        "finishGame": "Завершити гру",
+        "confirmSubmitIdea": "Надіслати цю ідею?",
+        "confirmSubmitRating": "Надіслати цю оцінку?"
       }
     }
   },

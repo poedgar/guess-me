@@ -178,6 +178,8 @@
       "targetSelectionModeDescription": "Choose how targets are selected: random or by join order",
       "showGuessResultsTitle": "Show guess results",
       "showGuessResultsDescription": "Show whether targets correctly identified commentators",
+      "ideaIncognitoModeTitle": "Incognito ratings",
+      "ideaIncognitoModeDescription": "When on, ratings and comments stay anonymous. When off, ratings are attributed and there's no comment box — discuss out loud instead",
       "guessCorrect": "Your choice was correct!",
       "guessIncorrect": "Your choice was incorrect.",
       "guessCorrectDetails": "Correct! %{actual} actually wrote this comment.",
@@ -302,6 +304,7 @@
       "gameTypeMirror": "In the Mirror",
       "gameTypeBasket": "Basket",
       "gameTypeClash": "Head-to-Head",
+      "gameTypeIdeas": "Group Ideas",
       "gameTypeSoon": "Soon",
       "basket": {
         "round": "Round %{current} of %{total}",
@@ -351,6 +354,24 @@
         "emptyGroup": "no players yet",
         "confirmSubjectGuess": "This comment is about %{name}?",
         "confirmAuthorGuess": "%{name} wrote this comment?"
+      },
+      "ideas": {
+        "yourIdeas": "Your ideas",
+        "writeIdea": "Write an idea...",
+        "addIdea": "Add idea",
+        "submittedCount": "%{count} idea(s) submitted",
+        "waitingForOthers": "Waiting for others to finish writing...",
+        "startRating": "Start Rating Rounds",
+        "round": "Round %{current} of %{total}",
+        "rateThisIdea": "Rate this idea",
+        "pointsLabel": "Points (0-5)",
+        "commentPlaceholder": "Optional comment...",
+        "submitRating": "Submit Rating",
+        "waitingForRatings": "%{count}/%{total} rated",
+        "nextRound": "Next Round",
+        "finishGame": "Finish Game",
+        "confirmSubmitIdea": "Submit this idea?",
+        "confirmSubmitRating": "Submit this rating?"
       }
     }
   },
