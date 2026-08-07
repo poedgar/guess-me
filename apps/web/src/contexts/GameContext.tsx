@@ -1,4 +1,4 @@
-import { auth, db, generateGameId, sortParticipantsByJoin, buildJoinIndexById, generateBasketSchedule, generateClashSchedule } from '@mirror/shared';
+import { auth, db, generateGameId, sortParticipantsByJoin, buildJoinIndexById, generateBasketSchedule, generateClashSchedule, generateIdeaSchedule } from '@mirror/shared';
 import type { BasketAssignment, BasketRound, ClashAssignment, ClashRound } from '@mirror/shared';
 import { useAuth } from './AuthContext';
 import {
@@ -33,7 +33,7 @@ export interface Game {
   adminEmail: string;
   participants: Participant[];
   createdAt: Date | Timestamp;
-  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing";
+  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing" | "idea_writing" | "idea_rating";
   // If set, indicates that target has submitted guesses and players can now award points to each other
   postGuessingPointPhase?: boolean;
   // Track which players have already awarded points in post-guessing phase
@@ -64,10 +64,13 @@ export interface Game {
   showGuessResults?: boolean;
   // Target selection mode: 'random' or 'chronological' (default: 'random')
   targetSelectionMode?: "random" | "chronological";
-  // Which game type to play: 'mirror' (default), 'basket', or 'clash'
-  gameType?: 'mirror' | 'basket' | 'clash';
+  // Which game type to play: 'mirror' (default), 'basket', 'clash', or 'ideas'
+  gameType?: 'mirror' | 'basket' | 'clash' | 'ideas';
   basketData?: BasketData;
   clashData?: ClashData;
+  ideaData?: IdeaGameData;
+  // Whether the admin also submits an idea for the group to rate (default: false)
+  ideaIncognitoMode?: boolean;
   // Admin target control preferences
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
@@ -194,6 +197,28 @@ export interface ClashData {
   teamScores: { a: number; b: number };
 }
 
+export interface Idea {
+  id: string;
+  authorId: string;
+  text: string;
+  submittedAt: number;
+}
+
+export interface IdeaRating {
+  raterId: string;
+  ideaId: string;
+  points: number;
+  comment?: string;
+}
+
+export interface IdeaGameData {
+  incognitoMode: boolean;
+  ideas: Idea[];
+  schedule: string[];
+  currentRoundIndex: number;
+  currentRoundRatings: IdeaRating[];
+}
+
 interface GameContextType {
   currentGame: Game | null;
   loading: boolean;
@@ -235,7 +260,7 @@ interface GameContextType {
     targetSelectionMode: "random" | "chronological",
   ) => Promise<void>;
   updateShowGuessResults: (showGuessResults: boolean) => Promise<void>;
-  setGameType: (type: 'mirror' | 'basket' | 'clash') => Promise<void>;
+  setGameType: (type: 'mirror' | 'basket' | 'clash' | 'ideas') => Promise<void>;
   startBasketGame: () => Promise<void>;
   submitBasketComment: (text: string) => Promise<void>;
   revealBasketComments: () => Promise<void>;
@@ -249,6 +274,12 @@ interface GameContextType {
   submitClashGuess: (commentWriterId: string, guessedSubjectId: string) => Promise<void>;
   submitClashAuthorGuess: (commentWriterId: string, guessedAuthorId: string) => Promise<void>;
   advanceClashGuessing: () => Promise<void>;
+  startIdeaGame: () => Promise<void>;
+  submitIdea: (text: string) => Promise<void>;
+  startIdeaRatingRounds: () => Promise<void>;
+  submitIdeaRating: (ideaId: string, points: number, comment?: string) => Promise<void>;
+  startNextIdeaRound: () => Promise<void>;
+  updateIdeaIncognitoMode: (ideaIncognitoMode: boolean) => Promise<void>;
   // Admin target control functions
   setNextRoundTarget: (targetUserId: string) => Promise<void>;
   skipNextRoundTarget: (targetUserId: string) => Promise<void>;
@@ -1820,7 +1851,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const setGameType = async (type: 'mirror' | 'basket' | 'clash'): Promise<void> => {
+  const setGameType = async (type: 'mirror' | 'basket' | 'clash' | 'ideas'): Promise<void> => {
     if (!currentGame) return;
     const gameRef = doc(db, 'games', currentGame.id);
     await updateDoc(gameRef, { gameType: type });
@@ -2252,6 +2283,167 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const startIdeaGame = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the game");
+    }
+    const eligibleWriters = (currentGame.adminWritesComments ?? false)
+      ? currentGame.participants.map((p: Participant) => p.userId)
+      : currentGame.participants.filter((p: Participant) => p.userId !== currentGame.adminId).map((p: Participant) => p.userId);
+    if (eligibleWriters.length < 2) {
+      throw new Error("Need at least 2 players (excluding admin) to start Group Ideas. Enable 'Admin writes comments' or add more players.");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        status: 'idea_writing',
+        ideaData: {
+          incognitoMode: currentGame.ideaIncognitoMode ?? true,
+          ideas: [],
+          schedule: [],
+          currentRoundIndex: 0,
+          currentRoundRatings: [],
+        },
+      });
+    } catch (err) {
+      console.error('Error starting idea game:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitIdea = async (text: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame?.ideaData) throw new Error("No active Group Ideas game");
+    if (!text.trim()) throw new Error("Idea cannot be empty");
+    if (text.trim().length > 500) throw new Error("Idea must be 500 characters or fewer");
+    const idea: Idea = {
+      id: `${Date.now()}-${auth.currentUser.uid}-${currentGame.ideaData.ideas.length}`,
+      authorId: auth.currentUser.uid,
+      text: text.trim(),
+      submittedAt: Date.now(),
+    };
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        'ideaData.ideas': arrayUnion(idea),
+      });
+    } catch (err) {
+      console.error('Error submitting idea:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startIdeaRatingRounds = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the rating rounds");
+    }
+    if (!currentGame.ideaData) throw new Error("No active Group Ideas game");
+    const authorIdsWithIdeas = Array.from(new Set(currentGame.ideaData.ideas.map((i: Idea) => i.authorId)));
+    if (authorIdsWithIdeas.length < 2) {
+      throw new Error("Need at least 2 participants with submitted ideas to start rating");
+    }
+    try {
+      setLoading(true);
+      const schedule = generateIdeaSchedule(authorIdsWithIdeas);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        status: 'idea_rating',
+        'ideaData.schedule': schedule,
+        'ideaData.currentRoundIndex': 0,
+        'ideaData.currentRoundRatings': [],
+      });
+    } catch (err) {
+      console.error('Error starting idea rating rounds:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitIdeaRating = async (ideaId: string, points: number, comment?: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame?.ideaData) throw new Error("No active Group Ideas game");
+    if (points < 0 || points > 5) throw new Error("Points must be between 0 and 5");
+    const { ideas, currentRoundRatings, incognitoMode } = currentGame.ideaData;
+    const idea = ideas.find((i: Idea) => i.id === ideaId);
+    if (!idea) throw new Error("Idea not found");
+    const raterId = auth.currentUser.uid;
+    const alreadyRated = currentRoundRatings.some((r: IdeaRating) => r.raterId === raterId && r.ideaId === ideaId);
+    if (alreadyRated) throw new Error("You have already rated this idea");
+    const rating: IdeaRating = {
+      raterId,
+      ideaId,
+      points,
+      ...(incognitoMode && comment?.trim() ? { comment: comment.trim() } : {}),
+    };
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        'ideaData.currentRoundRatings': arrayUnion(rating),
+        [`scores.${idea.authorId}`]: (currentGame.scores?.[idea.authorId] ?? 0) + points,
+      });
+    } catch (err) {
+      console.error('Error submitting idea rating:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startNextIdeaRound = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the next round");
+    }
+    if (!currentGame.ideaData) throw new Error("No active Group Ideas game");
+    const { schedule, currentRoundIndex } = currentGame.ideaData;
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      if (currentRoundIndex + 1 >= schedule.length) {
+        await updateDoc(gameRef, { status: 'finished' });
+      } else {
+        await updateDoc(gameRef, {
+          'ideaData.currentRoundIndex': currentRoundIndex + 1,
+          'ideaData.currentRoundRatings': [],
+        });
+      }
+    } catch (err) {
+      console.error('Error starting next idea round:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateIdeaIncognitoMode = async (ideaIncognitoMode: boolean): Promise<void> => {
+    if (!currentGame || !auth.currentUser || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can update this setting");
+    }
+    if (currentGame.status !== "waiting") {
+      throw new Error("This setting can only be updated before the game starts");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, "games", currentGame.id);
+      await updateDoc(gameRef, { ideaIncognitoMode });
+    } catch (err) {
+      console.error("Error updating idea incognito mode setting:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const listAllGames = async (): Promise<Game[]> => {
     const snapshot = await getDocs(collection(db, "games"));
     return snapshot.docs.map((d) => ({ ...d.data(), id: d.id }) as Game);
@@ -2322,6 +2514,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       submitClashGuess,
       submitClashAuthorGuess,
       advanceClashGuessing,
+      startIdeaGame,
+      submitIdea,
+      startIdeaRatingRounds,
+      submitIdeaRating,
+      startNextIdeaRound,
+      updateIdeaIncognitoMode,
       startPostGuessingPointPhase,
       awardPointsToPlayers,
       skipPostCommentPhase,
