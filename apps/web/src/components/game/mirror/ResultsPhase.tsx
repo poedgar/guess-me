@@ -27,7 +27,7 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
 
   if (game.adminLeft) {
     return (
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-gold text-center space-y-2" ref={scrollRef}>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-gold text-center space-y-2" ref={scrollRef} data-cy="admin-left">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {t('game.ui.adminLeftTitle')}
         </h2>

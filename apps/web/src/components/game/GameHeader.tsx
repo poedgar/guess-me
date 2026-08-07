@@ -65,6 +65,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
 
       <button type="button"
         onClick={onLeave}
+        data-cy="leave-game-button"
         className="w-full bg-game-danger text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
       >
         {t('game.leaveGame') || 'Leave Game'}
