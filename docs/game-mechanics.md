@@ -193,7 +193,15 @@ Participants become the target in the order they joined the game (by `joinedAt` 
 
 ## Admin-Less Flow
 
-If the admin leaves mid-game (`adminLeft: true` is set on the game document), remaining participants can still view the game state, but phase transitions are blocked. Handling for this edge case is minimal in the current implementation.
+If the admin leaves mid-game, `leaveGame()`'s admin branch (`GameContext.tsx`) writes the following fields in a single Firestore transaction: `status: 'finished'`, `currentRound: null`, `adminLeft: true`, `adminNextTargetPreference: null`, `playersWhoCompletedPostCommentPhase: []`. The game does not linger in a blocked or partially-frozen state — it is immediately over, and there are no further phase transitions to block.
+
+`ResultsPhase.tsx` checks `game.adminLeft` and renders a dedicated view (`data-cy="admin-left"`) instead of the normal finished view (`data-cy="game-finished"`) whenever it's set. Remaining participants land on this admin-left view via the existing real-time Firestore listener, with no extra action required.
+
+The leaving admin's own client is not exempt from this: their still-mounted `GameScreen` receives the same real-time update, and a `useEffect` watching `currentGame?.adminLeft` self-fires the "Admin has left the game" alert on their own screen too. After dismissing it, the admin lands on the same admin-left `ResultsPhase` view as everyone else — **not** a fresh `JoinScreen` or lobby. This was unexpected going in, but was confirmed both by a Cypress run and independent manual verification against production, so it's the actual, current behavior.
+
+Note: the `game.ui.adminLeftMessage` translation string (`packages/shared/src/locales/en.json` / `uk.json`) currently reads "You will be returned to the lobby" (or the Ukrainian equivalent). That promise is not implemented anywhere — nobody is navigated back to a lobby, admin or otherwise. This is a pre-existing copy/behavior mismatch, left as-is for now.
+
+Regression coverage: `apps/web/cypress/e2e/admin-left.cy.ts`.
 
 ---
 

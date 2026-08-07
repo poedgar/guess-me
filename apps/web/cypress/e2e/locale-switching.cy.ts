@@ -74,6 +74,7 @@ describe('Locale switching', () => {
         },
       });
     });
+    cy.window().its('navigator.language').should('eq', 'fr-FR');
     cy.get('[data-cy=leave-game-button]').should('contain.text', 'Leave Game');
   });
 });

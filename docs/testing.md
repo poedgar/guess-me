@@ -219,3 +219,18 @@ Run `npm run test:coverage` and open `coverage/lcov-report/index.html` for the f
 - `GameScreen.test.tsx` covers basic rendering. Phase-specific UI (guessing keyboard, point awarding) is not yet fully tested.
 - Context integration tests (testing the Firestore listener lifecycle) are pending.
 - Sound generation tests are not present — `SoundContext` uses Web Audio API which is not available in jsdom.
+
+---
+
+## Cypress E2E Tests (apps/web)
+
+The Jest suite above covers unit/component tests for the Expo app. Separately, `apps/web/cypress/e2e/` holds end-to-end specs for the web app, covering mirror/basket/clash game modes, settings, lifecycle, locale switching, animations, and admin-left handling.
+
+Unlike the Jest tests, these run against **real production Firebase** — there is no local or mocked backend. Run them from `apps/web`:
+
+```bash
+npm run cypress:open   # interactive runner
+npm run cypress:run    # headless run
+```
+
+They also run in CI via `.github/workflows/cypress-e2e.yml`, triggered on push to `apps/web/**` or `packages/shared/**`, plus a 6-hourly schedule.

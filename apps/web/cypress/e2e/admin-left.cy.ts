@@ -36,6 +36,15 @@ describe('Admin leaves the game', () => {
       // the admin — dismiss that alert, then confirm the leave action
       // completed by finding admin on their own admin-left view, before
       // checking test2's side of the transition.
+      //
+      // Note: this admin-side assertion locks in OBSERVED current behavior,
+      // not a deliberate product decision. If the app is later changed to
+      // actually return the leaving admin to a lobby (matching what
+      // adminLeftMessage's copy promises but doesn't currently do — see
+      // docs/game-mechanics.md's Admin-Less Flow section), this is the
+      // assertion to update — not evidence of a regression in the core
+      // thing this test covers, which is remaining participants seeing the
+      // admin-left view.
       cy.get('[data-cy=alert-button][data-cy-style=primary]').click();
       cy.get('[data-cy=admin-left]').should('exist');
       cy.wait(SETTLE_MS);
