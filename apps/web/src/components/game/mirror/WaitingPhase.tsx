@@ -19,10 +19,12 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
     loading,
     startGame,
     startBasketGame,
+    startIdeaGame,
     updateAdminWritesComments,
     updateShowSurnames,
     updateTargetSelectionMode,
     updateShowGuessResults,
+    updateIdeaIncognitoMode,
     setGameType,
   } = useGame();
   const { showAlert, AlertModal } = useAlert();
@@ -48,6 +50,8 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
       setIsStarting(true);
       if (game.gameType === 'basket') {
         await startBasketGame();
+      } else if (game.gameType === 'ideas') {
+        await startIdeaGame();
       } else {
         await startGame();
       }
@@ -86,6 +90,10 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const handleToggleShowGuessResults = makeToggler(
     updateShowGuessResults,
     () => !(game.showGuessResults ?? false),
+  );
+  const handleToggleIdeaIncognitoMode = makeToggler(
+    updateIdeaIncognitoMode,
+    () => !(game.ideaIncognitoMode ?? true),
   );
 
   return (
@@ -144,7 +152,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
           {/* Game type selector */}
           {isAdmin && (
             <div className="flex gap-2 mb-4">
-              {(['mirror', 'basket', 'clash'] as const).map(type => (
+              {(['mirror', 'basket', 'clash', 'ideas'] as const).map(type => (
                 <button
                   key={type}
                   type="button"
@@ -194,6 +202,42 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                   desc: t('game.ui.showGuessResultsDescription'),
                   checked: game.showGuessResults ?? false,
                   onChange: handleToggleShowGuessResults,
+                },
+              ].map(({ id, label, desc, checked, onChange }) => (
+                <label key={id} className="flex items-center justify-between gap-4 cursor-pointer">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    data-cy={`${id}-toggle`}
+                    checked={checked}
+                    onChange={onChange}
+                    className="w-5 h-5 accent-game-green"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+
+          {/* Idea game settings */}
+          {isAdmin && game.gameType === 'ideas' && (
+            <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+              {[
+                {
+                  id: 'admin-writes-comments',
+                  label: t('game.ui.adminWritesCommentsTitle'),
+                  desc: t('game.ui.adminWritesCommentsDescription'),
+                  checked: game.adminWritesComments ?? false,
+                  onChange: handleToggleAdminComments,
+                },
+                {
+                  id: 'idea-incognito-mode',
+                  label: t('game.ui.ideaIncognitoModeTitle'),
+                  desc: t('game.ui.ideaIncognitoModeDescription'),
+                  checked: game.ideaIncognitoMode ?? true,
+                  onChange: handleToggleIdeaIncognitoMode,
                 },
               ].map(({ id, label, desc, checked, onChange }) => (
                 <label key={id} className="flex items-center justify-between gap-4 cursor-pointer">
