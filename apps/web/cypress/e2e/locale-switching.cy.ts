@@ -33,6 +33,11 @@ describe('Locale switching', () => {
     cy.get('[data-cy=game-input-submit]').click();
     cy.url().should('match', /\/game\/[^/]+$/);
 
+    let gameUrl = '';
+    cy.url().then((url) => {
+      gameUrl = url;
+    });
+
     // ── Default locale is Ukrainian (the stubbed browser language above,
     // resolved via i18n.ts's detectLocale()). The leave-game button's text
     // is a simple, already-instrumented (Task 1) known string that changes
@@ -46,8 +51,29 @@ describe('Locale switching', () => {
 
     // ── Reload — locale is saved to localStorage (LanguageContext.tsx) and
     // restored on load, so this proves persistence, not just the in-session
-    // toggle. ─────────────────────────────────────────────────────────────
-    cy.reload();
+    // toggle. A plain cy.reload() wouldn't actually prove that: headless
+    // Cypress Chrome's real navigator.language ('en-US') is itself a
+    // recognized SUPPORTED_LOCALES tag, so i18n.ts's detectLocale() would
+    // independently re-resolve 'en' on reload even if the localStorage
+    // save/restore in LanguageContext.tsx were completely broken — the
+    // assertion would pass for the wrong reason. Stubbing
+    // navigator.language to an UNRECOGNIZED tag ('fr-FR') for this specific
+    // navigation forces detectLocale()'s own fallback to 'uk' instead;
+    // seeing 'Leave Game' (English) afterward can then only be explained by
+    // LanguageContext.tsx's persisted localStorage value overriding that
+    // fresh detection — which is the actual thing this step needs to
+    // prove. cy.reload() has no onBeforeLoad hook, so cy.visit() to the
+    // already-captured game URL is used instead. ───────────────────────────
+    cy.then(() => {
+      cy.visit(gameUrl, {
+        onBeforeLoad(win) {
+          Object.defineProperty(win.navigator, 'language', {
+            value: 'fr-FR',
+            configurable: true,
+          });
+        },
+      });
+    });
     cy.get('[data-cy=leave-game-button]').should('contain.text', 'Leave Game');
   });
 });
