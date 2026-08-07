@@ -2,6 +2,28 @@ import { Timestamp } from 'firebase/firestore';
 import { BasketAssignment, BasketRound } from './utils/basketSchedule';
 import { ClashAssignment, ClashRound } from './utils/clashSchedule';
 
+export interface Idea {
+  id: string;
+  authorId: string;
+  text: string;
+  submittedAt: number;
+}
+
+export interface IdeaRating {
+  raterId: string;
+  ideaId: string;
+  points: number; // 0-5
+  comment?: string; // only ever set in incognito mode
+}
+
+export interface IdeaGameData {
+  incognitoMode: boolean;
+  ideas: Idea[];
+  schedule: string[];
+  currentRoundIndex: number;
+  currentRoundRatings: IdeaRating[];
+}
+
 export interface Game {
   id: string;
   adminId: string;
@@ -9,7 +31,7 @@ export interface Game {
   adminEmail: string;
   participants: Participant[];
   createdAt: Date | Timestamp;
-  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing";
+  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing" | "idea_writing" | "idea_rating";
   postGuessingPointPhase?: boolean;
   playersWhoAwardedPostGuessPoints?: string[];
   adminAwards?: {
@@ -31,9 +53,12 @@ export interface Game {
   showSurnames?: boolean;
   showGuessResults?: boolean;
   targetSelectionMode?: "random" | "chronological";
-  gameType?: 'mirror' | 'basket' | 'clash';
+  gameType?: 'mirror' | 'basket' | 'clash' | 'ideas';
   basketData?: BasketData;
   clashData?: ClashData;
+  ideaData?: IdeaGameData;
+  // Whether the admin also submits an idea for the group to rate (default: false)
+  ideaIncognitoMode?: boolean;
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
   // Stable per-participant display numbers, assigned once when the game starts.
