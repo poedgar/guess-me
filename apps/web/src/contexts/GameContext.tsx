@@ -69,7 +69,7 @@ export interface Game {
   basketData?: BasketData;
   clashData?: ClashData;
   ideaData?: IdeaGameData;
-  // Whether the admin also submits an idea for the group to rate (default: false)
+  // Whether ratings/comments in Group Ideas mode stay anonymous (default: true)
   ideaIncognitoMode?: boolean;
   // Admin target control preferences
   adminNextTargetPreference?: string;
