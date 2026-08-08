@@ -30,6 +30,11 @@ export interface Game {
   adminName: string;
   adminEmail: string;
   participants: Participant[];
+  // Plain UIDs mirroring participants, kept in sync at create/join/leave.
+  // Exists so Firestore rules can check membership — rules can't search
+  // inside an array of objects for a matching field, only exact-value
+  // membership over primitive arrays.
+  participantIds?: string[];
   createdAt: Date | Timestamp;
   status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing" | "idea_writing" | "idea_rating";
   postGuessingPointPhase?: boolean;

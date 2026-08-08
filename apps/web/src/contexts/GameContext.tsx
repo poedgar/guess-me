@@ -32,6 +32,11 @@ export interface Game {
   adminName: string;
   adminEmail: string;
   participants: Participant[];
+  // Plain UIDs mirroring participants, kept in sync at create/join/leave.
+  // Exists so Firestore rules can check membership — rules can't search
+  // inside an array of objects for a matching field, only exact-value
+  // membership over primitive arrays.
+  participantIds?: string[];
   createdAt: Date | Timestamp;
   status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing" | "idea_writing" | "idea_rating";
   // If set, indicates that target has submitted guesses and players can now award points to each other
@@ -421,6 +426,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             joinedAt: now,
           },
         ],
+        participantIds: [user.uid],
         createdAt: serverTimestamp(),
         status: "waiting" as const,
         adminWritesComments,
@@ -490,6 +496,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
       await updateDoc(gameRef, {
         participants: arrayUnion(newParticipant),
+        participantIds: arrayUnion(user.uid),
       });
 
       // Set the game so the real-time listener starts (if not already set)
@@ -567,11 +574,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const updatedParticipants = (gameData.participants || []).filter(
           (p) => p.userId !== leavingUid,
         );
+        const updatedParticipantIds = (gameData.participantIds || []).filter(
+          (id) => id !== leavingUid,
+        );
 
         // If leaving user was the admin, mark the game as finished and flag adminLeft
         if (gameData.adminId === leavingUid) {
           transaction.update(gameRef, {
             participants: updatedParticipants,
+            participantIds: updatedParticipantIds,
             status: "finished",
             currentRound: null,
             adminLeft: true,
@@ -581,6 +592,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         } else {
           transaction.update(gameRef, {
             participants: updatedParticipants,
+            participantIds: updatedParticipantIds,
           });
         }
       });
@@ -1852,7 +1864,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const setGameType = async (type: 'mirror' | 'basket' | 'clash' | 'ideas'): Promise<void> => {
-    if (!currentGame) return;
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can update this setting");
+    }
     const gameRef = doc(db, 'games', currentGame.id);
     await updateDoc(gameRef, { gameType: type });
   };
