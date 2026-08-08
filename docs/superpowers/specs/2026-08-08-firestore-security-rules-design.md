@@ -87,9 +87,12 @@ Any signed-in user, provided they can't spoof someone else as the admin/creator.
 
 **Update:**
 ```
-allow update: if isAdmin(resource.data) || isParticipant(resource.data);
+allow update: if isAdmin(resource.data) || isParticipant(resource.data)
+  || (isSignedIn() && resource.data.status == "waiting");
 ```
 Coarse-grained: any participant or the admin can update the document. This matches the "participant + role-membership only" scope decision — the rule does not re-validate fine-grained business logic (e.g. "is this comment's claimed writer→subject pairing actually correct per the stored schedule," "is this caller really the round's target," "is this caller really the active clash group leader"). Those checks remain exactly where they are today: enforced by the app's own `GameContext.tsx` logic and, for the one function that already re-validates server-side (`submitIdeaRating`, via `runTransaction`), inside the transaction itself. This rule closes "a random stranger with a guessed game ID can write anything" while accepting the same self-asserted-role trust level the app already has today among actual participants.
+
+**Join carve-out (correction from an earlier draft of this spec):** an initial draft of this rule was `isAdmin || isParticipant` only, checked against the pre-write `resource.data` — which would have broken joining entirely, since a brand-new participant isn't yet in `participantIds` at the exact moment they're adding themselves. The third clause (`status == "waiting"`) mirrors the read rule's own carve-out: any signed-in stranger can update a `waiting` game, not just append themselves — broader than strictly necessary for joining, but consistent with the read rule's already-established reasoning (no real gameplay content exists at that status, so the low-stakes trust boundary already accepted for reads extends naturally to writes there too). A narrower "only allow appending the caller's own uid, touch nothing else" carve-out was considered and rejected as more failure-prone to get exactly right in rules language, for a status where the broader access is already low-risk.
 
 A stricter field-level split (e.g. "only admin can write `status`/`basketData`/`clashData`/`ideaData`/settings fields; only the round target can write `currentRound.comments[].points`") was considered and explicitly deferred — see Out of Scope.
 
