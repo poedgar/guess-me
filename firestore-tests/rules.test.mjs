@@ -7,7 +7,7 @@ import {
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -102,6 +102,12 @@ test('a signed-in stranger cannot update an active game they are not part of', a
   await assertFails(updateDoc(doc(strangerDb, 'games', 'game1'), { status: 'finished' }));
 });
 
+test('a participant can update an active game', async () => {
+  await seed('game1', baseGame({ status: 'active', participantIds: [ADMIN_UID, PARTICIPANT_UID] }));
+  const participantDb = testEnv.authenticatedContext(PARTICIPANT_UID).firestore();
+  await assertSucceeds(updateDoc(doc(participantDb, 'games', 'game1'), { status: 'active' }));
+});
+
 test('create succeeds when adminId and participantIds match the caller', async () => {
   const adminDb = testEnv.authenticatedContext(ADMIN_UID).firestore();
   await assertSucceeds(setDoc(doc(adminDb, 'games', 'game1'), baseGame()));
@@ -109,7 +115,7 @@ test('create succeeds when adminId and participantIds match the caller', async (
 
 test('create fails if adminId does not match the caller', async () => {
   const strangerDb = testEnv.authenticatedContext(STRANGER_UID).firestore();
-  await assertFails(setDoc(doc(strangerDb, 'games', 'game1'), baseGame({ adminId: ADMIN_UID })));
+  await assertFails(setDoc(doc(strangerDb, 'games', 'game1'), baseGame({ adminId: ADMIN_UID, participantIds: [STRANGER_UID] })));
 });
 
 test('create fails if participantIds does not match [caller]', async () => {
@@ -127,6 +133,12 @@ test('the admin can delete their own game', async () => {
   await seed('game1', baseGame({ status: 'finished' }));
   const adminDb = testEnv.authenticatedContext(ADMIN_UID).firestore();
   await assertSucceeds(deleteDoc(doc(adminDb, 'games', 'game1')));
+});
+
+test('list is always denied, even for the admin', async () => {
+  await seed('game1', baseGame());
+  const adminDb = testEnv.authenticatedContext(ADMIN_UID).firestore();
+  await assertFails(getDocs(collection(adminDb, 'games')));
 });
 
 test('an old-style game missing participantIds is still readable/writable by its admin', async () => {
@@ -154,6 +166,21 @@ test('an old-style game missing participantIds is NOT accessible to a non-admin 
   await assertFails(getDoc(doc(participantDb, 'games', 'game1')));
 });
 
+test('a legacy waiting game missing participantIds is still joinable by a stranger', async () => {
+  await seed('game1', {
+    adminId: ADMIN_UID,
+    adminName: 'Admin',
+    adminEmail: 'admin@example.com',
+    participants: [],
+    status: 'waiting',
+  });
+  const strangerDb = testEnv.authenticatedContext(STRANGER_UID).firestore();
+  await assertSucceeds(getDoc(doc(strangerDb, 'games', 'game1')));
+  await assertSucceeds(updateDoc(doc(strangerDb, 'games', 'game1'), {
+    participantIds: [STRANGER_UID],
+  }));
+});
+
 test('password doc is readable when signed in', async () => {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), 'password', PASSWORD_DOC_ID), { password: 'secret123' });
@@ -173,4 +200,10 @@ test('password doc is not readable when signed out', async () => {
 test('password doc is never writable by any client', async () => {
   const adminDb = testEnv.authenticatedContext(ADMIN_UID).firestore();
   await assertFails(setDoc(doc(adminDb, 'password', PASSWORD_DOC_ID), { password: 'hacked' }));
+
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'password', PASSWORD_DOC_ID), { password: 'secret123' });
+  });
+  await assertFails(updateDoc(doc(adminDb, 'password', PASSWORD_DOC_ID), { password: 'hacked' }));
+  await assertFails(deleteDoc(doc(adminDb, 'password', PASSWORD_DOC_ID)));
 });
