@@ -68,10 +68,16 @@ Helper functions:
 
 **Read:**
 ```
-allow get: if isAdmin(resource.data) || isParticipant(resource.data)
-  || (isSignedIn() && resource.data.status == "waiting");
+allow get: if isSignedIn() && (
+  resource == null
+  || isAdmin(resource.data)
+  || isParticipant(resource.data)
+  || resource.data.status == "waiting"
+);
 ```
 Non-participants (the join-flow bootstrap case — checking a game exists / isn't already joined, before the user is added) can read a game only while it's `waiting`, when there's no gameplay content yet (just admin name + participant list). Once a game leaves `waiting`, only actual participants/admin can read it — closing the exposure from guessable game IDs (an adjective+noun pair from ~231×140 ≈ 32,000 combinations).
+
+**Correction found during implementation:** the version above fixes a bug in this spec's original draft. Every branch dereferenced `resource.data` unconditionally, but `resource` is `null` for a `get` on a document that doesn't exist — which errors (and therefore denies) on every branch. This broke two routine, load-bearing paths: `createGame`'s ID-collision probe (`getDoc` + `!exists()`, expecting a clean "not found") and `joinGame`'s existence check. The `resource == null` leading disjunct, combined with `||`'s short-circuit evaluation, fixes this — a read that finds nothing leaks nothing.
 
 **Behavior change, called out explicitly:** today's `joinGame` doesn't check game status at all, so a brand-new stranger can technically join a game that's already `active`/`finished`/etc. This rule removes that (a stranger's `getDoc` — the necessary first step of `joinGame` — now fails once the game leaves `waiting`). This does **not** affect the already-shipped reload/rejoin-mid-game flow: an *existing* participant reloading is covered by `isParticipant()` regardless of status. Only "a stranger who was never added joins an in-progress game" changes, which isn't documented anywhere as an intended feature.
 
@@ -87,12 +93,18 @@ Any signed-in user, provided they can't spoof someone else as the admin/creator.
 
 **Update:**
 ```
-allow update: if isAdmin(resource.data) || isParticipant(resource.data)
-  || (isSignedIn() && resource.data.status == "waiting");
+allow update: if request.resource.data.adminId == resource.data.adminId
+  && (isAdmin(resource.data)
+      || isParticipant(resource.data)
+      || (isSignedIn()
+          && resource.data.status == "waiting"
+          && request.resource.data.status == resource.data.status));
 ```
 Coarse-grained: any participant or the admin can update the document. This matches the "participant + role-membership only" scope decision — the rule does not re-validate fine-grained business logic (e.g. "is this comment's claimed writer→subject pairing actually correct per the stored schedule," "is this caller really the round's target," "is this caller really the active clash group leader"). Those checks remain exactly where they are today: enforced by the app's own `GameContext.tsx` logic and, for the one function that already re-validates server-side (`submitIdeaRating`, via `runTransaction`), inside the transaction itself. This rule closes "a random stranger with a guessed game ID can write anything" while accepting the same self-asserted-role trust level the app already has today among actual participants.
 
 **Join carve-out (correction from an earlier draft of this spec):** an initial draft of this rule was `isAdmin || isParticipant` only, checked against the pre-write `resource.data` — which would have broken joining entirely, since a brand-new participant isn't yet in `participantIds` at the exact moment they're adding themselves. The third clause (`status == "waiting"`) mirrors the read rule's own carve-out: any signed-in stranger can update a `waiting` game, not just append themselves — broader than strictly necessary for joining, but consistent with the read rule's already-established reasoning (no real gameplay content exists at that status, so the low-stakes trust boundary already accepted for reads extends naturally to writes there too). A narrower "only allow appending the caller's own uid, touch nothing else" carve-out was considered and rejected as more failure-prone to get exactly right in rules language, for a status where the broader access is already low-risk.
+
+**`adminId` pin (correction found during implementation review, applied in two rounds):** the version above fixes a real privilege-escalation bug this spec's original draft didn't consider. The waiting-status carve-out's reasoning above is entirely about *confidentiality* ("no real gameplay content exists at that status") — it never addressed *integrity*: without a pin, any signed-in stranger could rewrite `adminId` to their own uid while a game is still `waiting`, becoming that game's permanent admin from then on (full read/update/delete at every later status too, since `isAdmin` is just `adminId == request.auth.uid`). A first fix pinned `adminId`/`status` only inside the waiting-branch — incomplete, because a stranger could join first (unaffected by the pin, since joining never touches `adminId`), which makes them satisfy `isParticipant`, and the `isParticipant` branch had no pin of its own. The fix above hoists the `adminId` pin to cover the *entire* rule, all three branches — provably safe since `adminId` is written by exactly one place in the whole codebase (`createGame`, both apps), so no legitimate update anywhere ever needs to change it.
 
 A stricter field-level split (e.g. "only admin can write `status`/`basketData`/`clashData`/`ideaData`/settings fields; only the round target can write `currentRound.comments[].points`") was considered and explicitly deferred — see Out of Scope.
 
@@ -118,7 +130,7 @@ allow delete: if isAdmin(resource.data);
    - `create` fails if `adminId`/`participantIds` don't match the caller.
    - `delete` fails for non-admins.
    - An old-style document missing `participantIds` is still readable/writable by its `adminId`.
-5. Deploying to production requires the Firebase CLI authenticated as you — this session has neither installed nor logged in, so the actual `firebase deploy --only firestore:rules` step is yours to run once the emulator suite passes.
+5. Deploying to production requires the Firebase CLI authenticated as you — this session has neither installed nor logged in, so the actual `firebase deploy --only firestore:rules` step is yours to run once the emulator suite passes. The suite grew to 23 tests across implementation (16 originally planned, plus one for the `resource == null` fix, plus 3 covering the `adminId`-pin corrections above, plus 3 more coverage-gap closures found during review) — every review pass so far has been a hand-trace of the rules language against seeded scenarios, not an actual execution; running `npm run test:rules` for real and confirming 23/23 green is the one remaining gate before deploying. After deploying, also trigger the Cypress E2E workflow (`workflow_dispatch`) and confirm it's green, since it runs against the live Vercel deploy and live Firestore — the only check that exercises the real app/rules contract end-to-end rather than hand-seeded test data.
 
 ## Out of Scope
 
