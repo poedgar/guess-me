@@ -105,6 +105,21 @@ test('a signed-in stranger cannot steal admin while updating a waiting game', as
   }));
 });
 
+test('a participant cannot steal admin even via the isParticipant branch', async () => {
+  await seed('game1', baseGame({ status: 'waiting', participantIds: [ADMIN_UID, PARTICIPANT_UID] }));
+  const participantDb = testEnv.authenticatedContext(PARTICIPANT_UID).firestore();
+  await assertFails(updateDoc(doc(participantDb, 'games', 'game1'), { adminId: PARTICIPANT_UID }));
+});
+
+test('a signed-in stranger cannot change status while updating a waiting game', async () => {
+  await seed('game1', baseGame({ status: 'waiting' }));
+  const strangerDb = testEnv.authenticatedContext(STRANGER_UID).firestore();
+  await assertFails(updateDoc(doc(strangerDb, 'games', 'game1'), {
+    participantIds: [ADMIN_UID, STRANGER_UID],
+    status: 'active',
+  }));
+});
+
 test('a signed-in stranger cannot update an active game they are not part of', async () => {
   await seed('game1', baseGame({ status: 'active', participantIds: [ADMIN_UID, PARTICIPANT_UID] }));
   const strangerDb = testEnv.authenticatedContext(STRANGER_UID).firestore();

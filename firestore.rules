@@ -36,12 +36,12 @@ service cloud.firestore {
         && request.resource.data.adminId == request.auth.uid
         && request.resource.data.participantIds == [request.auth.uid];
 
-      allow update: if isAdmin(resource.data)
-        || isParticipant(resource.data)
-        || (isSignedIn()
-            && resource.data.status == "waiting"
-            && request.resource.data.adminId == resource.data.adminId
-            && request.resource.data.status == resource.data.status);
+      allow update: if request.resource.data.adminId == resource.data.adminId
+        && (isAdmin(resource.data)
+            || isParticipant(resource.data)
+            || (isSignedIn()
+                && resource.data.status == "waiting"
+                && request.resource.data.status == resource.data.status));
 
       allow delete: if isAdmin(resource.data);
     }
