@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin(game) {
+      return isSignedIn() && game.adminId == request.auth.uid;
+    }
+
+    function isParticipant(game) {
+      return isSignedIn()
+        && 'participantIds' in game
+        && game.participantIds.hasAny([request.auth.uid]);
+    }
+
+    match /password/{docId} {
+      allow get: if isSignedIn();
+      allow list, create, update, delete: if false;
+    }
+
+    match /games/{gameId} {
+      allow get: if isAdmin(resource.data)
+        || isParticipant(resource.data)
+        || (isSignedIn() && resource.data.status == "waiting");
+
+      allow list: if false;
+
+      allow create: if isSignedIn()
+        && request.resource.data.adminId == request.auth.uid
+        && request.resource.data.participantIds == [request.auth.uid];
+
+      allow update: if isAdmin(resource.data)
+        || isParticipant(resource.data)
+        || (isSignedIn() && resource.data.status == "waiting");
+
+      allow delete: if isAdmin(resource.data);
+    }
+  }
+}

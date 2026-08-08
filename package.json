@@ -11,5 +11,8 @@
     "build": "cd apps/web && npm run build",
     "build:web": "npm -w apps/web run build",
     "deploy:web": "vercel --prod"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.26.0"
   }
 }
