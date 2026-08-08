@@ -371,7 +371,9 @@
         "nextRound": "Next Round",
         "finishGame": "Finish Game",
         "confirmSubmitIdea": "Submit this idea?",
-        "confirmSubmitRating": "Submit this rating?"
+        "confirmSubmitRating": "Submit this rating?",
+        "notEligibleToRate": "You are not participating in ratings this game.",
+        "commentsHeading": "Comments"
       }
     }
   },

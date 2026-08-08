@@ -21,6 +21,8 @@ const statusColorMap: Record<string, string> = {
   basket_guessing: 'bg-game-purple',
   clash_writing: 'bg-game-orange',
   clash_guessing: 'bg-red-500',
+  idea_writing: 'bg-game-blue',
+  idea_rating: 'bg-game-purple',
 };
 
 export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {

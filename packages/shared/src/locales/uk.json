@@ -378,7 +378,9 @@
         "nextRound": "Наступний раунд",
         "finishGame": "Завершити гру",
         "confirmSubmitIdea": "Надіслати цю ідею?",
-        "confirmSubmitRating": "Надіслати цю оцінку?"
+        "confirmSubmitRating": "Надіслати цю оцінку?",
+        "notEligibleToRate": "Ви не берете участі в оцінюванні цієї гри.",
+        "commentsHeading": "Коментарі"
       }
     }
   },

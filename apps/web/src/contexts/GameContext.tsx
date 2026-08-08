@@ -2347,8 +2347,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
     if (!currentGame.ideaData) throw new Error("No active Group Ideas game");
     const authorIdsWithIdeas = Array.from(new Set(currentGame.ideaData.ideas.map((i: Idea) => i.authorId)));
-    if (authorIdsWithIdeas.length < 2) {
-      throw new Error("Need at least 2 participants with submitted ideas to start rating");
+    const eligibleWriters = (currentGame.adminWritesComments ?? false)
+      ? currentGame.participants.map((p: Participant) => p.userId)
+      : currentGame.participants.filter((p: Participant) => p.userId !== currentGame.adminId).map((p: Participant) => p.userId);
+    const missingWriters = eligibleWriters.filter(id => !authorIdsWithIdeas.includes(id));
+    if (eligibleWriters.length < 2 || missingWriters.length > 0) {
+      throw new Error("Every eligible participant must submit at least one idea before rating rounds can start");
     }
     try {
       setLoading(true);
@@ -2372,24 +2376,43 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (!auth.currentUser) throw new Error("You must be signed in");
     if (!currentGame?.ideaData) throw new Error("No active Group Ideas game");
     if (points < 0 || points > 5) throw new Error("Points must be between 0 and 5");
-    const { ideas, currentRoundRatings, incognitoMode } = currentGame.ideaData;
-    const idea = ideas.find((i: Idea) => i.id === ideaId);
-    if (!idea) throw new Error("Idea not found");
+
     const raterId = auth.currentUser.uid;
-    const alreadyRated = currentRoundRatings.some((r: IdeaRating) => r.raterId === raterId && r.ideaId === ideaId);
-    if (alreadyRated) throw new Error("You have already rated this idea");
-    const rating: IdeaRating = {
-      raterId,
-      ideaId,
-      points,
-      ...(incognitoMode && comment?.trim() ? { comment: comment.trim() } : {}),
-    };
+    const gameRef = doc(db, 'games', currentGame.id);
+
     try {
       setLoading(true);
-      const gameRef = doc(db, 'games', currentGame.id);
-      await updateDoc(gameRef, {
-        'ideaData.currentRoundRatings': arrayUnion(rating),
-        [`scores.${idea.authorId}`]: (currentGame.scores?.[idea.authorId] ?? 0) + points,
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        const ideaData = gameData.ideaData;
+        if (!ideaData) throw new Error("No active Group Ideas game");
+
+        const eligibleRaters = (gameData.adminWritesComments ?? false)
+          ? gameData.participants.map((p: Participant) => p.userId)
+          : gameData.participants.filter((p: Participant) => p.userId !== gameData.adminId).map((p: Participant) => p.userId);
+        if (!eligibleRaters.includes(raterId)) {
+          throw new Error("You are not eligible to rate ideas in this game");
+        }
+
+        const idea = ideaData.ideas.find((i: Idea) => i.id === ideaId);
+        if (!idea) throw new Error("Idea not found");
+
+        const alreadyRated = ideaData.currentRoundRatings.some(
+          (r: IdeaRating) => r.raterId === raterId && r.ideaId === ideaId,
+        );
+        if (alreadyRated) throw new Error("You have already rated this idea");
+
+        const rating: IdeaRating = {
+          raterId, ideaId, points,
+          ...(ideaData.incognitoMode && comment?.trim() ? { comment: comment.trim() } : {}),
+        };
+
+        transaction.update(gameRef, {
+          'ideaData.currentRoundRatings': [...ideaData.currentRoundRatings, rating],
+          [`scores.${idea.authorId}`]: (gameData.scores?.[idea.authorId] ?? 0) + points,
+        });
       });
     } catch (err) {
       console.error('Error submitting idea rating:', err);

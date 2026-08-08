@@ -112,7 +112,7 @@ export const IdeaRatingPhase: React.FC<Props> = ({ game }) => {
                     count: currentRoundRatings.filter(r => r.ideaId === idea.id).length,
                     total: eligibleRaterIds.length,
                   })}</p>
-                ) : (
+                ) : eligibleRaterIds.includes(raterId) ? (
                   <>
                     <p className="text-xs text-gray-400">{t('game.ui.ideas.pointsLabel')}</p>
                     <div className="flex gap-2">
@@ -159,7 +159,24 @@ export const IdeaRatingPhase: React.FC<Props> = ({ game }) => {
                       {submittingIdeaId === idea.id ? t('common.loading') : t('game.ui.ideas.submitRating')}
                     </button>
                   </>
+                ) : (
+                  <p className="text-sm text-gray-400 italic" data-cy="idea-rating-not-eligible">
+                    {t('game.ui.ideas.notEligibleToRate')}
+                  </p>
                 )}
+                {incognitoMode && (() => {
+                  const comments = currentRoundRatings.filter(r => r.ideaId === idea.id && r.comment);
+                  return comments.length > 0 ? (
+                    <div className="space-y-1 pt-1" data-cy="idea-rating-comments-list" data-cy-idea-id={idea.id}>
+                      <p className="text-xs text-gray-400">{t('game.ui.ideas.commentsHeading')}</p>
+                      {comments.map((r, i) => (
+                        <p key={i} className="text-sm text-gray-600 dark:text-gray-300 italic" data-cy="idea-rating-comment-item">
+                          &ldquo;{r.comment}&rdquo;
+                        </p>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
               </div>
             );
           })}
