@@ -23,9 +23,12 @@ service cloud.firestore {
     }
 
     match /games/{gameId} {
-      allow get: if isAdmin(resource.data)
+      allow get: if isSignedIn() && (
+        resource == null
+        || isAdmin(resource.data)
         || isParticipant(resource.data)
-        || (isSignedIn() && resource.data.status == "waiting");
+        || resource.data.status == "waiting"
+      );
 
       allow list: if false;
 
