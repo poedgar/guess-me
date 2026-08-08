@@ -38,7 +38,10 @@ service cloud.firestore {
 
       allow update: if isAdmin(resource.data)
         || isParticipant(resource.data)
-        || (isSignedIn() && resource.data.status == "waiting");
+        || (isSignedIn()
+            && resource.data.status == "waiting"
+            && request.resource.data.adminId == resource.data.adminId
+            && request.resource.data.status == resource.data.status);
 
       allow delete: if isAdmin(resource.data);
     }

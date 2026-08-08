@@ -404,8 +404,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       do {
         gameId = generateGameId();
         attempts++;
-        const existingDoc = await getDoc(doc(db, "games", gameId));
-        if (!existingDoc.exists()) break;
+        let idTaken = false;
+        try {
+          const existingDoc = await getDoc(doc(db, "games", gameId));
+          idTaken = existingDoc.exists();
+        } catch {
+          // Permission-denied means a game exists here we can't read
+          // (e.g. someone else's active game) — treat as taken.
+          idTaken = true;
+        }
+        if (!idTaken) break;
         if (attempts >= maxAttempts)
           throw new Error(
             "Unable to generate unique game ID after multiple attempts",
@@ -466,7 +474,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       setLoading(true);
 
       const gameRef = doc(db, "games", gameId);
-      const gameDoc = await getDoc(gameRef);
+      let gameDoc;
+      try {
+        gameDoc = await getDoc(gameRef);
+      } catch {
+        // A permission-denied read here means the game exists but isn't
+        // joinable right now (e.g. already in progress) — surface the
+        // same not-found message rather than a raw Firebase error.
+        throw new Error("game_not_found");
+      }
 
       if (!gameDoc.exists()) {
         throw new Error("game_not_found");
@@ -480,7 +496,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       );
 
       if (isAlreadyParticipant) {
-        // User is already in the game, just refresh
+        // Backfill participantIds for legacy games that predate this field
+        await updateDoc(gameRef, {
+          participantIds: arrayUnion(user.uid),
+        });
         await refreshGame(gameId);
         return;
       }
@@ -574,9 +593,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const updatedParticipants = (gameData.participants || []).filter(
           (p) => p.userId !== leavingUid,
         );
-        const updatedParticipantIds = (gameData.participantIds || []).filter(
-          (id) => id !== leavingUid,
-        );
+        const updatedParticipantIds = updatedParticipants.map((p) => p.userId);
 
         // If leaving user was the admin, mark the game as finished and flag adminLeft
         if (gameData.adminId === leavingUid) {
