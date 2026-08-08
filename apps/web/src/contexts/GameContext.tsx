@@ -496,10 +496,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       );
 
       if (isAlreadyParticipant) {
-        // Backfill participantIds for legacy games that predate this field
-        await updateDoc(gameRef, {
-          participantIds: arrayUnion(user.uid),
-        });
+        // Backfill participantIds only for legacy games that predate this
+        // field and genuinely lack it. arrayUnion on an already-present
+        // value is a no-op for the document, but not for network cost —
+        // skip the write entirely when it's not needed, rather than paying
+        // for a redundant round-trip on every single re-visit.
+        const needsBackfill = !(gameData.participantIds ?? []).includes(user.uid);
+        if (needsBackfill) {
+          await updateDoc(gameRef, {
+            participantIds: arrayUnion(user.uid),
+          });
+        }
         await refreshGame(gameId);
         return;
       }
