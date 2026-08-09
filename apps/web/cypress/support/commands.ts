@@ -4,6 +4,12 @@ declare global {
   namespace Cypress {
     interface Chainable {
       signInAsTestUser(role: TestUserRole): Chainable<void>;
+      // TEMPORARY diagnostic command — logs the Firebase Auth identity
+      // actually persisted in IndexedDB at the moment it's called, to
+      // directly observe account-switch state instead of inferring it.
+      // Fully isolated from signInAsTestUser/validate — only called
+      // explicitly where needed, so a bug here can't affect other specs.
+      logPersistedAuthEmail(label: string): Chainable<void>;
     }
   }
 
@@ -118,4 +124,13 @@ Cypress.Commands.add('signInAsTestUser', (role: TestUserRole) => {
   );
 
   cy.visit('/');
+});
+
+// TEMPORARY diagnostic command — not a permanent addition. Deliberately does
+// NOT touch signInAsTestUser or validate above; this is a fully separate,
+// additive command so a mistake here is isolated to whichever spec calls it.
+Cypress.Commands.add('logPersistedAuthEmail', (label: string) => {
+  cy.window()
+    .then((win) => getPersistedFirebaseAuthEmail(win))
+    .then((email) => cy.log(`[DIAG] ${label}: persisted auth email = ${email}`));
 });
