@@ -70,13 +70,17 @@ describe('Full mirror-mode round', () => {
       cy.get('[data-cy=game-input-submit]').click();
       // ActivePhase can render with no data-cy at all for a target still
       // waiting on comments (commentsVisible false), so there's no single
-      // positive selector to wait on here. Wait for the join form to clear
-      // (proof ActivePhase mounted) plus a settle beat for its
-      // target-vs-non-target branch to finish its conditional re-render
-      // before doing a one-shot DOM read below — catching that render
-      // mid-transition would misidentify a real non-target as the target.
+      // positive selector to wait on for ActivePhase itself. But
+      // participant-row is WaitingPhase-only (never rendered anywhere
+      // else) — waiting for it to be gone is a real condition-based proof
+      // that *this specific client* has actually received status: 'active'
+      // from Firestore, not just a guess about how long that takes. An
+      // arbitrary cy.wait() here was found to intermittently race the
+      // status update on this exact client, misidentifying a still-loading
+      // WaitingPhase view as "no comment-input, so this must be the
+      // target" when the round data simply hadn't arrived yet.
       cy.get('[data-cy=game-input]').should('not.exist');
-      cy.wait(SETTLE_MS);
+      cy.get('[data-cy=participant-row]').should('not.exist');
       cy.get('body').then(($body) => {
         const test2IsCommenter = $body.find('[data-cy=comment-input]').length > 0;
         const commenterRole: 'test2' | 'test3' = test2IsCommenter ? 'test2' : 'test3';

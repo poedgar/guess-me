@@ -42,8 +42,16 @@ describe('adminWritesComments toggled on', () => {
       cy.signInAsTestUser('test1');
       cy.get('[data-cy=game-input]').type(gameId);
       cy.get('[data-cy=game-input-submit]').click();
+      // participant-row is WaitingPhase-only — waiting for it to be gone is
+      // a real condition-based proof that *this specific client* has
+      // received status: 'active' from Firestore, not a guess about how
+      // long that takes. An arbitrary cy.wait() here was found to
+      // intermittently race the status update on this exact client,
+      // misidentifying a still-loading WaitingPhase view as "no
+      // comment-input, so this must be the target" before the round data
+      // had actually arrived.
       cy.get('[data-cy=game-input]').should('not.exist');
-      cy.wait(SETTLE_MS);
+      cy.get('[data-cy=participant-row]').should('not.exist');
       cy.get('body').then(($body) => {
         const test1IsCommenter = $body.find('[data-cy=comment-input]').length > 0;
         const round1TargetRole: 'test1' | 'test2' = test1IsCommenter ? 'test2' : 'test1';
