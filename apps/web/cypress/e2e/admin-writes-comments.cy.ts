@@ -63,9 +63,14 @@ describe('adminWritesComments toggled on', () => {
         // used) — asserted after finalize, not assumed here. ──────────────
 
         // ── Commenter writes about the target ────────────────────────────
+        // round-info is rendered unconditionally once ActivePhase has
+        // currentRound data, regardless of admin/target/non-target role —
+        // a real condition-based proof this fresh account switch's client
+        // has this round's data, not a guess about how long that takes.
         cy.signInAsTestUser(round1CommenterRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
         cy.get('[data-cy=comment-input]').type('You always bring great energy to the group.');
         cy.get('[data-cy=submit-comment-button]').click();
         cy.get('[data-cy=comment-input]').should('not.exist');
@@ -76,6 +81,7 @@ describe('adminWritesComments toggled on', () => {
         cy.signInAsTestUser('test1');
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
         cy.get('[data-cy=show-comments-button]').click();
         cy.get('[data-cy=show-comments-button]').should('not.exist');
         cy.wait(SETTLE_MS);
@@ -86,6 +92,7 @@ describe('adminWritesComments toggled on', () => {
         cy.signInAsTestUser(round1TargetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
         cy.get('[data-cy=award-comment-points-button]').click();
         cy.get('[data-cy=finish-awarding-points-button]').click();
         cy.get('[data-cy=finish-awarding-points-button]').should('not.exist');
@@ -95,6 +102,7 @@ describe('adminWritesComments toggled on', () => {
         cy.signInAsTestUser(round1CommenterRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
         cy.get('[data-cy=give-points-to-target-button][data-cy-points=1]').click();
         cy.get('[data-cy=alert-button][data-cy-style=primary]').click();
         cy.get('[data-cy=give-points-to-target-button]').should('not.exist');
@@ -104,6 +112,7 @@ describe('adminWritesComments toggled on', () => {
         cy.signInAsTestUser('test1');
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
         cy.get('[data-cy=start-guessing-button]').click();
         cy.get('[data-cy=start-guessing-button]').should('not.exist');
         cy.wait(SETTLE_MS);
@@ -136,6 +145,9 @@ describe('adminWritesComments toggled on', () => {
         cy.signInAsTestUser(round1TargetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        // Waiting specifically for round 2 (not just any round) also rules
+        // out a false pass from a stale round-1 view.
+        cy.get('[data-cy=round-info][data-cy-round=2]').should('exist');
         cy.get('[data-cy=comment-input]').should('exist');
         cy.get('[data-cy=leaderboard-row]').should('have.length', 2);
         cy.get('[data-cy=leaderboard-total-points]').should(($points) => {
@@ -152,6 +164,7 @@ describe('adminWritesComments toggled on', () => {
         cy.signInAsTestUser(round1CommenterRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=round-info][data-cy-round=2]').should('exist');
         cy.get('[data-cy=comment-input]').should('not.exist');
       });
     });
