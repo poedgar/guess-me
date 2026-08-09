@@ -77,12 +77,10 @@ describe('Full mirror-mode round', () => {
       // mid-transition would misidentify a real non-target as the target.
       cy.get('[data-cy=game-input]').should('not.exist');
       cy.wait(SETTLE_MS);
-      cy.logPersistedAuthEmail('after peek visit, before DOM read'); // TEMPORARY DIAG
       cy.get('body').then(($body) => {
         const test2IsCommenter = $body.find('[data-cy=comment-input]').length > 0;
         const commenterRole: 'test2' | 'test3' = test2IsCommenter ? 'test2' : 'test3';
         const targetRole: 'test2' | 'test3' = test2IsCommenter ? 'test3' : 'test2';
-        cy.log(`[DIAG] peek result: test2IsCommenter=${test2IsCommenter} -> commenterRole=${commenterRole} targetRole=${targetRole}`); // TEMPORARY DIAG
         // playerNumbers is assigned once at startGame() via
         // buildJoinIndexById(currentGame.participants) in join order:
         // test1 (admin) = 1, test2 = 2, test3 = 3. Used below to pick the
@@ -93,7 +91,6 @@ describe('Full mirror-mode round', () => {
         cy.signInAsTestUser(commenterRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
-        cy.logPersistedAuthEmail('right before comment-input assertion'); // TEMPORARY DIAG
         cy.get('[data-cy=comment-input]').type('You always bring great energy to the group.');
         cy.get('[data-cy=submit-comment-button]').click();
         // Once the comment is recorded, the form is replaced by a

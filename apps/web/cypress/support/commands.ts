@@ -4,10 +4,6 @@ declare global {
   namespace Cypress {
     interface Chainable {
       signInAsTestUser(role: TestUserRole): Chainable<void>;
-      // TEMPORARY diagnostic command — logs the Firebase Auth identity
-      // actually persisted in IndexedDB at the moment it's called, to
-      // directly observe account-switch state instead of inferring it.
-      logPersistedAuthEmail(label: string): Chainable<void>;
     }
   }
 
@@ -115,11 +111,6 @@ Cypress.Commands.add('signInAsTestUser', (role: TestUserRole) => {
         cy.get('[data-cy=google-signin-button]').should('not.exist');
         cy.window()
           .then((win) => waitForPersistedFirebaseAuthEmail(win, account.email))
-          .then((email) => {
-            // TEMPORARY diagnostic — see logPersistedAuthEmail below.
-            cy.log(`[DIAG] validate(${role}): expected=${account.email} actual=${email}`);
-            return email;
-          })
           .should('eq', account.email);
       },
       cacheAcrossSpecs: false,
@@ -127,15 +118,4 @@ Cypress.Commands.add('signInAsTestUser', (role: TestUserRole) => {
   );
 
   cy.visit('/');
-});
-
-// TEMPORARY diagnostic command — not a permanent addition. Logs whatever
-// email is actually persisted in Firebase Auth's IndexedDB storage at the
-// moment it's called, labeled by the caller. Used to directly observe which
-// account the app is really authenticated as at a specific point in a test,
-// rather than inferring it from rendered UI state.
-Cypress.Commands.add('logPersistedAuthEmail', (label: string) => {
-  cy.window().then((win) => getPersistedFirebaseAuthEmail(win)).then((email) => {
-    cy.log(`[DIAG] ${label}: persisted auth email = ${email}`);
-  });
 });
