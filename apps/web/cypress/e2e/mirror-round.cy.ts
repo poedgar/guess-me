@@ -193,14 +193,22 @@ describe('Full mirror-mode round', () => {
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=finalize-button]').click();
-        // ResultsPhase.tsx (not the separate /results tab) renders directly
-        // on this same route once status flips to 'finished' — waiting for
-        // it here confirms the GuessingPhase-to-ResultsPhase transition has
-        // actually settled before navigating away, instead of clicking
-        // nav-results while the page may still be mid-transition (observed
-        // in CI as an intermittent "element is being covered" click
-        // failure on nav-results itself).
-        cy.get('[data-cy=game-finished]').should('exist');
+        // With 3 participants and adminWritesComments off, 2 non-admin
+        // participants are eligible targets — after round 1's finalize,
+        // the game legitimately continues to round 2 (ActivePhase again),
+        // it does NOT reach 'finished' (that only happens once every
+        // eligible target has had a turn). Wait for whichever real
+        // terminal state actually results — round-info (round 2 started)
+        // or game-finished (ResultsPhase, if this ever runs with different
+        // participant counts) — confirming the transition has genuinely
+        // settled before navigating away, instead of clicking nav-results
+        // while the page may still be mid-transition (observed in CI as an
+        // intermittent "element is being covered" click failure).
+        cy.get('body').should(($body) => {
+          const hasRoundInfo = $body.find('[data-cy=round-info]').length > 0;
+          const hasGameFinished = $body.find('[data-cy=game-finished]').length > 0;
+          expect(hasRoundInfo || hasGameFinished).to.be.true;
+        });
 
         // ── Results tab shows round 1's real totals ─────────────────────
         cy.get('[data-cy=nav-results]').click();
