@@ -137,6 +137,10 @@ describe('adminWritesComments toggled on', () => {
         cy.signInAsTestUser(round1TargetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        // Same principle as round-info in ActivePhase.tsx: confirm this
+        // fresh client actually has GuessingPhase's data loaded before
+        // trusting guess-author-button's count.
+        cy.get('[data-cy=guessing-phase-info]').should('exist');
         cy.get('[data-cy=guess-author-button]').should('have.length', 2);
         cy.contains('[data-cy=guess-author-button]', `${commenterPlayerNumber}.`).click();
         cy.get('[data-cy=submit-guesses-button]').click();

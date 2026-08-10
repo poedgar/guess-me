@@ -17,6 +17,7 @@ describe('Full mirror-mode round', () => {
     cy.get('[data-cy=game-input]').type('YR20RZ67FKy88HQVF6yW3');
     cy.get('[data-cy=game-input-submit]').click();
     cy.url().should('match', /\/game\/[^/]+$/);
+    cy.wait(SETTLE_MS);
 
     cy.url().then((url) => {
       // Game IDs are two Cyrillic words joined by a space, which the
@@ -172,6 +173,10 @@ describe('Full mirror-mode round', () => {
         cy.signInAsTestUser(targetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        // Same principle as round-info in ActivePhase.tsx: confirm this
+        // fresh client actually has GuessingPhase's data loaded before
+        // trusting guess-author-button's count.
+        cy.get('[data-cy=guessing-phase-info]').should('exist');
         cy.get('[data-cy=guess-author-button]').should('have.length', 3);
         cy.contains('[data-cy=guess-author-button]', `${commenterPlayerNumber}.`).click();
         cy.get('[data-cy=submit-guesses-button]').click();
@@ -188,6 +193,14 @@ describe('Full mirror-mode round', () => {
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=finalize-button]').click();
+        // ResultsPhase.tsx (not the separate /results tab) renders directly
+        // on this same route once status flips to 'finished' — waiting for
+        // it here confirms the GuessingPhase-to-ResultsPhase transition has
+        // actually settled before navigating away, instead of clicking
+        // nav-results while the page may still be mid-transition (observed
+        // in CI as an intermittent "element is being covered" click
+        // failure on nav-results itself).
+        cy.get('[data-cy=game-finished]').should('exist');
 
         // ── Results tab shows round 1's real totals ─────────────────────
         cy.get('[data-cy=nav-results]').click();

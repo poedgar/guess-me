@@ -176,7 +176,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
     <>
       {AlertModal}
       <div className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-purple">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-purple" data-cy="guessing-phase-info">
           <h2 className="text-xl font-bold mb-1 text-game-purple text-center">
             {t('game.ui.guessAuthorsTitle')}
           </h2>
