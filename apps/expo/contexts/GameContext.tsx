@@ -26,6 +26,28 @@ import React, {
   useState,
 } from "react";
 
+export interface Idea {
+  id: string;
+  authorId: string;
+  text: string;
+  submittedAt: number;
+}
+
+export interface IdeaRating {
+  raterId: string;
+  ideaId: string;
+  points: number; // 0-5
+  comment?: string; // only ever set in incognito mode
+}
+
+export interface IdeaGameData {
+  incognitoMode: boolean;
+  ideas: Idea[];
+  schedule: string[];
+  currentRoundIndex: number;
+  currentRoundRatings: IdeaRating[];
+}
+
 export interface Game {
   id: string;
   adminId: string;
@@ -38,7 +60,7 @@ export interface Game {
   // membership over primitive arrays.
   participantIds?: string[];
   createdAt: Date | Timestamp;
-  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing";
+  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing" | "idea_writing" | "idea_rating";
   // If set, indicates that target has submitted guesses and players can now award points to each other
   postGuessingPointPhase?: boolean;
   // Track which players have already awarded points in post-guessing phase
@@ -69,10 +91,13 @@ export interface Game {
   showGuessResults?: boolean;
   // Target selection mode: 'random' or 'chronological' (default: 'random')
   targetSelectionMode?: "random" | "chronological";
-  // Which game type to play: 'mirror' (default), 'basket', or 'clash'
-  gameType?: 'mirror' | 'basket' | 'clash';
+  // Which game type to play: 'mirror' (default), 'basket', 'clash', or 'ideas'
+  gameType?: 'mirror' | 'basket' | 'clash' | 'ideas';
   basketData?: BasketData;
   clashData?: ClashData;
+  ideaData?: IdeaGameData;
+  // Whether ratings/comments in Group Ideas mode stay anonymous (default: true)
+  ideaIncognitoMode?: boolean;
   // Admin target control preferences
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
@@ -240,7 +265,7 @@ interface GameContextType {
     targetSelectionMode: "random" | "chronological",
   ) => Promise<void>;
   updateShowGuessResults: (showGuessResults: boolean) => Promise<void>;
-  setGameType: (type: 'mirror' | 'basket' | 'clash') => Promise<void>;
+  setGameType: (type: 'mirror' | 'basket' | 'clash' | 'ideas') => Promise<void>;
   startBasketGame: () => Promise<void>;
   submitBasketComment: (text: string) => Promise<void>;
   revealBasketComments: () => Promise<void>;
@@ -263,6 +288,12 @@ interface GameContextType {
     awards: { recipientId: string; points: number }[],
   ) => Promise<void>;
   skipPostCommentPhase: () => Promise<void>;
+  startIdeaGame: () => Promise<void>;
+  submitIdea: (text: string) => Promise<void>;
+  startIdeaRatingRounds: () => Promise<void>;
+  submitIdeaRating: (ideaId: string, points: number, comment?: string) => Promise<void>;
+  startNextIdeaRound: () => Promise<void>;
+  updateIdeaIncognitoMode: (ideaIncognitoMode: boolean) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -1831,7 +1862,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const setGameType = async (type: 'mirror' | 'basket' | 'clash'): Promise<void> => {
+  const setGameType = async (type: 'mirror' | 'basket' | 'clash' | 'ideas'): Promise<void> => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
       throw new Error("Only the admin can update this setting");
     }
@@ -2265,6 +2296,30 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const startIdeaGame = async (): Promise<void> => {
+    throw new Error("Not yet implemented");
+  };
+
+  const submitIdea = async (text: string): Promise<void> => {
+    throw new Error("Not yet implemented");
+  };
+
+  const startIdeaRatingRounds = async (): Promise<void> => {
+    throw new Error("Not yet implemented");
+  };
+
+  const submitIdeaRating = async (ideaId: string, points: number, comment?: string): Promise<void> => {
+    throw new Error("Not yet implemented");
+  };
+
+  const startNextIdeaRound = async (): Promise<void> => {
+    throw new Error("Not yet implemented");
+  };
+
+  const updateIdeaIncognitoMode = async (ideaIncognitoMode: boolean): Promise<void> => {
+    throw new Error("Not yet implemented");
+  };
+
   const value: GameContextType = useMemo(
     () => ({
       currentGame,
@@ -2309,6 +2364,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       setNextRoundTarget,
       skipNextRoundTarget,
       resetTargetControls,
+      startIdeaGame,
+      submitIdea,
+      startIdeaRatingRounds,
+      submitIdeaRating,
+      startNextIdeaRound,
+      updateIdeaIncognitoMode,
     }),
     [currentGame, loading, user],
   ); // eslint-disable-line react-hooks/exhaustive-deps
