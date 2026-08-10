@@ -174,6 +174,13 @@ describe('Mirror mode wrong guess and multi-round completion', () => {
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=finalize-button]').click();
+        // Confirm on the admin's OWN page that round 2 has actually started
+        // — server-confirmed, not just optimistically applied locally —
+        // before any other account tries to read it fresh. A fixed
+        // cy.wait() here was found (via CI) to sometimes not be enough time
+        // for this specific write for another account's fresh page load to
+        // observe within round-info's own 15s retry window.
+        cy.get('[data-cy=round-info][data-cy-round=2]').should('exist');
         cy.wait(SETTLE_MS);
 
         // ══════════════════════ ROUND 2 ══════════════════════
