@@ -323,7 +323,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
           {isTarget && (
             <div ref={targetScrollRef}>
               {!commentsVisible ? (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                <p className="text-center text-gray-500 dark:text-gray-400 py-4" data-cy="target-waiting-view">
                   {t('game.ui.waitingForCommentsAboutYou')}
                 </p>
               ) : !targetFinishedPoints ? (

@@ -52,6 +52,23 @@ describe('adminWritesComments toggled on', () => {
       // had actually arrived.
       cy.get('[data-cy=game-input]').should('not.exist');
       cy.get('[data-cy=participant-row]').should('not.exist');
+      // Even past those two checks, ActivePhase can still be mid-render for
+      // a brief moment — a one-shot $body.find() can catch that transient
+      // instant and misread the role. Retry with .should() until the DOM
+      // has reached one of the two real terminal states (comment form for
+      // the commenter, or the target's waiting message) before trusting a
+      // single synchronous read of which one it is. This was found, via a
+      // local video capture, to be the actual mechanism behind an
+      // intermittent misidentified-role failure that survived the two
+      // checks above — confirmed here specifically: test1 legitimately had
+      // a visible comment box immediately after starting the game, but a
+      // subsequent hard-reloaded peek at the same account, without this
+      // extra wait, could still misread itself as the target.
+      cy.get('body').should(($body) => {
+        const hasCommentInput = $body.find('[data-cy=comment-input]').length > 0;
+        const hasTargetWaiting = $body.find('[data-cy=target-waiting-view]').length > 0;
+        expect(hasCommentInput || hasTargetWaiting).to.be.true;
+      });
       cy.get('body').then(($body) => {
         const test1IsCommenter = $body.find('[data-cy=comment-input]').length > 0;
         const round1TargetRole: 'test1' | 'test2' = test1IsCommenter ? 'test2' : 'test1';

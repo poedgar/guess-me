@@ -81,6 +81,21 @@ describe('Full mirror-mode round', () => {
       // target" when the round data simply hadn't arrived yet.
       cy.get('[data-cy=game-input]').should('not.exist');
       cy.get('[data-cy=participant-row]').should('not.exist');
+      // Even past those two checks, ActivePhase can still be mid-render for
+      // a brief moment (e.g. a flash before adminWritesComments/currentRound
+      // fields are all settled) — a one-shot $body.find() can catch that
+      // transient instant and misread the role. Retry with .should() until
+      // the DOM has reached one of the two real terminal states (comment
+      // form for the commenter, or the target's waiting message) before
+      // trusting a single synchronous read of which one it is. This was
+      // found, via a local video capture, to be the actual mechanism behind
+      // an intermittent misidentified-role failure that survived the two
+      // checks above.
+      cy.get('body').should(($body) => {
+        const hasCommentInput = $body.find('[data-cy=comment-input]').length > 0;
+        const hasTargetWaiting = $body.find('[data-cy=target-waiting-view]').length > 0;
+        expect(hasCommentInput || hasTargetWaiting).to.be.true;
+      });
       cy.get('body').then(($body) => {
         const test2IsCommenter = $body.find('[data-cy=comment-input]').length > 0;
         const commenterRole: 'test2' | 'test3' = test2IsCommenter ? 'test2' : 'test3';
