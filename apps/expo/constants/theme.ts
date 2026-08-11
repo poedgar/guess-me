@@ -134,6 +134,8 @@ export const StatusColors: Record<string, string> = {
   basket_guessing: '#AF52DE',
   clash_writing: '#FF7800',
   clash_guessing: '#FF5000',
+  idea_writing: '#007AFF',
+  idea_rating: '#AF52DE',
 };
 
 /** Shared modal styles for FancyAlert and FaceMessage */

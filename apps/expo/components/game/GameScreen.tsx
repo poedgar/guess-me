@@ -19,6 +19,7 @@ import { wrapScrollView } from 'react-native-scroll-into-view';
 import { ActivePhase } from '@/components/game/mirror/ActivePhase';
 import { BasketScreen } from '@/components/game/basket/BasketScreen';
 import { ClashScreen } from '@/components/game/clash/ClashScreen';
+import { IdeaScreen } from '@/components/game/ideas/IdeaScreen';
 import { GameHeader } from './GameHeader';
 import { GuessingPhase } from '@/components/game/mirror/GuessingPhase';
 import { JoinScreen } from './JoinScreen';
@@ -232,6 +233,19 @@ export const GameScreen: React.FC = () => {
 
                 {(currentGame.status === 'clash_writing' || currentGame.status === 'clash_guessing') && (
                   <ClashScreen
+                    game={currentGame}
+                    user={user}
+                    isAdmin={isAdmin}
+                    locale={locale}
+                    isDark={isDark}
+                    getDisplayName={getDisplayName}
+                    showFancyAlert={showFancyAlert}
+                    showFaceMessage={showFaceMessage}
+                  />
+                )}
+
+                {(currentGame.status === 'idea_writing' || currentGame.status === 'idea_rating') && (
+                  <IdeaScreen
                     game={currentGame}
                     user={user}
                     isAdmin={isAdmin}
