@@ -280,6 +280,8 @@ interface GameContextType {
   submitBasketCommentGuess: (commentWriterId: string) => Promise<void>;
   submitBasketAuthorGuess: (authorGuessId: string) => Promise<void>;
   startNextBasketRound: () => Promise<void>;
+  restartBasketRound: () => Promise<void>;
+  skipBasketRound: () => Promise<void>;
   saveClashGroups: (groupA: ClashGroup, groupB: ClashGroup) => Promise<void>;
   startClashGame: () => Promise<void>;
   submitClashComment: (text: string) => Promise<void>;
@@ -1961,6 +1963,50 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const restartBasketRound = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can restart the round");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        if (!gameData.basketData) throw new Error("No active basket game");
+        const { currentRoundGuesses } = gameData.basketData;
+
+        const scoreDeltas: Record<string, number> = {};
+        currentRoundGuesses.forEach((g: BasketGuess) => {
+          scoreDeltas[g.guesserId] = (scoreDeltas[g.guesserId] ?? 0) + g.pointsAwarded;
+        });
+
+        const updates: Record<string, unknown> = {
+          status: 'basket_writing',
+          'basketData.currentRoundComments': [],
+          'basketData.currentRoundGuesses': [],
+        };
+        Object.entries(scoreDeltas).forEach(([uid, delta]) => {
+          if (delta === 0) return;
+          updates[`scores.${uid}`] = (gameData.scores?.[uid] ?? 0) - delta;
+        });
+
+        transaction.update(gameRef, updates);
+      });
+    } catch (err) {
+      console.error('Error restarting basket round:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const skipBasketRound = async (): Promise<void> => {
+    await startNextBasketRound();
+  };
+
   const setGameType = async (type: 'mirror' | 'basket' | 'clash' | 'ideas'): Promise<void> => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
       throw new Error("Only the admin can update this setting");
@@ -2638,6 +2684,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       submitBasketCommentGuess,
       submitBasketAuthorGuess,
       startNextBasketRound,
+      restartBasketRound,
+      skipBasketRound,
       saveClashGroups,
       startClashGame,
       submitClashComment,

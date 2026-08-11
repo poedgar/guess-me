@@ -348,6 +348,104 @@ describe('submitBasketAuthorGuess', () => {
   });
 });
 
+// ── restartBasketRound ──────────────────────────────────────────────────────
+describe('restartBasketRound', () => {
+  const guesses = [
+    { guesserId: 'user-1', commentWriterId: 'user-2', commentCorrect: true, authorCorrect: true, authorGuessId: 'user-2', pointsAwarded: 2 },
+    { guesserId: 'user-2', commentWriterId: 'user-3', commentCorrect: false, authorCorrect: false, pointsAwarded: 0 },
+  ];
+  const game = {
+    ...BASE_GAME, status: 'basket_guessing',
+    scores: { 'user-1': 2, 'user-2': 5 },
+    basketData: {
+      schedule: SCHEDULE, currentRoundIndex: 0,
+      currentRoundComments: [{ writerId: 'user-2', subjectId: 'user-1', text: 'A', submittedAt: 1 }],
+      currentRoundGuesses: guesses,
+    },
+  };
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  function mockTransactionOn(gameData: object) {
+    const f = require('firebase/firestore');
+    mockTxn.get.mockResolvedValue({ exists: () => true, id: 'game-abc', data: () => gameData });
+    mockTxn.update.mockClear();
+    f.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  }
+
+  it('clears comments/guesses, sets status back to basket_writing, keeps schedule/currentRoundIndex', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+
+    await act(async () => { await result.current.restartBasketRound(); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        status: 'basket_writing',
+        'basketData.currentRoundComments': [],
+        'basketData.currentRoundGuesses': [],
+      }),
+    );
+  });
+
+  it('rolls back each guesser\'s score by the pointsAwarded they earned this round', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+
+    await act(async () => { await result.current.restartBasketRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    // user-1 earned 2 points this round (2 -> 0), user-2 earned 0 (5 -> 5, no key written)
+    expect(arg['scores.user-1']).toBe(0);
+    expect(arg['scores.user-2']).toBeUndefined();
+  });
+
+  it('is a safe no-op when nothing was submitted yet this round', async () => {
+    const emptyGame = { ...game, basketData: { ...game.basketData, currentRoundComments: [], currentRoundGuesses: [] } };
+    const { result } = await enterWithGame(emptyGame);
+    mockTransactionOn(emptyGame);
+
+    await act(async () => { await result.current.restartBasketRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg['basketData.currentRoundComments']).toEqual([]);
+    expect(Object.keys(arg).filter((k) => k.startsWith('scores.'))).toHaveLength(0);
+  });
+
+  it('rejects a non-admin caller', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+    const config = require('@/config/firebase');
+    config.auth.currentUser = { uid: 'user-2', displayName: 'Bob', email: 'bob@example.com', photoURL: null };
+
+    await expect(
+      act(async () => { await result.current.restartBasketRound(); })
+    ).rejects.toThrow('Only the admin can restart the round');
+  });
+});
+
+// ── skipBasketRound ──────────────────────────────────────────────────────────
+describe('skipBasketRound', () => {
+  it('delegates to the same advance logic as startNextBasketRound', async () => {
+    const game = {
+      ...BASE_GAME, status: 'basket_guessing',
+      basketData: { schedule: SCHEDULE, currentRoundIndex: 0, currentRoundComments: [], currentRoundGuesses: [] },
+    };
+    const { result, gameDoc } = await enterWithGame(game);
+    const f = require('firebase/firestore');
+    f.updateDoc.mockClear();
+
+    await act(async () => { await result.current.skipBasketRound(); });
+
+    expect(f.updateDoc).toHaveBeenCalledWith(gameDoc, expect.objectContaining({
+      status: 'basket_writing',
+      'basketData.currentRoundIndex': 1,
+    }));
+  });
+});
+
 // ── startNextBasketRound ─────────────────────────────────────────────────────
 describe('startNextBasketRound', () => {
   it('increments roundIndex and sets status basket_writing when rounds remain', async () => {
