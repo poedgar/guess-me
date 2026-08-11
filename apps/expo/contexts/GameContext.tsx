@@ -73,6 +73,11 @@ export interface Game {
       points: number;
       awardedBy: string;
       awardedAt: any;
+      // Which round these points were given in, so a round restart can
+      // strip stale entries from this history log. Undefined on entries
+      // written before this field existed — safe, since restart never
+      // applies to an already-finished game.
+      roundNumber?: number;
     }[];
   };
   // Track which players have completed the post-comment point phase (either gave target points or skipped)
@@ -251,6 +256,8 @@ interface GameContextType {
   givePointsToTarget: (targetUserId: string, points?: number) => Promise<void>;
   startGuessingPhase: () => Promise<void>;
   finalizeGuessingPhase: () => Promise<void>;
+  restartMirrorRound: () => Promise<void>;
+  skipMirrorRound: () => Promise<void>;
   submitGuess: (
     roundNumber: number,
     commentId: string,
@@ -1571,6 +1578,82 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const restartMirrorRound = async (): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can restart the round");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, "games", currentGame.id);
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+
+        let target: { targetUserId: string; targetUserName: string; roundNumber: number };
+        let remainingRounds = gameData.rounds ?? [];
+
+        if (gameData.currentRound) {
+          target = gameData.currentRound;
+        } else {
+          const singleTargetId = gameData.guessingData?.singleRoundTargetId;
+          const foundRound = singleTargetId
+            ? remainingRounds.find((r) => r.targetUserId === singleTargetId)
+            : undefined;
+          if (!foundRound) throw new Error("No active round to restart");
+          target = foundRound;
+          remainingRounds = remainingRounds.filter((r) => r.roundNumber !== foundRound.roundNumber);
+        }
+
+        const restartedRound: Round = {
+          roundNumber: target.roundNumber,
+          targetUserId: target.targetUserId,
+          targetUserName: target.targetUserName,
+          comments: [],
+          commentsVisible: false,
+          pointsGiven: false,
+          startedAt: new Date(),
+          targetPoints: 0,
+          targetPointsGivenBy: [],
+          targetPointsByPlayer: {},
+          guesses: [],
+          targetCorrectGuesses: 0,
+          guessesFinalized: false,
+        };
+
+        const adminAwards = gameData.adminAwards ?? {};
+        const filteredAdminAwards = Object.fromEntries(
+          Object.entries(adminAwards).map(([uid, awards]) => [
+            uid,
+            awards.filter((a) => a.roundNumber !== target.roundNumber),
+          ]),
+        );
+
+        transaction.update(gameRef, {
+          status: "active",
+          currentRound: restartedRound,
+          rounds: remainingRounds,
+          scores: gameData.roundStartScores ?? {},
+          guessResults: gameData.roundStartGuessResults ?? {},
+          postGuessingPointPhase: false,
+          playersWhoAwardedPostGuessPoints: [],
+          guessingData: null,
+          playersWhoCompletedPostCommentPhase: [],
+          adminAwards: filteredAdminAwards,
+        });
+      });
+    } catch (err) {
+      console.error("Error restarting round:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const skipMirrorRound = async (): Promise<void> => {
+    await startNextRound();
+  };
+
   const updateAdminWritesComments = async (
     adminWritesComments: boolean,
   ): Promise<void> => {
@@ -1945,6 +2028,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             (newScores[award.recipientId] || 0) + award.points;
         });
 
+        // This always runs while currentRound is null (post-guessing bonus
+        // points are part of the guessing-phase screen, before finalize) —
+        // look the round number up via guessingData instead.
+        const singleTargetId = gameData.guessingData?.singleRoundTargetId;
+        const activeRound = singleTargetId
+          ? (gameData.rounds ?? []).find((r) => r.targetUserId === singleTargetId)
+          : undefined;
+        const roundNumber = activeRound?.roundNumber;
+
         // Store admin awards for history tracking
         const adminAwards = gameData.adminAwards || {};
         const currentAwards = adminAwards[userId] || [];
@@ -1956,6 +2048,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
               ...award,
               awardedBy: userId,
               awardedAt: new Date(),
+              roundNumber,
             })),
           ],
         };
@@ -2529,6 +2622,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       startNextRound,
       startGuessingPhase,
       finalizeGuessingPhase,
+      restartMirrorRound,
+      skipMirrorRound,
       givePointsToTarget,
       submitGuess,
       markPlayerGuessesSubmitted,
