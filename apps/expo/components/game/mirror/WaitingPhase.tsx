@@ -349,10 +349,10 @@ export const WaitingPhase: React.FC<Props> = ({
             <View style={styles.toggleContainer}>
               <View style={styles.toggleInfo}>
                 <ThemedText style={styles.toggleLabel}>
-                  {t('game.ui.ideas.ideaIncognitoModeTitle', { locale })}
+                  {t('game.ui.ideaIncognitoModeTitle', { locale })}
                 </ThemedText>
                 <ThemedText style={styles.toggleDescription}>
-                  {t('game.ui.ideas.ideaIncognitoModeDescription', { locale })}
+                  {t('game.ui.ideaIncognitoModeDescription', { locale })}
                 </ThemedText>
               </View>
               <Switch
