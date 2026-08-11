@@ -444,6 +444,112 @@ describe('givePointsToTarget — uses runTransaction to prevent concurrent point
   });
 });
 
+// ─── 6b. awardCommentPoints — uses runTransaction ─────────────────────────────
+//
+// Regression coverage for a production-class bug: awardCommentPoints used to
+// do a plain getDoc → compute → updateDoc (no transaction) to award points to
+// one comment at a time. A target awarding points to several comments in
+// quick succession could have a second call's getDoc land before the first
+// call's updateDoc committed, so the second call's full-object score/comment
+// write would silently discard the first award. Wrapping it in runTransaction
+// (fresh read at commit time, same pattern as submitComment/givePointsToTarget)
+// fixes this the same way.
+
+describe('awardCommentPoints — uses runTransaction to prevent concurrent point loss', () => {
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  const COMMENT_A = { id: 'c1', authorId: 'author-a', text: 'A', submittedAt: new Date() };
+  const COMMENT_B = { id: 'c2', authorId: 'author-b', text: 'B', submittedAt: new Date() };
+
+  const roundWithTwoComments = {
+    ...ACTIVE_ROUND,
+    targetUserId: 'admin-uid',
+    comments: [COMMENT_A, COMMENT_B],
+    commentsVisible: true,
+  };
+
+  const activeGameDoc = makeGameDoc({
+    status: 'active',
+    currentRound: roundWithTwoComments,
+    scores: {},
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, activeGameDoc);
+
+    mockTxn.get.mockResolvedValue(makeSnap(activeGameDoc));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  });
+
+  it('calls runTransaction when awarding comment points', async () => {
+    const firestore = require('firebase/firestore');
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.runTransaction.mockClear();
+
+    await act(async () => { await result.current.awardCommentPoints('c1', 3); });
+
+    expect(firestore.runTransaction).toHaveBeenCalled();
+  });
+
+  it('writes the awarded comment and per-author score via a dot-path key, not the whole scores object', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.awardCommentPoints('c1', 3); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        'currentRound.comments': expect.arrayContaining([
+          expect.objectContaining({ id: 'c1', points: 3 }),
+        ]),
+        'scores.author-a': 3,
+      }),
+    );
+  });
+
+  it('does not drop a concurrently-awarded comment when a second award reads fresh state', async () => {
+    // Simulates awarding comment A, then quickly awarding comment B: the
+    // second transaction's fresh read reflects comment A's already-applied
+    // points/score, so that award must survive in the second write's array.
+    const firestore = require('firebase/firestore');
+    const gameAfterFirstAward = makeGameDoc({
+      status: 'active',
+      currentRound: {
+        ...roundWithTwoComments,
+        comments: [{ ...COMMENT_A, points: 3 }, COMMENT_B],
+      },
+      scores: { 'author-a': 3 },
+    });
+    mockTxn.get.mockResolvedValue(makeSnap(gameAfterFirstAward));
+
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.awardCommentPoints('c2', 2); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg['currentRound.comments']).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'c1', points: 3 }),
+        expect.objectContaining({ id: 'c2', points: 2 }),
+      ]),
+    );
+    expect(arg['scores.author-b']).toBe(2);
+    // Untouched by this call — author-a's already-committed score isn't re-sent/clobbered
+    expect(arg['scores.author-a']).toBeUndefined();
+  });
+});
+
 // ─── 7. resetTargetControls clears playersWhoCompletedPostCommentPhase ─────────
 
 describe('resetTargetControls — clears playersWhoCompletedPostCommentPhase', () => {

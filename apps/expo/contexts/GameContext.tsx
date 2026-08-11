@@ -797,44 +797,41 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       const gameRef = doc(db, "games", currentGame.id);
-      const gameDoc = await getDoc(gameRef);
 
-      if (!gameDoc.exists()) {
-        throw new Error("Game not found");
-      }
-
-      const gameData = gameDoc.data() as Game;
-      const currentRound = gameData.currentRound;
-
-      if (!currentRound) {
-        throw new Error("No active round");
-      }
-
-      // Find the comment and update it with points
-      const updatedComments = currentRound.comments.map((comment) => {
-        if (comment.id === commentId) {
-          return { ...comment, points };
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) {
+          throw new Error("Game not found");
         }
-        return comment;
-      });
 
-      // Update scores
-      const comment = updatedComments.find((c) => c.id === commentId);
-      if (comment) {
-        const currentScores = gameData.scores || {};
-        const authorCurrentScore = currentScores[comment.authorId] || 0;
-        const newScores = {
-          ...currentScores,
-          [comment.authorId]: authorCurrentScore + points,
-        };
+        const gameData = gameDoc.data() as Game;
+        const currentRound = gameData.currentRound;
 
-        // Update comments and scores, but don't automatically set pointsGiven
-        // The target will explicitly mark when they're done giving points
-        await updateDoc(gameRef, {
-          "currentRound.comments": updatedComments,
-          scores: newScores,
+        if (!currentRound) {
+          throw new Error("No active round");
+        }
+
+        // Find the comment and update it with points
+        const updatedComments = currentRound.comments.map((comment) => {
+          if (comment.id === commentId) {
+            return { ...comment, points };
+          }
+          return comment;
         });
-      }
+
+        const comment = updatedComments.find((c) => c.id === commentId);
+        if (!comment) return;
+
+        const authorCurrentScore = gameData.scores?.[comment.authorId] || 0;
+
+        // Update comments and the awarded author's score, but don't
+        // automatically set pointsGiven — the target explicitly marks when
+        // they're done giving points.
+        transaction.update(gameRef, {
+          "currentRound.comments": updatedComments,
+          [`scores.${comment.authorId}`]: authorCurrentScore + points,
+        });
+      });
     } catch (error: unknown) {
       console.error("Error giving points:", error);
       throw error;
@@ -1773,25 +1770,34 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const submitBasketCommentGuess = async (commentWriterId: string): Promise<void> => {
     if (!auth.currentUser) throw new Error("You must be signed in");
     if (!currentGame?.basketData) throw new Error("No active basket game");
-    const { currentRoundComments } = currentGame.basketData;
     const guesserId = auth.currentUser.uid;
-    const actualComment = currentRoundComments.find((c: BasketComment) => c.subjectId === guesserId);
-    if (!actualComment) throw new Error("No comment found for this player");
-    const commentCorrect = actualComment.writerId === commentWriterId;
-    const guess: BasketGuess = {
-      guesserId, commentWriterId, commentCorrect, authorCorrect: false,
-      pointsAwarded: commentCorrect ? 1 : 0,
-    };
     try {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);
-      const updates: Record<string, unknown> = {
-        'basketData.currentRoundGuesses': arrayUnion(guess),
-      };
-      if (commentCorrect) {
-        updates[`scores.${guesserId}`] = (currentGame.scores?.[guesserId] ?? 0) + 1;
-      }
-      await updateDoc(gameRef, updates);
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        if (!gameData.basketData) throw new Error("No active basket game");
+        const { currentRoundComments, currentRoundGuesses } = gameData.basketData;
+        if (currentRoundGuesses.some((g: BasketGuess) => g.guesserId === guesserId)) {
+          throw new Error("Comment guess already submitted for this round");
+        }
+        const actualComment = currentRoundComments.find((c: BasketComment) => c.subjectId === guesserId);
+        if (!actualComment) throw new Error("No comment found for this player");
+        const commentCorrect = actualComment.writerId === commentWriterId;
+        const guess: BasketGuess = {
+          guesserId, commentWriterId, commentCorrect, authorCorrect: false,
+          pointsAwarded: commentCorrect ? 1 : 0,
+        };
+        const updates: Record<string, unknown> = {
+          'basketData.currentRoundGuesses': [...currentRoundGuesses, guess],
+        };
+        if (commentCorrect) {
+          updates[`scores.${guesserId}`] = (gameData.scores?.[guesserId] ?? 0) + 1;
+        }
+        transaction.update(gameRef, updates);
+      });
     } catch (err) {
       console.error('Error submitting basket comment guess:', err);
       throw err;
@@ -1803,30 +1809,39 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const submitBasketAuthorGuess = async (authorGuessId: string): Promise<void> => {
     if (!auth.currentUser) throw new Error("You must be signed in");
     if (!currentGame?.basketData) throw new Error("No active basket game");
-    const { schedule, currentRoundIndex, currentRoundGuesses } = currentGame.basketData;
     const guesserId = auth.currentUser.uid;
-    const existingGuess = currentRoundGuesses.find((g: BasketGuess) => g.guesserId === guesserId);
-    if (!existingGuess?.commentCorrect) {
-      throw new Error("Cannot guess author without a correct comment guess");
-    }
-    const assignment = schedule[currentRoundIndex].assignments.find((a: BasketAssignment) => a.subjectId === guesserId);
-    if (!assignment) throw new Error("No assignment found for this player");
-    const authorCorrect = authorGuessId === assignment.writerId;
-    const updatedGuesses = currentRoundGuesses.map((g: BasketGuess) =>
-      g.guesserId === guesserId
-        ? { ...g, authorGuessId, authorCorrect, pointsAwarded: g.pointsAwarded + (authorCorrect ? 1 : 0) }
-        : g
-    );
     try {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);
-      const updates: Record<string, unknown> = {
-        'basketData.currentRoundGuesses': updatedGuesses,
-      };
-      if (authorCorrect) {
-        updates[`scores.${guesserId}`] = (currentGame.scores?.[guesserId] ?? 0) + 1;
-      }
-      await updateDoc(gameRef, updates);
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        if (!gameData.basketData) throw new Error("No active basket game");
+        const { schedule, currentRoundIndex, currentRoundGuesses } = gameData.basketData;
+        const existingGuess = currentRoundGuesses.find((g: BasketGuess) => g.guesserId === guesserId);
+        if (!existingGuess?.commentCorrect) {
+          throw new Error("Cannot guess author without a correct comment guess");
+        }
+        if (existingGuess.authorGuessId !== undefined) {
+          throw new Error("Author guess already submitted for this round");
+        }
+        const assignment = schedule[currentRoundIndex].assignments.find((a: BasketAssignment) => a.subjectId === guesserId);
+        if (!assignment) throw new Error("No assignment found for this player");
+        const authorCorrect = authorGuessId === assignment.writerId;
+        const updatedGuesses = currentRoundGuesses.map((g: BasketGuess) =>
+          g.guesserId === guesserId
+            ? { ...g, authorGuessId, authorCorrect, pointsAwarded: g.pointsAwarded + (authorCorrect ? 1 : 0) }
+            : g
+        );
+        const updates: Record<string, unknown> = {
+          'basketData.currentRoundGuesses': updatedGuesses,
+        };
+        if (authorCorrect) {
+          updates[`scores.${guesserId}`] = (gameData.scores?.[guesserId] ?? 0) + 1;
+        }
+        transaction.update(gameRef, updates);
+      });
     } catch (err) {
       console.error('Error submitting basket author guess:', err);
       throw err;
@@ -2193,28 +2208,38 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
   const submitClashGuess = async (commentWriterId: string, guessedSubjectId: string): Promise<void> => {
     if (!auth.currentUser) throw new Error("You must be signed in");
-    const cd = currentGame?.clashData;
-    if (!cd) throw new Error("No active clash game");
+    if (!currentGame?.clashData) throw new Error("No active clash game");
     const uid = auth.currentUser.uid;
-    const currentGroup = cd.currentGuessingGroup;
-    if (!currentGroup) throw new Error("Not in guessing phase");
-    const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
-    if (uid !== activeLeaderId) throw new Error("Only the active leader can submit guesses");
-    const oppositeComments = currentGroup === 'a' ? cd.currentRoundCommentsB : cd.currentRoundCommentsA;
-    const comment = oppositeComments.find((c: ClashComment) => c.writerId === commentWriterId);
-    if (!comment) throw new Error("Comment not found");
-    const subjectCorrect = comment.subjectId === guessedSubjectId;
-    const guess: ClashGuess = { commentWriterId, guessedSubjectId, subjectCorrect, pointsAwarded: subjectCorrect ? 1 : 0 };
-    const guessKey = currentGroup === 'a' ? 'clashData.currentRoundGuessesA' : 'clashData.currentRoundGuessesB';
-    const updates: Record<string, unknown> = { [guessKey]: arrayUnion(guess) };
-    if (subjectCorrect) {
-      updates[`clashData.teamScores.${currentGroup}`] = (cd.teamScores[currentGroup] ?? 0) + 1;
-      updates[`scores.${uid}`] = (currentGame!.scores?.[uid] ?? 0) + 1;
-    }
     try {
       setLoading(true);
-      const gameRef = doc(db, 'games', currentGame!.id);
-      await updateDoc(gameRef, updates);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        const cd = gameData.clashData;
+        if (!cd) throw new Error("No active clash game");
+        const currentGroup = cd.currentGuessingGroup;
+        if (!currentGroup) throw new Error("Not in guessing phase");
+        const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+        if (uid !== activeLeaderId) throw new Error("Only the active leader can submit guesses");
+        const oppositeComments = currentGroup === 'a' ? cd.currentRoundCommentsB : cd.currentRoundCommentsA;
+        const comment = oppositeComments.find((c: ClashComment) => c.writerId === commentWriterId);
+        if (!comment) throw new Error("Comment not found");
+        const guesses = currentGroup === 'a' ? cd.currentRoundGuessesA : cd.currentRoundGuessesB;
+        if (guesses.some((g: ClashGuess) => g.commentWriterId === commentWriterId)) {
+          throw new Error("Guess already submitted for this comment");
+        }
+        const subjectCorrect = comment.subjectId === guessedSubjectId;
+        const guess: ClashGuess = { commentWriterId, guessedSubjectId, subjectCorrect, pointsAwarded: subjectCorrect ? 1 : 0 };
+        const guessKey = currentGroup === 'a' ? 'clashData.currentRoundGuessesA' : 'clashData.currentRoundGuessesB';
+        const updates: Record<string, unknown> = { [guessKey]: [...guesses, guess] };
+        if (subjectCorrect) {
+          updates[`clashData.teamScores.${currentGroup}`] = (cd.teamScores[currentGroup] ?? 0) + 1;
+          updates[`scores.${uid}`] = (gameData.scores?.[uid] ?? 0) + 1;
+        }
+        transaction.update(gameRef, updates);
+      });
     } catch (err) {
       console.error('Error submitting clash guess:', err);
       throw err;
@@ -2225,33 +2250,39 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
   const submitClashAuthorGuess = async (commentWriterId: string, guessedAuthorId: string): Promise<void> => {
     if (!auth.currentUser) throw new Error("You must be signed in");
-    const cd = currentGame?.clashData;
-    if (!cd) throw new Error("No active clash game");
+    if (!currentGame?.clashData) throw new Error("No active clash game");
     const uid = auth.currentUser.uid;
-    const currentGroup = cd.currentGuessingGroup;
-    if (!currentGroup) throw new Error("Not in guessing phase");
-    const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
-    if (uid !== activeLeaderId) throw new Error("Only the active leader can submit guesses");
-    const guesses = currentGroup === 'a' ? cd.currentRoundGuessesA : cd.currentRoundGuessesB;
-    const existing = guesses.find((g: ClashGuess) => g.commentWriterId === commentWriterId);
-    if (!existing?.subjectCorrect) throw new Error("Cannot guess author without a correct subject guess");
-    if (existing.guessedAuthorId !== undefined) throw new Error("Author already guessed");
-    const authorCorrect = guessedAuthorId === commentWriterId;
-    const updatedGuesses = guesses.map((g: ClashGuess) =>
-      g.commentWriterId === commentWriterId
-        ? { ...g, guessedAuthorId, authorCorrect, pointsAwarded: g.pointsAwarded + (authorCorrect ? 1 : 0) }
-        : g
-    );
-    const guessKey = currentGroup === 'a' ? 'clashData.currentRoundGuessesA' : 'clashData.currentRoundGuessesB';
-    const updates: Record<string, unknown> = { [guessKey]: updatedGuesses };
-    if (authorCorrect) {
-      updates[`clashData.teamScores.${currentGroup}`] = (cd.teamScores[currentGroup] ?? 0) + 1;
-      updates[`scores.${uid}`] = (currentGame!.scores?.[uid] ?? 0) + 1;
-    }
     try {
       setLoading(true);
-      const gameRef = doc(db, 'games', currentGame!.id);
-      await updateDoc(gameRef, updates);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        const cd = gameData.clashData;
+        if (!cd) throw new Error("No active clash game");
+        const currentGroup = cd.currentGuessingGroup;
+        if (!currentGroup) throw new Error("Not in guessing phase");
+        const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+        if (uid !== activeLeaderId) throw new Error("Only the active leader can submit guesses");
+        const guesses = currentGroup === 'a' ? cd.currentRoundGuessesA : cd.currentRoundGuessesB;
+        const existing = guesses.find((g: ClashGuess) => g.commentWriterId === commentWriterId);
+        if (!existing?.subjectCorrect) throw new Error("Cannot guess author without a correct subject guess");
+        if (existing.guessedAuthorId !== undefined) throw new Error("Author already guessed");
+        const authorCorrect = guessedAuthorId === commentWriterId;
+        const updatedGuesses = guesses.map((g: ClashGuess) =>
+          g.commentWriterId === commentWriterId
+            ? { ...g, guessedAuthorId, authorCorrect, pointsAwarded: g.pointsAwarded + (authorCorrect ? 1 : 0) }
+            : g
+        );
+        const guessKey = currentGroup === 'a' ? 'clashData.currentRoundGuessesA' : 'clashData.currentRoundGuessesB';
+        const updates: Record<string, unknown> = { [guessKey]: updatedGuesses };
+        if (authorCorrect) {
+          updates[`clashData.teamScores.${currentGroup}`] = (cd.teamScores[currentGroup] ?? 0) + 1;
+          updates[`scores.${uid}`] = (gameData.scores?.[uid] ?? 0) + 1;
+        }
+        transaction.update(gameRef, updates);
+      });
     } catch (err) {
       console.error('Error submitting clash author guess:', err);
       throw err;
