@@ -620,11 +620,31 @@ describe('restartMirrorRound — resets the writing-step round in place', () => 
   });
 
   it('rejects a non-admin caller', async () => {
+    // Game where the current user (admin-uid in the mock) is NOT the admin
+    const mockTxn = { get: jest.fn(), update: jest.fn() };
+    const gameWithOtherAdmin = makeGameDoc({
+      adminId: 'other-admin',
+      status: 'active',
+      currentRound: {
+        ...ACTIVE_ROUND,
+        comments: [{ id: 'c1', authorId: 'admin-uid', text: 'hi', submittedAt: new Date(), points: 3 }],
+        commentsVisible: true,
+        pointsGiven: true,
+        targetPoints: 2,
+      },
+      scores: { 'admin-uid': 3, 'player-uid': 2 },
+      roundStartScores: {},
+      roundStartGuessResults: {},
+      participants: [ADMIN, PLAYER, { userId: 'other-admin', userName: 'OtherAdmin', userEmail: 'o@t.com', joinedAt: new Date() }],
+    });
     const firestore = require('firebase/firestore');
-    firestore.doc.mockReturnValue({ path: 'games/game-x' });
-    // Re-enter as the non-admin player instead
-    const config = require('@/config/firebase');
-    config.auth.currentUser = { uid: 'player-uid' };
+    setupEnterGameMocks(firestore, gameWithOtherAdmin);
+    mockTxn.get.mockResolvedValue(makeSnap(gameWithOtherAdmin));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+
     const { result } = renderHook(() => useGame(), { wrapper });
     await act(async () => { await result.current.enterGame('SECRET'); });
 
