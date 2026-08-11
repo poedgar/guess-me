@@ -4,6 +4,7 @@ import { generateGameId } from "@/utils/gameIdGenerator";
 import { sortParticipantsByJoin, buildJoinIndexById } from "@/utils/participants";
 import { BasketAssignment, BasketRound, generateBasketSchedule } from '@/utils/basketSchedule';
 import { ClashAssignment, ClashRound, generateClashSchedule } from '@/utils/clashSchedule';
+import { generateIdeaSchedule } from '@/utils/ideaSchedule';
 import {
   arrayUnion,
   doc,
@@ -2297,27 +2298,187 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const startIdeaGame = async (): Promise<void> => {
-    throw new Error("Not yet implemented");
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the game");
+    }
+    const eligibleWriters = (currentGame.adminWritesComments ?? false)
+      ? currentGame.participants.map((p: Participant) => p.userId)
+      : currentGame.participants.filter((p: Participant) => p.userId !== currentGame.adminId).map((p: Participant) => p.userId);
+    if (eligibleWriters.length < 2) {
+      throw new Error("Need at least 2 players (excluding admin) to start Group Ideas. Enable 'Admin writes comments' or add more players.");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        status: 'idea_writing',
+        ideaData: {
+          incognitoMode: currentGame.ideaIncognitoMode ?? true,
+          ideas: [],
+          schedule: [],
+          currentRoundIndex: 0,
+          currentRoundRatings: [],
+        },
+      });
+    } catch (err) {
+      console.error('Error starting idea game:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submitIdea = async (text: string): Promise<void> => {
-    throw new Error("Not yet implemented");
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame?.ideaData) throw new Error("No active Group Ideas game");
+    if (!text.trim()) throw new Error("Idea cannot be empty");
+    if (text.trim().length > 500) throw new Error("Idea must be 500 characters or fewer");
+    const idea: Idea = {
+      id: `${Date.now()}-${auth.currentUser.uid}-${currentGame.ideaData.ideas.length}`,
+      authorId: auth.currentUser.uid,
+      text: text.trim(),
+      submittedAt: Date.now(),
+    };
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        'ideaData.ideas': arrayUnion(idea),
+      });
+    } catch (err) {
+      console.error('Error submitting idea:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const startIdeaRatingRounds = async (): Promise<void> => {
-    throw new Error("Not yet implemented");
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the rating rounds");
+    }
+    if (!currentGame.ideaData) throw new Error("No active Group Ideas game");
+    const authorIdsWithIdeas = Array.from(new Set(currentGame.ideaData.ideas.map((i: Idea) => i.authorId)));
+    const eligibleWriters = (currentGame.adminWritesComments ?? false)
+      ? currentGame.participants.map((p: Participant) => p.userId)
+      : currentGame.participants.filter((p: Participant) => p.userId !== currentGame.adminId).map((p: Participant) => p.userId);
+    const missingWriters = eligibleWriters.filter(id => !authorIdsWithIdeas.includes(id));
+    if (eligibleWriters.length < 2 || missingWriters.length > 0) {
+      throw new Error("Every eligible participant must submit at least one idea before rating rounds can start");
+    }
+    try {
+      setLoading(true);
+      const schedule = generateIdeaSchedule(authorIdsWithIdeas);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await updateDoc(gameRef, {
+        status: 'idea_rating',
+        'ideaData.schedule': schedule,
+        'ideaData.currentRoundIndex': 0,
+        'ideaData.currentRoundRatings': [],
+      });
+    } catch (err) {
+      console.error('Error starting idea rating rounds:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submitIdeaRating = async (ideaId: string, points: number, comment?: string): Promise<void> => {
-    throw new Error("Not yet implemented");
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame?.ideaData) throw new Error("No active Group Ideas game");
+    if (points < 0 || points > 5) throw new Error("Points must be between 0 and 5");
+
+    const raterId = auth.currentUser.uid;
+    const gameRef = doc(db, 'games', currentGame.id);
+
+    try {
+      setLoading(true);
+      await runTransaction(db, async (transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        const ideaData = gameData.ideaData;
+        if (!ideaData) throw new Error("No active Group Ideas game");
+
+        const eligibleRaters = (gameData.adminWritesComments ?? false)
+          ? gameData.participants.map((p: Participant) => p.userId)
+          : gameData.participants.filter((p: Participant) => p.userId !== gameData.adminId).map((p: Participant) => p.userId);
+        if (!eligibleRaters.includes(raterId)) {
+          throw new Error("You are not eligible to rate ideas in this game");
+        }
+
+        const idea = ideaData.ideas.find((i: Idea) => i.id === ideaId);
+        if (!idea) throw new Error("Idea not found");
+
+        const alreadyRated = ideaData.currentRoundRatings.some(
+          (r: IdeaRating) => r.raterId === raterId && r.ideaId === ideaId,
+        );
+        if (alreadyRated) throw new Error("You have already rated this idea");
+
+        const rating: IdeaRating = {
+          raterId, ideaId, points,
+          ...(ideaData.incognitoMode && comment?.trim() ? { comment: comment.trim() } : {}),
+        };
+
+        transaction.update(gameRef, {
+          'ideaData.currentRoundRatings': [...ideaData.currentRoundRatings, rating],
+          [`scores.${idea.authorId}`]: (gameData.scores?.[idea.authorId] ?? 0) + points,
+        });
+      });
+    } catch (err) {
+      console.error('Error submitting idea rating:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const startNextIdeaRound = async (): Promise<void> => {
-    throw new Error("Not yet implemented");
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the next round");
+    }
+    if (!currentGame.ideaData) throw new Error("No active Group Ideas game");
+    const { schedule, currentRoundIndex } = currentGame.ideaData;
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      if (currentRoundIndex + 1 >= schedule.length) {
+        await updateDoc(gameRef, { status: 'finished' });
+      } else {
+        await updateDoc(gameRef, {
+          'ideaData.currentRoundIndex': currentRoundIndex + 1,
+          'ideaData.currentRoundRatings': [],
+        });
+      }
+    } catch (err) {
+      console.error('Error starting next idea round:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateIdeaIncognitoMode = async (ideaIncognitoMode: boolean): Promise<void> => {
-    throw new Error("Not yet implemented");
+    if (!currentGame || !auth.currentUser || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can update this setting");
+    }
+    if (currentGame.status !== "waiting") {
+      throw new Error("This setting can only be updated before the game starts");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, "games", currentGame.id);
+      await updateDoc(gameRef, { ideaIncognitoMode });
+    } catch (err) {
+      console.error("Error updating idea incognito mode setting:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const value: GameContextType = useMemo(
