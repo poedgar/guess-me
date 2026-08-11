@@ -258,6 +258,7 @@
       "gameTypeMirror": "В дзеркалі",
       "gameTypeBasket": "Кошик",
       "gameTypeClash": "Стінка на стінку",
+      "gameTypeIdeas": "Групові ідеї",
       "gameTypeSoon": "Незабаром",
       "basket": {
         "round": "Раунд %{current} з %{total}",
@@ -307,6 +308,26 @@
         "emptyGroup": "поки немає гравців",
         "confirmSubjectGuess": "Цей коментар про %{name}?",
         "confirmAuthorGuess": "%{name} написав(ла) цей коментар?"
+      },
+      "ideas": {
+        "yourIdeas": "Ваші ідеї",
+        "writeIdea": "Напишіть свою ідею...",
+        "addIdea": "Додати ідею",
+        "submittedCount": "Надіслали ідеї: %{count} учасник(ів)",
+        "startRating": "Почати оцінювання",
+        "round": "Раунд %{current} з %{total}",
+        "pointsLabel": "Бали",
+        "commentPlaceholder": "Необов'язковий анонімний коментар...",
+        "submitRating": "Надіслати оцінку",
+        "waitingForRatings": "Оцінили: %{count}/%{total}",
+        "nextRound": "Наступний раунд",
+        "finishGame": "Закінчити гру",
+        "notEligibleToRate": "Ви не берете участі в оцінюванні цієї гри.",
+        "commentsHeading": "Коментарі",
+        "confirmSubmitIdea": "Надіслати цю ідею?",
+        "confirmSubmitRating": "Надіслати цю оцінку?",
+        "ideaIncognitoModeTitle": "Анонімне оцінювання",
+        "ideaIncognitoModeDescription": "Якщо увімкнено, оцінки та коментарі залишаються анонімними. Якщо вимкнено, надаються лише іменні бали — обговорення відбувається усно."
       }
     }
   },

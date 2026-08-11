@@ -252,6 +252,7 @@
       "gameTypeMirror": "In the Mirror",
       "gameTypeBasket": "Basket",
       "gameTypeClash": "Head-to-Head",
+      "gameTypeIdeas": "Group Ideas",
       "gameTypeSoon": "Soon",
       "basket": {
         "round": "Round %{current} of %{total}",
@@ -301,6 +302,26 @@
         "emptyGroup": "no players yet",
         "confirmSubjectGuess": "This comment is about %{name}?",
         "confirmAuthorGuess": "%{name} wrote this comment?"
+      },
+      "ideas": {
+        "yourIdeas": "Your ideas",
+        "writeIdea": "Write your idea...",
+        "addIdea": "Add idea",
+        "submittedCount": "%{count} participant(s) have submitted",
+        "startRating": "Start Rating Rounds",
+        "round": "Round %{current} of %{total}",
+        "pointsLabel": "Points",
+        "commentPlaceholder": "Optional anonymous comment...",
+        "submitRating": "Submit Rating",
+        "waitingForRatings": "%{count}/%{total} rated",
+        "nextRound": "Next Round",
+        "finishGame": "Finish Game",
+        "notEligibleToRate": "You are not participating in ratings this game.",
+        "commentsHeading": "Comments",
+        "confirmSubmitIdea": "Submit this idea?",
+        "confirmSubmitRating": "Submit this rating?",
+        "ideaIncognitoModeTitle": "Anonymous ratings",
+        "ideaIncognitoModeDescription": "If enabled, ratings and comments stay anonymous. If disabled, only attributed points are given — discussion happens out loud."
       }
     }
   },
