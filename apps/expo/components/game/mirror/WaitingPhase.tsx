@@ -53,7 +53,7 @@ export const WaitingPhase: React.FC<Props> = ({
   onCopyGameId,
 }) => {
   const { playSound } = useSound();
-  const { loading, startGame, startBasketGame, startClashGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, setGameType } = useGame();
+  const { loading, startGame, startBasketGame, startClashGame, startIdeaGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, updateIdeaIncognitoMode, setGameType } = useGame();
 
   const [isCopied, setIsCopied] = useState(false);
   const isMounted = useRef(true);
@@ -119,6 +119,11 @@ export const WaitingPhase: React.FC<Props> = ({
     updateShowGuessResults
   );
 
+  const handleToggleIdeaIncognitoMode = makeSettingToggler(
+    () => !(game.ideaIncognitoMode ?? true),
+    updateIdeaIncognitoMode
+  );
+
   const handleStartGame = async () => {
     if (isMounted.current === false) return;
     try {
@@ -128,6 +133,8 @@ export const WaitingPhase: React.FC<Props> = ({
         await startBasketGame();
       } else if (game.gameType === 'clash') {
         await startClashGame();
+      } else if (game.gameType === 'ideas') {
+        await startIdeaGame();
       } else {
         await startGame();
       }
@@ -320,8 +327,43 @@ export const WaitingPhase: React.FC<Props> = ({
                   {t('game.ui.gameTypeClash', { locale })}
                 </ThemedText>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.gameTypeButton,
+                  game.gameType === 'ideas' && styles.gameTypeButtonActive,
+                ]}
+                onPress={() => setGameType('ideas').catch(() => {})}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={[
+                  styles.gameTypeButtonText,
+                  game.gameType === 'ideas' && styles.gameTypeButtonTextActive,
+                ]}>
+                  {t('game.ui.gameTypeIdeas', { locale })}
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           </View>
+
+          {game.gameType === 'ideas' && (
+            <View style={styles.toggleContainer}>
+              <View style={styles.toggleInfo}>
+                <ThemedText style={styles.toggleLabel}>
+                  {t('game.ui.ideas.ideaIncognitoModeTitle', { locale })}
+                </ThemedText>
+                <ThemedText style={styles.toggleDescription}>
+                  {t('game.ui.ideas.ideaIncognitoModeDescription', { locale })}
+                </ThemedText>
+              </View>
+              <Switch
+                value={game.ideaIncognitoMode ?? true}
+                onValueChange={handleToggleIdeaIncognitoMode}
+                trackColor={{ false: GameColors.neutral, true: GameColors.green }}
+                thumbColor={GameColors.white}
+                ios_backgroundColor={GameColors.neutral}
+              />
+            </View>
+          )}
         </>
       )}
 
