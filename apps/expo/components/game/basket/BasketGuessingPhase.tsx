@@ -1,3 +1,4 @@
+import { AdminRoundTools } from "@/components/game/AdminRoundTools";
 import { ShowFancyAlertFn } from "@/components/game/GameHeader";
 import { gameStyles } from "@/components/game/gameStyles";
 import { ThemedText } from "@/components/themed-text";
@@ -44,6 +45,8 @@ export const BasketGuessingPhase: React.FC<Props> = ({
     submitBasketCommentGuess,
     submitBasketAuthorGuess,
     startNextBasketRound,
+    restartBasketRound,
+    skipBasketRound,
   } = useGame();
   const { playSound } = useSound();
 
@@ -400,6 +403,13 @@ export const BasketGuessingPhase: React.FC<Props> = ({
           </Animated.View>
           </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartBasketRound}
+          onSkip={skipBasketRound}
+        />
       </View>
     </View>
   );

@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
 import { gameStyles } from '@/components/game/gameStyles';
 import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
@@ -29,7 +30,7 @@ interface Props {
 export const BasketWritingPhase: React.FC<Props> = ({
   game, user, isAdmin, locale, isDark, getDisplayName, showFancyAlert,
 }) => {
-  const { submitBasketComment, revealBasketComments } = useGame();
+  const { submitBasketComment, revealBasketComments, restartBasketRound, skipBasketRound } = useGame();
   const { playSound } = useSound();
   const inputTheme = themedInput(isDark);
 
@@ -187,6 +188,13 @@ export const BasketWritingPhase: React.FC<Props> = ({
           </Animated.View>
           </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartBasketRound}
+          onSkip={skipBasketRound}
+        />
       </View>
     </View>
   );

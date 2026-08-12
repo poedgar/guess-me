@@ -7,6 +7,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
+import { AdminRoundTools } from '../AdminRoundTools';
 import type { BasketAssignment } from '@mirror/shared';
 
 interface Props {
@@ -15,7 +16,7 @@ interface Props {
 
 export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, submitBasketComment, revealBasketComments } = useGame();
+  const { loading, submitBasketComment, revealBasketComments, restartBasketRound, skipBasketRound } = useGame();
   const { playSound } = useSound();
   const { t } = useLanguage();
   const { showAlert, AlertModal } = useAlert();
@@ -140,6 +141,7 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
             >
               {isRevealing ? t('common.loading') : t('game.ui.basket.revealComments')}
             </button>
+            <AdminRoundTools isAdmin={isAdmin} onRestart={restartBasketRound} onSkip={skipBasketRound} />
           </div>
         )}
       </div>
