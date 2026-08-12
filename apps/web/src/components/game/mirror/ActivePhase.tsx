@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
+import { AdminRoundTools } from '../AdminRoundTools';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
@@ -26,6 +27,8 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     givePointsToTarget,
     startGuessingPhase,
     startNextRound,
+    restartMirrorRound,
+    skipMirrorRound,
   } = useGame();
   const { playSound } = useSound();
   const { showAlert, AlertModal } = useAlert();
@@ -316,6 +319,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                   </button>
                 )}
               </div>
+              <AdminRoundTools isAdmin={isAdmin} onRestart={restartMirrorRound} onSkip={skipMirrorRound} />
             </div>
           )}
 

@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
+import { AdminRoundTools } from '../AdminRoundTools';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
@@ -17,7 +18,7 @@ interface GuessingPhaseProps {
 
 export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound } = useGame();
+  const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound, restartMirrorRound, skipMirrorRound } = useGame();
   const { playSound } = useSound();
   const { showAlert, AlertModal } = useAlert();
   const { t } = useLanguage();
@@ -304,6 +305,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                   {isFinalizing ? t('common.loading') : t('game.ui.finalize')}
                 </button>
               )}
+              <AdminRoundTools isAdmin={isAdmin} onRestart={restartMirrorRound} onSkip={skipMirrorRound} />
             </div>
           )}
         </div>

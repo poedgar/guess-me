@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
@@ -62,7 +63,7 @@ export const GuessingPhase: React.FC<Props> = ({
   locale,
 }) => {
   const { playSound } = useSound();
-  const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound } = useGame();
+  const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound, restartMirrorRound, skipMirrorRound } = useGame();
 
   const [selectedGuesses, setSelectedGuesses] = useState<{ [commentId: string]: string }>({});
   const [hasSubmittedGuesses, setHasSubmittedGuesses] = useState(false);
@@ -545,6 +546,13 @@ export const GuessingPhase: React.FC<Props> = ({
           </Animated.View>
           </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartMirrorRound}
+          onSkip={skipMirrorRound}
+        />
       </View>
 
       {/* Post-Guessing Point Panel */}

@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
@@ -63,6 +64,8 @@ export const ActivePhase: React.FC<Props> = ({
     startGuessingPhase,
     skipPostCommentPhase,
     startNextRound,
+    restartMirrorRound,
+    skipMirrorRound,
   } = useGame();
 
   const [isStartingNextRound, setIsStartingNextRound] = useState(false);
@@ -457,6 +460,13 @@ export const ActivePhase: React.FC<Props> = ({
           </Animated.View>
           </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartMirrorRound}
+          onSkip={skipMirrorRound}
+        />
 
         {/* User is the target */}
         {user?.uid === game.currentRound.targetUserId && (
