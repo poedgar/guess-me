@@ -354,3 +354,90 @@ describe('updateIdeaIncognitoMode', () => {
     ).rejects.toThrow('This setting can only be updated before the game starts');
   });
 });
+
+// ── restartIdeaRound ────────────────────────────────────────────────────────────
+describe('restartIdeaRound', () => {
+  const IDEAS = [
+    { id: 'i1', authorId: 'user-2', text: 'Idea from Bob', submittedAt: 1 },
+    { id: 'i2', authorId: 'user-3', text: 'Idea from Carol', submittedAt: 2 },
+  ];
+  const ratings = [
+    { raterId: 'user-1', ideaId: 'i1', points: 4 },
+    { raterId: 'user-1', ideaId: 'i2', points: 1 },
+  ];
+  const game = {
+    ...BASE_GAME,
+    status: 'idea_rating',
+    scores: { 'user-2': 4, 'user-3': 1 },
+    ideaData: {
+      incognitoMode: true,
+      ideas: IDEAS,
+      schedule: ['user-2', 'user-3'],
+      currentRoundIndex: 0,
+      currentRoundRatings: ratings,
+    },
+  };
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  function mockTransactionOn(gameData: object) {
+    const f = require('firebase/firestore');
+    mockTxn.get.mockResolvedValue({ exists: () => true, id: 'game-abc', data: () => gameData });
+    mockTxn.update.mockClear();
+    f.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  }
+
+  it('clears currentRoundRatings and keeps schedule/currentRoundIndex untouched', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+
+    await act(async () => { await result.current.restartIdeaRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg['ideaData.currentRoundRatings']).toEqual([]);
+    expect(arg['ideaData.schedule']).toBeUndefined(); // not touched, so not written
+  });
+
+  it('rolls back each rated idea\'s author score by the points they were given this round', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+
+    await act(async () => { await result.current.restartIdeaRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg['scores.user-2']).toBe(0); // 4 - 4
+    expect(arg['scores.user-3']).toBe(0); // 1 - 1
+  });
+
+  it('rejects a non-admin caller', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+    const config = require('@/config/firebase');
+    config.auth.currentUser = { uid: 'user-2', displayName: 'Bob', email: 'bob@example.com', photoURL: null };
+
+    await expect(
+      act(async () => { await result.current.restartIdeaRound(); })
+    ).rejects.toThrow('Only the admin can restart the round');
+  });
+});
+
+// ── skipIdeaRound ────────────────────────────────────────────────────────────────
+describe('skipIdeaRound', () => {
+  it('delegates to the same advance logic as startNextIdeaRound', async () => {
+    const game = {
+      ...BASE_GAME, status: 'idea_rating',
+      ideaData: { incognitoMode: true, ideas: [], schedule: ['user-1', 'user-2'], currentRoundIndex: 0, currentRoundRatings: [] },
+    };
+    const { result, gameDoc } = await enterWithGame(game);
+    const f = require('firebase/firestore');
+    f.updateDoc.mockClear();
+
+    await act(async () => { await result.current.skipIdeaRound(); });
+
+    expect(f.updateDoc).toHaveBeenCalledWith(gameDoc, {
+      'ideaData.currentRoundIndex': 1,
+      'ideaData.currentRoundRatings': [],
+    });
+  });
+});

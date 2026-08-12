@@ -305,6 +305,8 @@ interface GameContextType {
   startIdeaRatingRounds: () => Promise<void>;
   submitIdeaRating: (ideaId: string, points: number, comment?: string) => Promise<void>;
   startNextIdeaRound: () => Promise<void>;
+  restartIdeaRound: () => Promise<void>;
+  skipIdeaRound: () => Promise<void>;
   updateIdeaIncognitoMode: (ideaIncognitoMode: boolean) => Promise<void>;
 }
 
@@ -2684,6 +2686,50 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const restartIdeaRound = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can restart the round");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        const ideaData = gameData.ideaData;
+        if (!ideaData) throw new Error("No active Group Ideas game");
+
+        const scoreDeltas: Record<string, number> = {};
+        ideaData.currentRoundRatings.forEach((r: IdeaRating) => {
+          const idea = ideaData.ideas.find((i: Idea) => i.id === r.ideaId);
+          if (!idea) return;
+          scoreDeltas[idea.authorId] = (scoreDeltas[idea.authorId] ?? 0) + r.points;
+        });
+
+        const updates: Record<string, unknown> = {
+          'ideaData.currentRoundRatings': [],
+        };
+        Object.entries(scoreDeltas).forEach(([authorId, delta]) => {
+          if (delta === 0) return;
+          updates[`scores.${authorId}`] = (gameData.scores?.[authorId] ?? 0) - delta;
+        });
+
+        transaction.update(gameRef, updates);
+      });
+    } catch (err) {
+      console.error('Error restarting idea round:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const skipIdeaRound = async (): Promise<void> => {
+    await startNextIdeaRound();
+  };
+
   const updateIdeaIncognitoMode = async (ideaIncognitoMode: boolean): Promise<void> => {
     if (!currentGame || !auth.currentUser || auth.currentUser.uid !== currentGame.adminId) {
       throw new Error("Only the admin can update this setting");
@@ -2758,6 +2804,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       startIdeaRatingRounds,
       submitIdeaRating,
       startNextIdeaRound,
+      restartIdeaRound,
+      skipIdeaRound,
       updateIdeaIncognitoMode,
     }),
     [currentGame, loading, user],
