@@ -13,7 +13,8 @@
     "loading": "Завантаження...",
     "error": "Помилка",
     "success": "Успіх",
-    "unknown": "Невідомо"
+    "unknown": "Невідомо",
+    "or": "або"
   },
   "navigation": {
     "home": "Головна",
@@ -35,7 +36,31 @@
     "signInErrorTitle": "Помилка входу",
     "signInErrorMessage": "Не вдалося увійти. Спробуйте ще раз.",
     "signOutErrorTitle": "Помилка виходу",
-    "signOutErrorMessage": "Не вдалося вийти. Спробуйте ще раз."
+    "signOutErrorMessage": "Не вдалося вийти. Спробуйте ще раз.",
+    "email": "Електронна пошта",
+    "password": "Пароль",
+    "confirmPassword": "Підтвердіть пароль",
+    "displayName": "Ваше ім'я",
+    "displayNamePlaceholder": "Ваше ім'я",
+    "register": "Реєстрація",
+    "signInWithEmail": "Увійти",
+    "registerWithEmail": "Створити акаунт",
+    "alreadyHaveAccount": "Вже є акаунт? Увійти",
+    "needAccount": "Немає акаунту? Зареєструватися",
+    "forgotPassword": "Забули пароль?",
+    "sendResetEmail": "Надіслати лист для відновлення",
+    "resetPasswordSentTitle": "Перевірте пошту",
+    "resetPasswordSent": "Ми надіслали посилання для відновлення пароля на вашу пошту.",
+    "backToSignIn": "Повернутися до входу",
+    "errorFieldsRequired": "Будь ласка, заповніть усі поля.",
+    "errorDisplayNameRequired": "Будь ласка, введіть ваше ім'я.",
+    "errorPasswordMismatch": "Паролі не співпадають.",
+    "errorEmailInUse": "Ця електронна пошта вже зареєстрована — спробуйте увійти.",
+    "errorWeakPassword": "Пароль має містити щонайменше 6 символів.",
+    "errorWrongPassword": "Невірна електронна пошта або пароль.",
+    "errorUserNotFound": "Акаунт з такою поштою не знайдено.",
+    "errorInvalidEmail": "Це не схоже на дійсну електронну адресу.",
+    "errorTooManyRequests": "Забагато спроб — зачекайте трохи і спробуйте ще раз."
   },
   "game": {
     "start": "Почати гру",

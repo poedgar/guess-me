@@ -9,3 +9,4 @@ export { generateClashSchedule, type ClashAssignment, type ClashRound } from './
 export { generateIdeaSchedule } from './utils/ideaSchedule';
 export { toSafeDate } from './utils/dates';
 export { calculateSimilarPairs, type SimilarPair } from './utils/playerSimilarity';
+export { mapFirebaseAuthErrorToKey } from './utils/authErrors';

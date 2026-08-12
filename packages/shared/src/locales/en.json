@@ -13,7 +13,8 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "or": "or"
   },
   "navigation": {
     "home": "Home",
@@ -35,7 +36,31 @@
     "signInErrorTitle": "Sign-in error",
     "signInErrorMessage": "Could not sign in. Please try again.",
     "signOutErrorTitle": "Sign-out error",
-    "signOutErrorMessage": "Could not sign out. Please try again."
+    "signOutErrorMessage": "Could not sign out. Please try again.",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "displayName": "Your name",
+    "displayNamePlaceholder": "Your name",
+    "register": "Register",
+    "signInWithEmail": "Sign In",
+    "registerWithEmail": "Create Account",
+    "alreadyHaveAccount": "Already have an account? Sign in",
+    "needAccount": "Need an account? Register",
+    "forgotPassword": "Forgot password?",
+    "sendResetEmail": "Send reset email",
+    "resetPasswordSentTitle": "Check your email",
+    "resetPasswordSent": "We've sent a password reset link to your email.",
+    "backToSignIn": "Back to sign in",
+    "errorFieldsRequired": "Please fill in all fields.",
+    "errorDisplayNameRequired": "Please enter your name.",
+    "errorPasswordMismatch": "Passwords don't match.",
+    "errorEmailInUse": "This email is already registered — try signing in instead.",
+    "errorWeakPassword": "Password must be at least 6 characters.",
+    "errorWrongPassword": "Incorrect email or password.",
+    "errorUserNotFound": "No account found with that email.",
+    "errorInvalidEmail": "That doesn't look like a valid email address.",
+    "errorTooManyRequests": "Too many attempts — please wait a moment and try again."
   },
   "game": {
     "start": "Start game",
