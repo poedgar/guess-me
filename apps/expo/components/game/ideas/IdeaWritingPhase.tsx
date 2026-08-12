@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
 import { gameStyles } from '@/components/game/gameStyles';
 import { Fonts, GameColors, themedInput } from '@/constants/theme';
@@ -25,7 +26,7 @@ interface Props {
 export const IdeaWritingPhase: React.FC<Props> = ({
   game, user, isAdmin, locale, isDark, showFancyAlert,
 }) => {
-  const { submitIdea, startIdeaRatingRounds } = useGame();
+  const { submitIdea, startIdeaRatingRounds, restartIdeaRound, skipIdeaRound } = useGame();
   const { playSound } = useSound();
   const inputTheme = themedInput(isDark);
 
@@ -158,6 +159,13 @@ export const IdeaWritingPhase: React.FC<Props> = ({
           </TouchableOpacity>
         </View>
       )}
+      <AdminRoundTools
+        isAdmin={isAdmin}
+        locale={locale}
+        showFancyAlert={showFancyAlert}
+        onRestart={restartIdeaRound}
+        onSkip={skipIdeaRound}
+      />
     </View>
   );
 };

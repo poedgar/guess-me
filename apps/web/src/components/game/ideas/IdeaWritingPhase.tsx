@@ -5,6 +5,7 @@ import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { AdminRoundTools } from '../AdminRoundTools';
 
 interface Props {
   game: Game;
@@ -12,7 +13,7 @@ interface Props {
 
 export const IdeaWritingPhase: React.FC<Props> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, submitIdea, startIdeaRatingRounds } = useGame();
+  const { loading, submitIdea, startIdeaRatingRounds, restartIdeaRound, skipIdeaRound } = useGame();
   const { playSound } = useSound();
   const { t } = useLanguage();
   const { showAlert, AlertModal } = useAlert();
@@ -126,6 +127,7 @@ export const IdeaWritingPhase: React.FC<Props> = ({ game }) => {
             >
               {isStarting ? t('common.loading') : t('game.ui.ideas.startRating')}
             </button>
+            <AdminRoundTools isAdmin={isAdmin} onRestart={restartIdeaRound} onSkip={skipIdeaRound} />
           </div>
         )}
       </div>
