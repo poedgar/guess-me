@@ -8,6 +8,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 import { ClashScoreboard } from './ClashScoreboard';
+import { AdminRoundTools } from '../AdminRoundTools';
 
 type CardPhase = 'idle' | 'subject_picking' | 'correct' | 'wrong' | 'author_picking' | 'done';
 
@@ -17,7 +18,7 @@ interface Props {
 
 export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, submitClashGuess, submitClashAuthorGuess, advanceClashGuessing } = useGame();
+  const { loading, submitClashGuess, submitClashAuthorGuess, advanceClashGuessing, restartClashRound, skipClashRound } = useGame();
   const { playSound } = useSound();
   const { t } = useLanguage();
   const { showAlert, AlertModal } = useAlert();
@@ -276,6 +277,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
               }`}>
               {isAdvancing ? t('common.loading') : advanceLabel}
             </button>
+            <AdminRoundTools isAdmin={isAdmin} onRestart={restartClashRound} onSkip={skipClashRound} />
           </div>
         )}
       </div>

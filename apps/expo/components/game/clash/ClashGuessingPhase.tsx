@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
 import { gameStyles } from '@/components/game/gameStyles';
 import { ClashScoreboard } from './ClashScoreboard';
@@ -31,7 +32,7 @@ type CardPhase = 'idle' | 'subject_picking' | 'correct' | 'wrong' | 'author_pick
 export const ClashGuessingPhase: React.FC<Props> = ({
   game, user, isAdmin, locale, getDisplayName, showFancyAlert,
 }) => {
-  const { submitClashGuess, submitClashAuthorGuess, advanceClashGuessing } = useGame();
+  const { submitClashGuess, submitClashAuthorGuess, advanceClashGuessing, restartClashRound, skipClashRound } = useGame();
   const { playSound } = useSound();
 
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
@@ -319,6 +320,13 @@ export const ClashGuessingPhase: React.FC<Props> = ({
           </Animated.View>
           </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartClashRound}
+          onSkip={skipClashRound}
+        />
       </View>
     </View>
   );

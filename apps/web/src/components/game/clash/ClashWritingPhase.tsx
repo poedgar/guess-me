@@ -8,6 +8,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 import { ClashScoreboard } from './ClashScoreboard';
+import { AdminRoundTools } from '../AdminRoundTools';
 import type { ClashAssignment } from '@mirror/shared';
 
 interface Props {
@@ -16,7 +17,7 @@ interface Props {
 
 export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, submitClashComment, revealClashComments } = useGame();
+  const { loading, submitClashComment, revealClashComments, restartClashRound, skipClashRound } = useGame();
   const { playSound } = useSound();
   const { t } = useLanguage();
   const { showAlert, AlertModal } = useAlert();
@@ -141,6 +142,7 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
               className="bg-game-orange text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
               {isRevealing ? t('common.loading') : t('game.ui.clash.revealComments')}
             </button>
+            <AdminRoundTools isAdmin={isAdmin} onRestart={restartClashRound} onSkip={skipClashRound} />
           </div>
         )}
       </div>
