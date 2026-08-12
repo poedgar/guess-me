@@ -378,4 +378,63 @@ describe('skipClashRound', () => {
       'clashData.currentRoundIndex': 1,
     }));
   });
+
+  // Regression coverage: skipClashRound used to delegate straight to
+  // advanceClashGuessing(true), which hard-guards on status === 'clash_guessing'
+  // and throws otherwise. ClashWritingPhase renders only during 'clash_writing',
+  // so Skip was completely dead (an unhandled throw) on that screen.
+  it('advances directly to the next round when called mid-writing (status: clash_writing), without throwing', async () => {
+    const game = {
+      ...BASE_GAME,
+      status: 'clash_writing',
+      adminId: 'leader-a',
+      clashData: {
+        groupA: { leaderId: 'leader-a', memberIds: ['leader-a'] },
+        groupB: { leaderId: 'leader-b', memberIds: ['leader-b'] },
+        schedule: [{ assignmentsA: [], assignmentsB: [] }, { assignmentsA: [], assignmentsB: [] }],
+        currentRoundIndex: 0,
+        currentRoundCommentsA: [], currentRoundCommentsB: [],
+        lastGroupToFinish: null, currentGuessingGroup: null,
+        currentRoundGuessesA: [], currentRoundGuessesB: [],
+        teamScores: { a: 0, b: 0 },
+      },
+    };
+    const { result, gameDoc } = await enterWithGame(game);
+    const f = require('firebase/firestore');
+    f.updateDoc.mockClear();
+
+    await expect(
+      act(async () => { await result.current.skipClashRound(); })
+    ).resolves.not.toThrow();
+
+    expect(f.updateDoc).toHaveBeenCalledWith(gameDoc, expect.objectContaining({
+      status: 'clash_writing',
+      'clashData.currentRoundIndex': 1,
+    }));
+  });
+
+  it('sets status to finished when skipping mid-writing on the last round', async () => {
+    const game = {
+      ...BASE_GAME,
+      status: 'clash_writing',
+      adminId: 'leader-a',
+      clashData: {
+        groupA: { leaderId: 'leader-a', memberIds: ['leader-a'] },
+        groupB: { leaderId: 'leader-b', memberIds: ['leader-b'] },
+        schedule: [{ assignmentsA: [], assignmentsB: [] }],
+        currentRoundIndex: 0,
+        currentRoundCommentsA: [], currentRoundCommentsB: [],
+        lastGroupToFinish: null, currentGuessingGroup: null,
+        currentRoundGuessesA: [], currentRoundGuessesB: [],
+        teamScores: { a: 0, b: 0 },
+      },
+    };
+    const { result, gameDoc } = await enterWithGame(game);
+    const f = require('firebase/firestore');
+    f.updateDoc.mockClear();
+
+    await act(async () => { await result.current.skipClashRound(); });
+
+    expect(f.updateDoc).toHaveBeenCalledWith(gameDoc, { status: 'finished' });
+  });
 });

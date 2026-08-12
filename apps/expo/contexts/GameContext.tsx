@@ -1635,18 +1635,23 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           ]),
         );
 
-        transaction.update(gameRef, {
+        const updates: Record<string, unknown> = {
           status: "active",
           currentRound: restartedRound,
           rounds: remainingRounds,
-          scores: gameData.roundStartScores ?? {},
-          guessResults: gameData.roundStartGuessResults ?? {},
           postGuessingPointPhase: false,
           playersWhoAwardedPostGuessPoints: [],
           guessingData: null,
           playersWhoCompletedPostCommentPhase: [],
           adminAwards: filteredAdminAwards,
-        });
+        };
+        if (gameData.roundStartScores !== undefined) {
+          updates.scores = gameData.roundStartScores;
+        }
+        if (gameData.roundStartGuessResults !== undefined) {
+          updates.guessResults = gameData.roundStartGuessResults;
+        }
+        transaction.update(gameRef, updates);
       });
     } catch (err) {
       console.error("Error restarting round:", err);
@@ -1657,6 +1662,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const skipMirrorRound = async (): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can start the next round");
+    }
+    const round = currentGame.currentRound;
+    const isAbandonedMidRound = round && !(round.commentsVisible && round.pointsGiven);
+    if (isAbandonedMidRound) {
+      const gameRef = doc(db, "games", currentGame.id);
+      await updateDoc(gameRef, {
+        adminSkippedTargets: arrayUnion(round.targetUserId),
+      });
+    }
     await startNextRound();
   };
 
@@ -2518,6 +2534,30 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   };
 
   const skipClashRound = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can advance the round");
+    }
+    if (currentGame.status === 'clash_writing') {
+      const cd = currentGame.clashData;
+      if (!cd) throw new Error("No active clash game");
+      const gameRef = doc(db, 'games', currentGame.id);
+      if (cd.currentRoundIndex + 1 >= cd.schedule.length) {
+        await updateDoc(gameRef, { status: 'finished' });
+      } else {
+        await updateDoc(gameRef, {
+          status: 'clash_writing',
+          'clashData.currentRoundIndex': cd.currentRoundIndex + 1,
+          'clashData.currentRoundCommentsA': [],
+          'clashData.currentRoundCommentsB': [],
+          'clashData.currentRoundGuessesA': [],
+          'clashData.currentRoundGuessesB': [],
+          'clashData.lastGroupToFinish': null,
+          'clashData.currentGuessingGroup': null,
+        });
+      }
+      return;
+    }
     await advanceClashGuessing(true);
   };
 
