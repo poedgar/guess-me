@@ -40,6 +40,10 @@ jest.mock('firebase/auth', () => ({
   signInWithCredential: jest.fn(),
   signOut: jest.fn(() => Promise.resolve()),
   GoogleAuthProvider: jest.fn(),
+  createUserWithEmailAndPassword: jest.fn(),
+  signInWithEmailAndPassword: jest.fn(),
+  sendPasswordResetEmail: jest.fn(),
+  updateProfile: jest.fn(),
   User: {},
 }));
 
