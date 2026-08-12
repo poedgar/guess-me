@@ -76,6 +76,7 @@ export const JoinScreen: React.FC = () => {
           <button
             type="button"
             onClick={() => signOut()}
+            data-cy="sign-out-button"
             className="w-full bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
           >
             {t('auth.signOut')}
