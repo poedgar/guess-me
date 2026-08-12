@@ -6,12 +6,13 @@ import { FancyAlert, FancyAlertButton } from "@/components/ui/FancyAlert";
 import { HeaderLogo } from "@/components/ui/HeaderLogo";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LoginAnimation } from "@/components/ui/LoginAnimation";
-import { Colors, Fonts, GameColors } from "@/constants/theme";
+import { Colors, Fonts, GameColors, themedInput } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSound } from "@/contexts/SoundContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { t } from "@/i18n";
+import { mapFirebaseAuthErrorToKey } from "@mirror/shared";
 import { GoogleSigninButton } from "@react-native-google-signin/google-signin";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
@@ -20,19 +21,29 @@ import {
   Image,
   Platform,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const AuthScreen: React.FC = () => {
-  const { signIn, signOut, user, loading, isSignedIn } = useAuth();
+  const { signIn, signOut, user, loading, isSignedIn, registerWithEmail, signInWithEmail, resetPassword } = useAuth();
   const { locale } = useLanguage();
   const { playSound } = useSound();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const insets = useSafeAreaInsets();
+  const inputTheme = themedInput(isDark);
+
+  const [authMode, setAuthMode] = useState<'signin' | 'register' | 'forgot'>('signin');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [displayNameInput, setDisplayNameInput] = useState('');
+  const [resetEmailInput, setResetEmailInput] = useState('');
+  const [isSubmittingEmailForm, setIsSubmittingEmailForm] = useState(false);
 
   // Fancy alert state
   const [fancyVisible, setFancyVisible] = useState(false);
@@ -104,6 +115,80 @@ export const AuthScreen: React.FC = () => {
         t("auth.signOutErrorTitle", { locale }),
         (error instanceof Error && error.message) || t("auth.signOutErrorMessage", { locale }),
       );
+    }
+  };
+
+  const handleEmailSignIn = async () => {
+    if (!emailInput.trim() || !passwordInput) {
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t("auth.errorFieldsRequired", { locale }));
+      return;
+    }
+    try {
+      setIsSubmittingEmailForm(true);
+      await playSound("click");
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await signInWithEmail(emailInput.trim(), passwordInput);
+      await playSound("success");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: unknown) {
+      await playSound("error");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t(mapFirebaseAuthErrorToKey(error), { locale }));
+    } finally {
+      setIsSubmittingEmailForm(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!displayNameInput.trim()) {
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t("auth.errorDisplayNameRequired", { locale }));
+      return;
+    }
+    if (!emailInput.trim() || !passwordInput) {
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t("auth.errorFieldsRequired", { locale }));
+      return;
+    }
+    if (passwordInput.length < 6) {
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t("auth.errorWeakPassword", { locale }));
+      return;
+    }
+    if (passwordInput !== confirmPasswordInput) {
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t("auth.errorPasswordMismatch", { locale }));
+      return;
+    }
+    try {
+      setIsSubmittingEmailForm(true);
+      await playSound("click");
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await registerWithEmail(emailInput.trim(), passwordInput, displayNameInput.trim());
+      await playSound("success");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: unknown) {
+      await playSound("error");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t(mapFirebaseAuthErrorToKey(error), { locale }));
+    } finally {
+      setIsSubmittingEmailForm(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetEmailInput.trim()) {
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t("auth.errorInvalidEmail", { locale }));
+      return;
+    }
+    try {
+      setIsSubmittingEmailForm(true);
+      await resetPassword(resetEmailInput.trim());
+      showFancyAlert(
+        t("auth.resetPasswordSentTitle", { locale }),
+        t("auth.resetPasswordSent", { locale }),
+        [{ text: t("common.ok", { locale }), onPress: () => setAuthMode("signin") }],
+      );
+    } catch (error: unknown) {
+      showFancyAlert(t("auth.signInErrorTitle", { locale }), t(mapFirebaseAuthErrorToKey(error), { locale }));
+    } finally {
+      setIsSubmittingEmailForm(false);
     }
   };
 
@@ -239,7 +324,123 @@ export const AuthScreen: React.FC = () => {
           </ThemedText>
         </View>
 
+        {authMode === "forgot" ? (
+          <View style={styles.emailFormContainer}>
+            <TextInput
+              style={[styles.input, inputTheme.style]}
+              value={resetEmailInput}
+              onChangeText={setResetEmailInput}
+              placeholder={t("auth.email", { locale })}
+              placeholderTextColor={inputTheme.placeholderTextColor}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              testID="reset-email-input"
+            />
+            <TouchableOpacity
+              style={[styles.emailSubmitButton, { backgroundColor: GameColors.blue, shadowColor: GameColors.shadow }]}
+              onPress={handleResetPassword}
+              disabled={isSubmittingEmailForm}
+              activeOpacity={0.8}
+              testID="send-reset-button"
+            >
+              {isSubmittingEmailForm ? (
+                <ActivityIndicator size="small" color={GameColors.white} />
+              ) : (
+                <ThemedText style={styles.emailSubmitButtonText}>{t("auth.sendResetEmail", { locale })}</ThemedText>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setAuthMode("signin")} testID="back-to-signin-link">
+              <ThemedText style={styles.modeLinkText}>{t("auth.backToSignIn", { locale })}</ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <View style={styles.modeToggleRow}>
+              <TouchableOpacity onPress={() => setAuthMode("signin")} testID="signin-tab">
+                <ThemedText
+                  style={[styles.modeToggleText, authMode === "signin" && styles.modeToggleTextActive]}
+                >
+                  {t("auth.signIn", { locale })}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setAuthMode("register")} testID="register-tab">
+                <ThemedText
+                  style={[styles.modeToggleText, authMode === "register" && styles.modeToggleTextActive]}
+                >
+                  {t("auth.register", { locale })}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.emailFormContainer}>
+              {authMode === "register" && (
+                <TextInput
+                  style={[styles.input, inputTheme.style]}
+                  value={displayNameInput}
+                  onChangeText={setDisplayNameInput}
+                  placeholder={t("auth.displayNamePlaceholder", { locale })}
+                  placeholderTextColor={inputTheme.placeholderTextColor}
+                  testID="display-name-input"
+                />
+              )}
+              <TextInput
+                style={[styles.input, inputTheme.style]}
+                value={emailInput}
+                onChangeText={setEmailInput}
+                placeholder={t("auth.email", { locale })}
+                placeholderTextColor={inputTheme.placeholderTextColor}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                testID="email-input"
+              />
+              <TextInput
+                style={[styles.input, inputTheme.style]}
+                value={passwordInput}
+                onChangeText={setPasswordInput}
+                placeholder={t("auth.password", { locale })}
+                placeholderTextColor={inputTheme.placeholderTextColor}
+                secureTextEntry
+                testID="password-input"
+              />
+              {authMode === "register" && (
+                <TextInput
+                  style={[styles.input, inputTheme.style]}
+                  value={confirmPasswordInput}
+                  onChangeText={setConfirmPasswordInput}
+                  placeholder={t("auth.confirmPassword", { locale })}
+                  placeholderTextColor={inputTheme.placeholderTextColor}
+                  secureTextEntry
+                  testID="confirm-password-input"
+                />
+              )}
+              <TouchableOpacity
+                style={[styles.emailSubmitButton, { backgroundColor: GameColors.blue, shadowColor: GameColors.shadow }]}
+                onPress={authMode === "register" ? handleRegister : handleEmailSignIn}
+                disabled={isSubmittingEmailForm}
+                activeOpacity={0.8}
+                testID={authMode === "register" ? "register-submit-button" : "email-signin-submit-button"}
+              >
+                {isSubmittingEmailForm ? (
+                  <ActivityIndicator size="small" color={GameColors.white} />
+                ) : (
+                  <ThemedText style={styles.emailSubmitButtonText}>
+                    {authMode === "register" ? t("auth.registerWithEmail", { locale }) : t("auth.signInWithEmail", { locale })}
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+              {authMode === "signin" && (
+                <TouchableOpacity onPress={() => setAuthMode("forgot")} testID="forgot-password-link">
+                  <ThemedText style={styles.modeLinkText}>{t("auth.forgotPassword", { locale })}</ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ThemedText style={styles.orDivider}>{t("common.or", { locale })}</ThemedText>
+          </>
+        )}
+
         {/* Google Sign-In Button */}
+        {authMode !== "forgot" && (
         <View style={styles.buttonContainer}>
           {isSigningIn ? (
             <View style={styles.loadingButton}>
@@ -287,6 +488,7 @@ export const AuthScreen: React.FC = () => {
             />
           )}
         </View>
+        )}
       </View>
     </ThemedView>
   );
@@ -342,6 +544,64 @@ const styles = StyleSheet.create({
   buttonContainer: {
     width: "100%",
     alignItems: "center",
+  },
+  modeToggleRow: {
+    flexDirection: "row",
+    gap: 24,
+    marginBottom: 20,
+  },
+  modeToggleText: {
+    fontSize: 16,
+    fontFamily: Fonts.sans,
+    opacity: 0.5,
+    paddingBottom: 4,
+  },
+  modeToggleTextActive: {
+    opacity: 1,
+    fontWeight: "700",
+    borderBottomWidth: 2,
+    borderBottomColor: GameColors.blue,
+  },
+  emailFormContainer: {
+    width: "100%",
+    gap: 12,
+    marginBottom: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    fontFamily: Fonts.sans,
+  },
+  emailSubmitButton: {
+    width: "100%",
+    height: 50,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    ...Platform.select({
+      ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+      android: { elevation: 4 },
+    }),
+  },
+  emailSubmitButtonText: {
+    color: GameColors.white,
+    fontSize: 16,
+    fontWeight: "600",
+    fontFamily: Fonts.sans,
+  },
+  modeLinkText: {
+    fontSize: 13,
+    opacity: 0.7,
+    textAlign: "center",
+    fontFamily: Fonts.sans,
+  },
+  orDivider: {
+    opacity: 0.5,
+    marginBottom: 16,
+    fontFamily: Fonts.sans,
   },
   googleButton: {
     width: "100%",
