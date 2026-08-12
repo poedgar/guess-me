@@ -29,7 +29,7 @@ Three new methods, added to each app's existing `AuthContextType`/provider, matc
 
 All three throw on failure (matching `signIn`/`signOut`'s existing pattern) — no try/catch swallowing inside the context; the UI layer handles presentation.
 
-**Web-specific note:** `apps/web/src/contexts/AuthContext.tsx` already imports `signInWithEmailAndPassword` for the Cypress-only hook. `signInWithEmail` reuses that import and exposes it as a first-class context method; the `window.__cypressSignInWithEmail` hook can then be removed since Cypress can drive the real UI form instead (see Testing).
+**Web-specific note:** `apps/web/src/contexts/AuthContext.tsx` already imports `signInWithEmailAndPassword` for the Cypress-only hook. `signInWithEmail` reuses that import and exposes it as a first-class context method. `window.__cypressSignInWithEmail` itself is **not removed** — it turns out to be load-bearing for the entire E2E suite's session-caching and account-validation logic (`apps/web/cypress/support/commands.ts`'s `signInAsTestUser`, used by every existing Cypress test, including a `cy.session` `validate()` callback that reads persisted Firebase auth state from IndexedDB). Rewriting that to drive the real UI form instead is a much larger, riskier change than this feature calls for, with no functional benefit — the hook already calls the exact same `signInWithEmailAndPassword` the new UI will call, just without going through form clicks. Leave `commands.ts` untouched.
 
 ## UI — `AuthScreen.tsx` (both apps)
 
@@ -70,7 +70,7 @@ New keys under `auth.*` in the shared locale files (`packages/shared/src/locales
 ## Testing
 
 - **apps/expo:** Jest + RTL coverage extending `apps/expo/__tests__/AuthScreen.test.tsx` — mode toggle switches forms, client-side validation blocks submission with the right message, each of the three new `AuthContext` methods gets called with the right arguments on valid submit, Firebase error codes render the mapped message. Plus direct unit coverage for the three new `AuthContext` methods themselves (mocked `firebase/auth`), matching the existing mocking conventions already used for `signIn`/`signOut`.
-- **apps/web:** no unit test runner (established in prior work) — extend the existing Cypress E2E suite to drive the real registration/sign-in/forgot-password forms directly, and remove `window.__cypressSignInWithEmail` once the real UI can do everything that hook was standing in for.
+- **apps/web:** no unit test runner (established in prior work) — add new Cypress E2E coverage that drives the real registration/sign-in/forgot-password forms directly (mode toggle, field validation, a real registration + sign-out + sign-in-again round trip). This is additive: `commands.ts`'s existing `signInAsTestUser`/`__cypressSignInWithEmail` infrastructure is untouched and keeps serving every other existing test unchanged.
 
 ## Out of Scope
 
