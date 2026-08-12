@@ -288,7 +288,9 @@ interface GameContextType {
   revealClashComments: () => Promise<void>;
   submitClashGuess: (commentWriterId: string, guessedSubjectId: string) => Promise<void>;
   submitClashAuthorGuess: (commentWriterId: string, guessedAuthorId: string) => Promise<void>;
-  advanceClashGuessing: () => Promise<void>;
+  advanceClashGuessing: (force?: boolean) => Promise<void>;
+  restartClashRound: () => Promise<void>;
+  skipClashRound: () => Promise<void>;
   // Admin target control functions
   setNextRoundTarget: (targetUserId: string) => Promise<void>;
   skipNextRoundTarget: (targetUserId: string) => Promise<void>;
@@ -2430,7 +2432,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const advanceClashGuessing = async (): Promise<void> => {
+  const advanceClashGuessing = async (force: boolean = false): Promise<void> => {
     if (!auth.currentUser) throw new Error("You must be signed in");
     if (!currentGame || auth.currentUser.uid !== currentGame.adminId) throw new Error("Only the admin can advance guessing");
     const cd = currentGame.clashData;
@@ -2439,7 +2441,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     const otherGroup: 'a' | 'b' = currentGroup === 'a' ? 'b' : 'a';
     const otherGuessCount = otherGroup === 'a' ? cd.currentRoundGuessesA.length : cd.currentRoundGuessesB.length;
     const otherCommentCount = otherGroup === 'a' ? cd.currentRoundCommentsB.length : cd.currentRoundCommentsA.length;
-    const otherGroupDone = otherCommentCount > 0 && otherGuessCount >= otherCommentCount;
+    const otherGroupDone = force || (otherCommentCount > 0 && otherGuessCount >= otherCommentCount);
     try {
       setLoading(true);
       const gameRef = doc(db, 'games', currentGame.id);
@@ -2465,6 +2467,56 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const restartClashRound = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || auth.currentUser.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can restart the round");
+    }
+    try {
+      setLoading(true);
+      const gameRef = doc(db, 'games', currentGame.id);
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+        const gameData = gameDoc.data() as Game;
+        const cd = gameData.clashData;
+        if (!cd) throw new Error("No active clash game");
+
+        const pointsA = cd.currentRoundGuessesA.reduce((sum: number, g: ClashGuess) => sum + g.pointsAwarded, 0);
+        const pointsB = cd.currentRoundGuessesB.reduce((sum: number, g: ClashGuess) => sum + g.pointsAwarded, 0);
+
+        const updates: Record<string, unknown> = {
+          status: 'clash_writing',
+          'clashData.currentRoundCommentsA': [],
+          'clashData.currentRoundCommentsB': [],
+          'clashData.currentRoundGuessesA': [],
+          'clashData.currentRoundGuessesB': [],
+          'clashData.lastGroupToFinish': null,
+          'clashData.currentGuessingGroup': null,
+          'clashData.teamScores.a': (cd.teamScores.a ?? 0) - pointsA,
+          'clashData.teamScores.b': (cd.teamScores.b ?? 0) - pointsB,
+        };
+        if (pointsA > 0) {
+          updates[`scores.${cd.groupA.leaderId}`] = (gameData.scores?.[cd.groupA.leaderId] ?? 0) - pointsA;
+        }
+        if (pointsB > 0) {
+          updates[`scores.${cd.groupB.leaderId}`] = (gameData.scores?.[cd.groupB.leaderId] ?? 0) - pointsB;
+        }
+
+        transaction.update(gameRef, updates);
+      });
+    } catch (err) {
+      console.error('Error restarting clash round:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const skipClashRound = async (): Promise<void> => {
+    await advanceClashGuessing(true);
   };
 
   const startIdeaGame = async (): Promise<void> => {
@@ -2693,6 +2745,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       submitClashGuess,
       submitClashAuthorGuess,
       advanceClashGuessing,
+      restartClashRound,
+      skipClashRound,
       startPostGuessingPointPhase,
       awardPointsToPlayers,
       skipPostCommentPhase,

@@ -227,3 +227,155 @@ describe('submitClashAuthorGuess', () => {
     ).rejects.toThrow('Author already guessed');
   });
 });
+
+// ── advanceClashGuessing(force) ───────────────────────────────────────────────
+describe('advanceClashGuessing — force path', () => {
+  const game = {
+    ...BASE_GAME,
+    adminId: 'leader-a',
+    clashData: {
+      groupA: { leaderId: 'leader-a', memberIds: ['leader-a', 'member-a'] },
+      groupB: { leaderId: 'leader-b', memberIds: ['leader-b', 'member-b'] },
+      schedule: [{ assignmentsA: [], assignmentsB: [] }, { assignmentsA: [], assignmentsB: [] }],
+      currentRoundIndex: 0,
+      currentRoundCommentsA: [{ writerId: 'member-a', subjectId: 'x', text: 't', submittedAt: 1 }],
+      currentRoundCommentsB: [{ writerId: 'member-b', subjectId: 'y', text: 't', submittedAt: 1 }],
+      lastGroupToFinish: 'b',
+      currentGuessingGroup: 'a',
+      currentRoundGuessesA: [], // group A leader hasn't guessed at all — normally blocks advancing
+      currentRoundGuessesB: [],
+      teamScores: { a: 0, b: 0 },
+    },
+  };
+
+  it('without force, moves to the other group when the current one is incomplete (unchanged behavior)', async () => {
+    const { result, gameDoc } = await enterWithGame(game);
+    const f = require('firebase/firestore');
+    f.updateDoc.mockClear();
+
+    await act(async () => { await result.current.advanceClashGuessing(); });
+
+    expect(f.updateDoc).toHaveBeenCalledWith(gameDoc, { 'clashData.currentGuessingGroup': 'b' });
+  });
+
+  it('with force:true, jumps straight to the next round regardless of completion', async () => {
+    const { result, gameDoc } = await enterWithGame(game);
+    const f = require('firebase/firestore');
+    f.updateDoc.mockClear();
+
+    await act(async () => { await result.current.advanceClashGuessing(true); });
+
+    expect(f.updateDoc).toHaveBeenCalledWith(gameDoc, expect.objectContaining({
+      status: 'clash_writing',
+      'clashData.currentRoundIndex': 1,
+    }));
+  });
+});
+
+// ── restartClashRound ───────────────────────────────────────────────────────
+describe('restartClashRound', () => {
+  const guessesA = [{ commentWriterId: 'member-b', guessedSubjectId: 'leader-a', subjectCorrect: true, guessedAuthorId: 'member-b', authorCorrect: true, pointsAwarded: 2 }];
+  const guessesB = [{ commentWriterId: 'member-a', guessedSubjectId: 'x', subjectCorrect: false, pointsAwarded: 0 }];
+  const game = {
+    ...BASE_GAME,
+    adminId: 'leader-a',
+    scores: { 'leader-a': 2, 'leader-b': 5 },
+    clashData: {
+      groupA: { leaderId: 'leader-a', memberIds: ['leader-a', 'member-a'] },
+      groupB: { leaderId: 'leader-b', memberIds: ['leader-b', 'member-b'] },
+      schedule: [{ assignmentsA: [], assignmentsB: [] }],
+      currentRoundIndex: 0,
+      currentRoundCommentsA: [{ writerId: 'member-a', subjectId: 'x', text: 't', submittedAt: 1 }],
+      currentRoundCommentsB: [{ writerId: 'member-b', subjectId: 'leader-a', text: 't', submittedAt: 1 }],
+      lastGroupToFinish: 'b',
+      currentGuessingGroup: 'a',
+      currentRoundGuessesA: guessesA,
+      currentRoundGuessesB: guessesB,
+      teamScores: { a: 2, b: 0 },
+    },
+  };
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  function mockTransactionOn(gameData: object) {
+    const f = require('firebase/firestore');
+    mockTxn.get.mockResolvedValue({ exists: () => true, id: 'game-abc', data: () => gameData });
+    mockTxn.update.mockClear();
+    f.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  }
+
+  it('clears both groups\' comments/guesses and resets turn state, sets status back to clash_writing', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+
+    await act(async () => { await result.current.restartClashRound(); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        status: 'clash_writing',
+        'clashData.currentRoundCommentsA': [],
+        'clashData.currentRoundCommentsB': [],
+        'clashData.currentRoundGuessesA': [],
+        'clashData.currentRoundGuessesB': [],
+        'clashData.lastGroupToFinish': null,
+        'clashData.currentGuessingGroup': null,
+      }),
+    );
+  });
+
+  it('rolls back both individual and team scores for the points earned this round', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+
+    await act(async () => { await result.current.restartClashRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg['scores.leader-a']).toBe(0); // 2 - 2
+    expect(arg['scores.leader-b']).toBeUndefined(); // group B earned 0 this round
+    expect(arg['clashData.teamScores.a']).toBe(0); // 2 - 2
+    expect(arg['clashData.teamScores.b']).toBe(0); // 0 - 0
+  });
+
+  it('rejects a non-admin caller', async () => {
+    const { result } = await enterWithGame(game);
+    mockTransactionOn(game);
+    const config = require('@/config/firebase');
+    config.auth.currentUser = { uid: 'member-a', displayName: 'MemberA', email: 'membera@example.com', photoURL: null };
+
+    await expect(
+      act(async () => { await result.current.restartClashRound(); })
+    ).rejects.toThrow('Only the admin can restart the round');
+  });
+});
+
+// ── skipClashRound ──────────────────────────────────────────────────────────
+describe('skipClashRound', () => {
+  it('calls advanceClashGuessing with force:true', async () => {
+    const game = {
+      ...BASE_GAME,
+      adminId: 'leader-a',
+      clashData: {
+        groupA: { leaderId: 'leader-a', memberIds: ['leader-a'] },
+        groupB: { leaderId: 'leader-b', memberIds: ['leader-b'] },
+        schedule: [{ assignmentsA: [], assignmentsB: [] }, { assignmentsA: [], assignmentsB: [] }],
+        currentRoundIndex: 0,
+        currentRoundCommentsA: [], currentRoundCommentsB: [],
+        lastGroupToFinish: null, currentGuessingGroup: 'a',
+        currentRoundGuessesA: [], currentRoundGuessesB: [],
+        teamScores: { a: 0, b: 0 },
+      },
+    };
+    const { result, gameDoc } = await enterWithGame(game);
+    const f = require('firebase/firestore');
+    f.updateDoc.mockClear();
+
+    await act(async () => { await result.current.skipClashRound(); });
+
+    expect(f.updateDoc).toHaveBeenCalledWith(gameDoc, expect.objectContaining({
+      status: 'clash_writing',
+      'clashData.currentRoundIndex': 1,
+    }));
+  });
+});
