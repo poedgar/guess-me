@@ -118,7 +118,7 @@ export const AuthScreen: React.FC = () => {
           </div>
         )}
         {info && (
-          <div className="bg-game-green/10 border border-game-green text-game-green rounded-lg p-4 mb-6 text-sm">
+          <div data-cy="reset-confirmation" className="bg-game-green/10 border border-game-green text-game-green rounded-lg p-4 mb-6 text-sm">
             {info}
           </div>
         )}

@@ -65,6 +65,6 @@ describe('Email/password auth', () => {
     cy.get('[data-cy=password-input]').should('not.exist');
     cy.get('[data-cy=reset-email-input]').type(testEmail);
     cy.get('[data-cy=send-reset-button]').click();
-    cy.contains(/reset|email/i).should('exist');
+    cy.get('[data-cy=reset-confirmation]').should('exist');
   });
 });
