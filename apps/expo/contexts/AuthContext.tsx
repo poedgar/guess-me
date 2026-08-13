@@ -122,15 +122,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const registerWithEmail = async (email: string, password: string, displayName: string) => {
+    let credential;
     try {
       setLoading(true);
-      const credential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(credential.user, { displayName });
+      credential = await createUserWithEmailAndPassword(auth, email, password);
       // onAuthStateChanged fires from this write and resets loading, same as signIn().
     } catch (error: unknown) {
       console.error('Register error:', error);
       setLoading(false);
       throw error;
+    }
+    try {
+      await updateProfile(credential.user, { displayName });
+    } catch (error: unknown) {
+      // The account was already created (and the user signed in via
+      // onAuthStateChanged, which already reset loading) by this point — a
+      // display-name write failure is not a registration failure, so it
+      // must not be surfaced through the same error path signIn/register
+      // failures use, and must not touch loading again.
+      console.error('Failed to set display name after registration:', error);
     }
   };
 
