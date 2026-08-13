@@ -1,4 +1,5 @@
 import { defineConfig } from 'cypress';
+import { cleanupTestAuthUsers } from './cypress/tasks/cleanupTestAuthUsers';
 import { cleanupTestGames } from './cypress/tasks/cleanupTestGames';
 
 export default defineConfig({
@@ -35,6 +36,12 @@ export default defineConfig({
         const result = await cleanupTestGames(serviceAccountPath, adminEmail);
         // eslint-disable-next-line no-console
         console.log(`[cleanupTestGames:${label}] Deleted ${result.deleted} test game(s).`);
+
+        const authResult = await cleanupTestAuthUsers(serviceAccountPath);
+        // eslint-disable-next-line no-console
+        console.log(
+          `[cleanupTestAuthUsers:${label}] Deleted ${authResult.deleted} test auth user(s).`,
+        );
       };
       on('before:run', async () => {
         await runCleanup('before:run');
