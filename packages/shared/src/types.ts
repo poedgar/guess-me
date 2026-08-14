@@ -7,6 +7,9 @@ export interface Idea {
   authorId: string;
   text: string;
   submittedAt: number;
+  // Sum of all rating points this idea has received. Optional for
+  // backward compatibility with ideas submitted before this field existed.
+  score?: number;
 }
 
 export interface IdeaRating {

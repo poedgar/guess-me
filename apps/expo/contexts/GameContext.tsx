@@ -32,6 +32,9 @@ export interface Idea {
   authorId: string;
   text: string;
   submittedAt: number;
+  // Sum of all rating points this idea has received. Optional for
+  // backward compatibility with ideas submitted before this field existed.
+  score?: number;
 }
 
 export interface IdeaRating {
@@ -2603,6 +2606,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       authorId: auth.currentUser.uid,
       text: text.trim(),
       submittedAt: Date.now(),
+      score: 0,
     };
     try {
       setLoading(true);
@@ -2687,9 +2691,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           ...(ideaData.incognitoMode && comment?.trim() ? { comment: comment.trim() } : {}),
         };
 
+        const updatedIdeas = ideaData.ideas.map((i: Idea) =>
+          i.id === ideaId ? { ...i, score: (i.score ?? 0) + points } : i,
+        );
+
         transaction.update(gameRef, {
           'ideaData.currentRoundRatings': [...ideaData.currentRoundRatings, rating],
-          [`scores.${idea.authorId}`]: (gameData.scores?.[idea.authorId] ?? 0) + points,
+          'ideaData.ideas': updatedIdeas,
         });
       });
     } catch (err) {
@@ -2743,18 +2751,17 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
         const scoreDeltas: Record<string, number> = {};
         ideaData.currentRoundRatings.forEach((r: IdeaRating) => {
-          const idea = ideaData.ideas.find((i: Idea) => i.id === r.ideaId);
-          if (!idea) return;
-          scoreDeltas[idea.authorId] = (scoreDeltas[idea.authorId] ?? 0) + r.points;
+          scoreDeltas[r.ideaId] = (scoreDeltas[r.ideaId] ?? 0) + r.points;
         });
 
         const updates: Record<string, unknown> = {
           'ideaData.currentRoundRatings': [],
         };
-        Object.entries(scoreDeltas).forEach(([authorId, delta]) => {
-          if (delta === 0) return;
-          updates[`scores.${authorId}`] = (gameData.scores?.[authorId] ?? 0) - delta;
-        });
+        if (Object.keys(scoreDeltas).length > 0) {
+          updates['ideaData.ideas'] = ideaData.ideas.map((i: Idea) =>
+            scoreDeltas[i.id] ? { ...i, score: (i.score ?? 0) - scoreDeltas[i.id] } : i,
+          );
+        }
 
         transaction.update(gameRef, updates);
       });

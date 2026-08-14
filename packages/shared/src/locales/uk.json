@@ -412,7 +412,9 @@
         "confirmSubmitIdea": "Надіслати цю ідею?",
         "confirmSubmitRating": "Надіслати цю оцінку?",
         "notEligibleToRate": "Ви не берете участі в оцінюванні цієї гри.",
-        "commentsHeading": "Коментарі"
+        "commentsHeading": "Коментарі",
+        "finalLeaderboardTitle": "Найкращі ідеї",
+        "noIdeasYet": "Ще немає ідей."
       }
     }
   },

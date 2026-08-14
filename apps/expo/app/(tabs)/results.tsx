@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
+import { IdeaLeaderboard } from '@/components/game/ideas/IdeaLeaderboard';
 import { GameColors } from '@/constants/theme';
 import type { Comment, Round } from '@/contexts/GameContext';
 import { useGame } from '@/contexts/GameContext';
@@ -55,22 +56,33 @@ export default function TabTwoScreen() {
       {/* Show participants and leaderboard here when game is started */}
       {currentGame && currentGame.status !== 'waiting' && (
         <View style={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-          <ThemedText type="subtitle" style={{ marginTop: 16, marginBottom: 8 }}>
-            🏆 {t('results.leaderboardTitle', { locale })}
-          </ThemedText>
-          
-          <ScrollView style={styles.leaderboardScroll}>
-            {participantsWithScores.map((p, idx) => (
-              <View key={p.userId} style={styles.leaderboardRow}>
-                <ThemedText style={styles.leaderboardName}>{idx < 3 ? ['🥇','🥈','🥉'][idx] : `#${idx+1}`} {joinIndexById[p.userId] ? `${joinIndexById[p.userId]}. ` : ''}{p.userName}</ThemedText>
-                <ThemedText style={styles.points}>
-                  {p.totalPoints}
-                  {p.guessPoints ? ` (${p.guessPoints})` : ''}
-                </ThemedText>
-              </View>
-            ))}
-          </ScrollView>
-          
+          {currentGame.gameType === 'ideas' ? (
+            <IdeaLeaderboard
+              ideas={currentGame.ideaData?.ideas ?? []}
+              locale={locale}
+              title={`🏆 ${t('game.ui.ideas.finalLeaderboardTitle', { locale })}`}
+              scrollHeight={260}
+            />
+          ) : (
+            <>
+              <ThemedText type="subtitle" style={{ marginTop: 16, marginBottom: 8 }}>
+                🏆 {t('results.leaderboardTitle', { locale })}
+              </ThemedText>
+
+              <ScrollView style={styles.leaderboardScroll}>
+                {participantsWithScores.map((p, idx) => (
+                  <View key={p.userId} style={styles.leaderboardRow}>
+                    <ThemedText style={styles.leaderboardName}>{idx < 3 ? ['🥇','🥈','🥉'][idx] : `#${idx+1}`} {joinIndexById[p.userId] ? `${joinIndexById[p.userId]}. ` : ''}{p.userName}</ThemedText>
+                    <ThemedText style={styles.points}>
+                      {p.totalPoints}
+                      {p.guessPoints ? ` (${p.guessPoints})` : ''}
+                    </ThemedText>
+                  </View>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
           {/* Round History */}
           {(() => {
             const allRounds = currentGame.rounds || [];

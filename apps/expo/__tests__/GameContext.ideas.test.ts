@@ -222,7 +222,7 @@ describe('submitIdeaRating', () => {
   // override adminWritesComments: true so the caller is actually eligible.
   const ELIGIBLE_ROUND_GAME = { ...ROUND_GAME, adminWritesComments: true };
 
-  it('writes the rating and increments scores[authorId] by points', async () => {
+  it('writes the rating and increments the idea\'s own score by points, not the author\'s', async () => {
     const { result } = await enterWithGame(ELIGIBLE_ROUND_GAME);
     const f = require('firebase/firestore');
     const { txnUpdate } = setupTransaction(f, ELIGIBLE_ROUND_GAME);
@@ -231,7 +231,9 @@ describe('submitIdeaRating', () => {
 
     expect(txnUpdate).toHaveBeenCalledTimes(1);
     const written = txnUpdate.mock.calls[0][1] as Record<string, unknown>;
-    expect(written['scores.user-2']).toBe(4);
+    const updatedIdeas = written['ideaData.ideas'] as Array<{ id: string; score?: number }>;
+    expect(updatedIdeas.find(i => i.id === 'i1')?.score).toBe(4);
+    expect(written['scores.user-2']).toBeUndefined();
     expect(written['ideaData.currentRoundRatings']).toEqual([
       expect.objectContaining({ raterId: 'user-1', ideaId: 'i1', points: 4 }),
     ]);
@@ -358,8 +360,8 @@ describe('updateIdeaIncognitoMode', () => {
 // ── restartIdeaRound ────────────────────────────────────────────────────────────
 describe('restartIdeaRound', () => {
   const IDEAS = [
-    { id: 'i1', authorId: 'user-2', text: 'Idea from Bob', submittedAt: 1 },
-    { id: 'i2', authorId: 'user-3', text: 'Idea from Carol', submittedAt: 2 },
+    { id: 'i1', authorId: 'user-2', text: 'Idea from Bob', submittedAt: 1, score: 4 },
+    { id: 'i2', authorId: 'user-3', text: 'Idea from Carol', submittedAt: 2, score: 1 },
   ];
   const ratings = [
     { raterId: 'user-1', ideaId: 'i1', points: 4 },
@@ -368,7 +370,6 @@ describe('restartIdeaRound', () => {
   const game = {
     ...BASE_GAME,
     status: 'idea_rating',
-    scores: { 'user-2': 4, 'user-3': 1 },
     ideaData: {
       incognitoMode: true,
       ideas: IDEAS,
@@ -399,15 +400,16 @@ describe('restartIdeaRound', () => {
     expect(arg['ideaData.schedule']).toBeUndefined(); // not touched, so not written
   });
 
-  it('rolls back each rated idea\'s author score by the points they were given this round', async () => {
+  it('rolls back each rated idea\'s own score by the points it was given this round', async () => {
     const { result } = await enterWithGame(game);
     mockTransactionOn(game);
 
     await act(async () => { await result.current.restartIdeaRound(); });
 
     const arg = mockTxn.update.mock.calls[0][1];
-    expect(arg['scores.user-2']).toBe(0); // 4 - 4
-    expect(arg['scores.user-3']).toBe(0); // 1 - 1
+    const updatedIdeas = arg['ideaData.ideas'] as Array<{ id: string; score?: number }>;
+    expect(updatedIdeas.find(i => i.id === 'i1')?.score).toBe(0); // 4 - 4
+    expect(updatedIdeas.find(i => i.id === 'i2')?.score).toBe(0); // 1 - 1
   });
 
   it('rejects a non-admin caller', async () => {

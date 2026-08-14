@@ -2,6 +2,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import React from 'react';
 import { Game, calculateSimilarPairs } from '@mirror/shared';
 import { Leaderboard } from '../Leaderboard';
+import { IdeaLeaderboard } from '../ideas/IdeaLeaderboard';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 
@@ -49,13 +50,21 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
         </p>
       </div>
 
-      <Leaderboard
-        participants={game.participants}
-        scores={game.scores}
-        guessResults={game.guessResults}
-        title={t('game.ui.finalLeaderboardTitle')}
-        maxHeight="max-h-96"
-      />
+      {game.gameType === 'ideas' ? (
+        <IdeaLeaderboard
+          ideas={game.ideaData?.ideas ?? []}
+          title={t('game.ui.ideas.finalLeaderboardTitle')}
+          maxHeight="max-h-96"
+        />
+      ) : (
+        <Leaderboard
+          participants={game.participants}
+          scores={game.scores}
+          guessResults={game.guessResults}
+          title={t('game.ui.finalLeaderboardTitle')}
+          maxHeight="max-h-96"
+        />
+      )}
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">

@@ -405,7 +405,9 @@
         "confirmSubmitIdea": "Submit this idea?",
         "confirmSubmitRating": "Submit this rating?",
         "notEligibleToRate": "You are not participating in ratings this game.",
-        "commentsHeading": "Comments"
+        "commentsHeading": "Comments",
+        "finalLeaderboardTitle": "Top Ideas",
+        "noIdeasYet": "No ideas yet."
       }
     }
   },
