@@ -324,7 +324,7 @@ export const GuessingPhase: React.FC<Props> = ({
         {(hasSubmittedGuesses || game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '')) ? (
           (() => {
             const playerResult = game.guessResults?.[user?.uid ?? ''];
-            if (playerResult) {
+            if (playerResult && game.showGuessResults) {
               return (
                 <View style={styles.guessResultsContainer}>
                   <ThemedText type="subtitle" style={styles.guessResultsTitle}>

@@ -199,7 +199,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
           <div ref={playerScrollRef}>
             {hasSubmitted ? (
               <div className="bg-game-purple/10 border border-game-purple rounded-lg p-4 text-center">
-                {playerResult ? (
+                {playerResult && game.showGuessResults ? (
                   <div>
                     <p className="text-game-purple font-semibold text-lg mb-1">
                       {t('game.ui.guessResultsHeader')}

@@ -5,3 +5,9 @@ import { afterEach } from 'vitest';
 afterEach(() => {
   cleanup();
 });
+
+// jsdom doesn't implement scrollIntoView; several components call it via
+// useScrollIntoViewOnChange.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
