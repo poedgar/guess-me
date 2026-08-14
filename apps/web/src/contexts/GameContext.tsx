@@ -1468,7 +1468,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       const playersAlready =
         gameData.guessingData?.playersWhoSubmittedGuesses || [];
       const playersAlreadyArray = arrayUnion(playerId);
-      const totalTargets = (gameData.participants?.length ?? 0) - 1;
+      // For Mirror mode, only count targets in the current guessing data
+      const targetCount = Object.keys(gameData.guessingData?.commentsByTarget || {}).length;
+      const totalTargets = targetCount > 0 ? targetCount : (gameData.participants?.length ?? 0) - 1;
       const allSubmitted = playersAlready.length + 1 >= totalTargets;
 
       // Use the caller-supplied count when available (computed locally in the component

@@ -1098,7 +1098,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           if (!alreadySubmitted && numGuessesByUser >= numComments) {
             const playersAlready =
               serverGame.guessingData?.playersWhoSubmittedGuesses || [];
-            const totalTargets = (serverGame.participants?.length ?? 0) - 1;
+            // For Mirror mode, only count targets in the current guessing data
+            const targetCount = Object.keys(serverGame.guessingData?.commentsByTarget || {}).length;
+            const totalTargets = targetCount > 0 ? targetCount : (serverGame.participants?.length ?? 0) - 1;
             const allSubmitted = playersAlready.length + 1 >= totalTargets;
 
             // Count correct guesses by this player across ALL rounds (sum from source data,
@@ -1127,7 +1129,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           if (!alreadySubmitted && numComments === 0) {
             const playersAlready =
               serverGame.guessingData?.playersWhoSubmittedGuesses || [];
-            const totalTargets = (serverGame.participants?.length ?? 0) - 1;
+            // For Mirror mode, only count targets in the current guessing data
+            const targetCount = Object.keys(serverGame.guessingData?.commentsByTarget || {}).length;
+            const totalTargets = targetCount > 0 ? targetCount : (serverGame.participants?.length ?? 0) - 1;
             const allSubmitted = playersAlready.length + 1 >= totalTargets;
             await updateDoc(gameRef, {
               "guessingData.playersWhoSubmittedGuesses": arrayUnion(userId),
@@ -1444,7 +1448,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       const playersAlready =
         gameData.guessingData?.playersWhoSubmittedGuesses || [];
       const playersAlreadyArray = arrayUnion(playerId);
-      const totalTargets = (gameData.participants?.length ?? 0) - 1;
+      // For Mirror mode, only count targets in the current guessing data
+      const targetCount = Object.keys(gameData.guessingData?.commentsByTarget || {}).length;
+      const totalTargets = targetCount > 0 ? targetCount : (gameData.participants?.length ?? 0) - 1;
       const allSubmitted = playersAlready.length + 1 >= totalTargets;
 
       // Use the caller-supplied count when available (computed locally in the component
