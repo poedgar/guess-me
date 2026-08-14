@@ -471,6 +471,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
         </div>
 
         <Leaderboard
+          game={game}
           participants={game.participants}
           scores={game.roundStartScores ?? game.scores}
           guessResults={game.roundStartGuessResults ?? game.guessResults}

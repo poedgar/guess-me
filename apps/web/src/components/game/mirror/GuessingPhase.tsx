@@ -315,6 +315,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
         </div>
 
         <Leaderboard
+          game={game}
           participants={game.participants}
           scores={game.roundStartScores ?? game.scores}
           guessResults={game.roundStartGuessResults ?? game.guessResults}

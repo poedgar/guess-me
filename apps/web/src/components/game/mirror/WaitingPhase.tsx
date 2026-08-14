@@ -279,6 +279,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
 
         {game.scores && Object.keys(game.scores).length > 0 && (
           <Leaderboard
+            game={game}
             participants={game.participants}
             scores={game.scores}
             guessResults={game.guessResults}

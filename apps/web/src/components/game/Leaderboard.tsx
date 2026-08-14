@@ -1,11 +1,13 @@
 import React from 'react';
-import { Participant } from '@mirror/shared';
+import { Game, Participant } from '@mirror/shared';
 import { PlayerAvatar } from '../ui/PlayerAvatar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getDisplayName } from '../../utils/displayName';
+import { getPlayerNumber } from '../../utils/playerNumbers';
 
 interface LeaderboardProps {
+  game: Game;
   participants: Participant[];
   scores?: { [userId: string]: number };
   guessResults?: { [userId: string]: { correctGuesses: number } };
@@ -15,6 +17,7 @@ interface LeaderboardProps {
 }
 
 export const Leaderboard: React.FC<LeaderboardProps> = ({
+  game,
   participants,
   scores,
   guessResults,
@@ -72,7 +75,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
 
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 dark:text-white truncate text-sm">
-                  {getDisplayName(p.userName, showSurnames)}
+                  {getPlayerNumber(game, p.userId)}. {getDisplayName(p.userName, showSurnames)}
+                  {p.userId === game.adminId && ' 👑'}
                   {isCurrentUser && (
                     <span className="ml-1 text-xs text-blue-500">
                       {t('game.ui.youLabel')}

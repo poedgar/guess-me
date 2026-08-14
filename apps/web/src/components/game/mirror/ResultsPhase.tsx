@@ -58,6 +58,7 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
         />
       ) : (
         <Leaderboard
+          game={game}
           participants={game.participants}
           scores={game.scores}
           guessResults={game.guessResults}
