@@ -174,7 +174,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
           )}
 
           {/* Admin settings */}
-          {isAdmin && (game.gameType ?? 'mirror') === 'mirror' && (
+          {isAdmin && (
             <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
               {[
                 {
@@ -227,13 +227,6 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
           {isAdmin && game.gameType === 'ideas' && (
             <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
               {[
-                {
-                  id: 'admin-writes-comments',
-                  label: t('game.ui.adminWritesCommentsTitle'),
-                  desc: t('game.ui.adminWritesCommentsDescription'),
-                  checked: game.adminWritesComments ?? false,
-                  onChange: handleToggleAdminComments,
-                },
                 {
                   id: 'idea-incognito-mode',
                   label: t('game.ui.ideaIncognitoModeTitle'),
