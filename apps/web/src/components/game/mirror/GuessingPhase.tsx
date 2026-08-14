@@ -7,6 +7,7 @@ import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { AdminRoundTools } from '../AdminRoundTools';
+import { PostGuessingPointsPanel } from './PostGuessingPointsPanel';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
 import { getDisplayName } from '../../../utils/displayName';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
@@ -322,6 +323,8 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
           maxHeight="max-h-80"
           showSurnames={game.showSurnames}
         />
+
+        {game.postGuessingPointPhase && <PostGuessingPointsPanel game={game} />}
       </div>
     </>
   );
