@@ -8,6 +8,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 import { AdminRoundTools } from '../AdminRoundTools';
+import { getDisplayName } from '../../../utils/displayName';
 
 interface Props {
   game: Game;
@@ -184,11 +185,11 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
                   type="button"
                   data-cy="basket-guess-author-button"
                   data-cy-user-id={p.userId}
-                  onClick={() => handleAuthorSelect(p.userId, p.userName)}
+                  onClick={() => handleAuthorSelect(p.userId, getDisplayName(p.userName, game.showSurnames ?? false))}
                   disabled={isSubmittingAuthor || loading}
                   className="w-full text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 font-medium text-gray-900 dark:text-white hover:border-game-purple disabled:opacity-50 transition-colors"
                 >
-                  {p.userName}
+                  {getDisplayName(p.userName, game.showSurnames ?? false)}
                 </button>
               ))}
             </div>

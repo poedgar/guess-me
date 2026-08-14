@@ -3,6 +3,7 @@ import { Participant } from '@mirror/shared';
 import { PlayerAvatar } from '../ui/PlayerAvatar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { getDisplayName } from '../../utils/displayName';
 
 interface LeaderboardProps {
   participants: Participant[];
@@ -10,6 +11,7 @@ interface LeaderboardProps {
   guessResults?: { [userId: string]: { correctGuesses: number } };
   maxHeight?: string;
   title?: string;
+  showSurnames?: boolean;
 }
 
 export const Leaderboard: React.FC<LeaderboardProps> = ({
@@ -18,6 +20,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
   guessResults,
   maxHeight = 'max-h-96',
   title,
+  showSurnames = false,
 }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -65,11 +68,11 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                 )}
               </div>
 
-              <PlayerAvatar name={p.userName} photoURL={p.photoURL} size="sm" />
+              <PlayerAvatar name={getDisplayName(p.userName, showSurnames)} photoURL={p.photoURL} size="sm" />
 
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 dark:text-white truncate text-sm">
-                  {p.userName}
+                  {getDisplayName(p.userName, showSurnames)}
                   {isCurrentUser && (
                     <span className="ml-1 text-xs text-blue-500">
                       {t('game.ui.youLabel')}

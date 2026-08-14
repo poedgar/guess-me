@@ -63,6 +63,7 @@ export const ResultsPhase: React.FC<ResultsPhaseProps> = ({ game }) => {
           guessResults={game.guessResults}
           title={t('game.ui.finalLeaderboardTitle')}
           maxHeight="max-h-96"
+          showSurnames={game.showSurnames}
         />
       )}
 

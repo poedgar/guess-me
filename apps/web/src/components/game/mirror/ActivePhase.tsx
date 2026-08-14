@@ -8,6 +8,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { AdminRoundTools } from '../AdminRoundTools';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
+import { getDisplayName } from '../../../utils/displayName';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 
@@ -280,7 +281,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                             {getPlayerNumber(game, p.userId)}.
                           </span>
                           <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
-                            {p.userName}
+                            {getDisplayName(p.userName, game.showSurnames ?? false)}
                           </span>
                           <span
                             className={`text-xs font-semibold ${
@@ -474,6 +475,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
           scores={game.roundStartScores ?? game.scores}
           guessResults={game.roundStartGuessResults ?? game.guessResults}
           maxHeight="max-h-80"
+          showSurnames={game.showSurnames}
         />
       </div>
     </>

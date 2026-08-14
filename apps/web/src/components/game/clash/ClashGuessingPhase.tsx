@@ -9,6 +9,7 @@ import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnCha
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 import { ClashScoreboard } from './ClashScoreboard';
 import { AdminRoundTools } from '../AdminRoundTools';
+import { getDisplayName } from '../../../utils/displayName';
 
 type CardPhase = 'idle' | 'subject_picking' | 'correct' | 'wrong' | 'author_picking' | 'done';
 
@@ -63,7 +64,10 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
   const { teamScores } = cd!;
   const totalRounds = cd!.schedule.length;
   const isAdmin = user?.uid === game.adminId;
-  const activeLeaderName = game.participants.find(p => p.userId === activeLeaderId)?.userName ?? '?';
+  const activeLeaderName = getDisplayName(
+    game.participants.find(p => p.userId === activeLeaderId)?.userName ?? '?',
+    game.showSurnames ?? false,
+  );
 
   const ownGroupIds: string[] = currentGroup === 'a' ? cd!.groupA.memberIds : cd!.groupB.memberIds;
   const oppositeGroupIds: string[] = currentGroup === 'a' ? cd!.groupB.memberIds : cd!.groupA.memberIds;
@@ -218,7 +222,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
                         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('game.ui.clash.whichMember')}</p>
                         {ownGroupIds.map(memberId => {
                           const p = game.participants.find(pt => pt.userId === memberId);
-                          const name = p?.userName ?? memberId;
+                          const name = p ? getDisplayName(p.userName, game.showSurnames ?? false) : memberId;
                           return (
                             <button key={memberId} type="button"
                               data-cy="clash-guess-subject-button"
@@ -243,7 +247,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
                         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('game.ui.clash.whoWroteIt')}</p>
                         {oppositeGroupIds.map(authorId => {
                           const p = game.participants.find(pt => pt.userId === authorId);
-                          const name = p?.userName ?? authorId;
+                          const name = p ? getDisplayName(p.userName, game.showSurnames ?? false) : authorId;
                           return (
                             <button key={authorId} type="button"
                               data-cy="clash-guess-author-button"

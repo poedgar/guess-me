@@ -8,6 +8,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { AdminRoundTools } from '../AdminRoundTools';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
+import { getDisplayName } from '../../../utils/displayName';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 
@@ -184,7 +185,10 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
           <p className="text-center text-gray-500 dark:text-gray-400 mb-4">
             {singleTargetId
               ? t('game.ui.guessingCommentsAbout', {
-                  name: game.participants.find(p => p.userId === singleTargetId)?.userName ?? '',
+                  name: getDisplayName(
+                    game.participants.find(p => p.userId === singleTargetId)?.userName ?? '',
+                    game.showSurnames ?? false,
+                  ),
                 })
               : t('game.ui.guessAuthorsSubtitle')}
           </p>
@@ -243,7 +247,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                               : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-900 dark:text-white hover:border-game-blue'
                           }`}
                         >
-                          {getPlayerNumber(game, author.userId)}. {author.userName}
+                          {getPlayerNumber(game, author.userId)}. {getDisplayName(author.userName, game.showSurnames ?? false)}
                         </button>
                       ))}
                     </div>
@@ -315,6 +319,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
           scores={game.roundStartScores ?? game.scores}
           guessResults={game.roundStartGuessResults ?? game.guessResults}
           maxHeight="max-h-80"
+          showSurnames={game.showSurnames}
         />
       </div>
     </>

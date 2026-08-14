@@ -10,6 +10,7 @@ import { PULSE_COLORS } from '../../../constants/pulseColors';
 import { ClashScoreboard } from './ClashScoreboard';
 import { AdminRoundTools } from '../AdminRoundTools';
 import type { ClashAssignment } from '@mirror/shared';
+import { getDisplayName } from '../../../utils/displayName';
 
 interface Props {
   game: Game;
@@ -37,7 +38,9 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
     : schedule[currentRoundIndex].assignmentsB;
   const myAssignment = myAssignments.find((a: ClashAssignment) => a.writerId === uid);
   const subjectParticipant = game.participants.find(p => p.userId === myAssignment?.subjectId);
-  const subjectName = subjectParticipant?.userName ?? '?';
+  const subjectName = subjectParticipant
+    ? getDisplayName(subjectParticipant.userName, game.showSurnames ?? false)
+    : '?';
 
   const groupSize = cd.groupA.memberIds.length;
   const alreadySubmitted = submitted

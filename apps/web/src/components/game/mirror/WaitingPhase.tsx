@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { getDisplayName } from '../../../utils/displayName';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
@@ -142,7 +143,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
               >
                 <span className="text-sm text-gray-500 dark:text-gray-400 w-5">{idx + 1}.</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
-                  {p.userName}
+                  {getDisplayName(p.userName, game.showSurnames ?? false)}
                   {p.userId === game.adminId && ' 👑'}
                 </span>
               </div>
@@ -282,6 +283,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             scores={game.scores}
             guessResults={game.guessResults}
             title={t('game.ui.leaderboardTitle')}
+            showSurnames={game.showSurnames}
           />
         )}
       </div>

@@ -4,6 +4,7 @@ import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { getDisplayName } from '../../../utils/displayName';
 
 interface Props {
   game: Game;
@@ -95,7 +96,7 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
 
   const renderPoolCard = (participant: Participant) => (
     <div key={participant.userId} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 mb-2">
-      <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-white truncate">{participant.userName}</span>
+      <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-white truncate">{getDisplayName(participant.userName, game.showSurnames ?? false)}</span>
       {isAdmin && (
         <div className="flex gap-1">
           <button type="button" data-cy="clash-assign-button" data-cy-group="a" data-cy-user-id={participant.userId} onClick={() => assignToGroup(participant.userId, 'a')}
@@ -117,7 +118,7 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
             <span>{isLeader ? '👑' : <span className="opacity-20">👑</span>}</span>
           </button>
         ) : isLeader ? <span>👑</span> : null}
-        <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-white truncate">{participant.userName}</span>
+        <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-white truncate">{getDisplayName(participant.userName, game.showSurnames ?? false)}</span>
         {isAdmin && (
           <button type="button" onClick={() => assignToGroup(pid, null)} className="text-gray-400 hover:text-red-500 text-xs px-1">✕</button>
         )}

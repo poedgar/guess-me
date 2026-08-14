@@ -9,6 +9,7 @@ import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnCha
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 import { AdminRoundTools } from '../AdminRoundTools';
 import type { BasketAssignment } from '@mirror/shared';
+import { getDisplayName } from '../../../utils/displayName';
 
 interface Props {
   game: Game;
@@ -31,7 +32,9 @@ export const BasketWritingPhase: React.FC<Props> = ({ game }) => {
   const currentRound = schedule[currentRoundIndex];
   const myAssignment = currentRound?.assignments.find((a: BasketAssignment) => a.writerId === user?.uid);
   const subjectParticipant = game.participants.find(p => p.userId === myAssignment?.subjectId);
-  const subjectName = subjectParticipant?.userName ?? '?';
+  const subjectName = subjectParticipant
+    ? getDisplayName(subjectParticipant.userName, game.showSurnames ?? false)
+    : '?';
   const alreadySubmitted = submitted || currentRoundComments.some((c: any) => c.writerId === user?.uid);
   const submittedCount = currentRoundComments.length;
   const totalCount = currentRound?.assignments.length ?? 0;
