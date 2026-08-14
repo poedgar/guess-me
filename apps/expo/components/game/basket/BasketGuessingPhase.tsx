@@ -93,10 +93,6 @@ export const BasketGuessingPhase: React.FC<Props> = ({
   const actualComment = currentRoundComments.find(
     (c) => c.subjectId === guesserId,
   );
-  console.log("basketData exists", !!game.basketData);
-  console.log("currentRoundIndex", currentRoundIndex);
-  console.log("schedule", schedule);
-  console.log("schedule[currentRoundIndex]", schedule[currentRoundIndex]);
   const writerIds = new Set(
     schedule[currentRoundIndex].assignments.map((a) => a.writerId),
   );
