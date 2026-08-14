@@ -10,6 +10,7 @@ import { PULSE_COLORS } from '../../../constants/pulseColors';
 import { ClashScoreboard } from './ClashScoreboard';
 import { AdminRoundTools } from '../AdminRoundTools';
 import { getDisplayName } from '../../../utils/displayName';
+import { getClashLeader } from '@mirror/shared';
 
 type CardPhase = 'idle' | 'subject_picking' | 'correct' | 'wrong' | 'author_picking' | 'done';
 
@@ -37,7 +38,9 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
   const currentRoundIndex = cd?.currentRoundIndex ?? 0;
   const currentGroup = cd?.currentGuessingGroup;
   const uid = user?.uid ?? '';
-  const activeLeaderId = currentGroup === 'a' ? cd?.groupA.leaderId : cd?.groupB.leaderId;
+  const activeLeaderId = cd && currentGroup
+    ? getClashLeader(currentGroup === 'a' ? cd.groupA : cd.groupB, currentRoundIndex)
+    : undefined;
   const isActiveLeader = uid === activeLeaderId;
 
   const commentsToGuess: any[] = currentGroup === 'a' ? (cd?.currentRoundCommentsB ?? []) : (cd?.currentRoundCommentsA ?? []);

@@ -18,8 +18,6 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
 
   const [groupAIds, setGroupAIds] = useState<string[]>(game.clashData?.groupA?.memberIds ?? []);
   const [groupBIds, setGroupBIds] = useState<string[]>(game.clashData?.groupB?.memberIds ?? []);
-  const [leaderAId, setLeaderAId] = useState<string | null>(game.clashData?.groupA?.leaderId ?? null);
-  const [leaderBId, setLeaderBId] = useState<string | null>(game.clashData?.groupB?.leaderId ?? null);
   const [isSaving, setIsSaving] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
@@ -34,21 +32,14 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
 
   const canStart = isAdmin
     && groupAIds.length > 0
-    && groupAIds.length === groupBIds.length
-    && leaderAId !== null
-    && leaderBId !== null;
+    && groupAIds.length === groupBIds.length;
 
-  const persistGroups = useCallback(async (
-    newA: string[], newB: string[], newLeaderA: string | null, newLeaderB: string | null
-  ) => {
+  const persistGroups = useCallback(async (newA: string[], newB: string[]) => {
     if (!isAdmin) return;
-    if (newA.length > 0 && newB.length > 0 && newA.length === newB.length && newLeaderA && newLeaderB) {
+    if (newA.length > 0 && newB.length > 0 && newA.length === newB.length) {
       try {
         setIsSaving(true);
-        await saveClashGroups(
-          { leaderId: newLeaderA, memberIds: newA },
-          { leaderId: newLeaderB, memberIds: newB },
-        );
+        await saveClashGroups({ memberIds: newA }, { memberIds: newB });
       } catch { /* non-blocking */ } finally {
         setIsSaving(false);
       }
@@ -62,27 +53,10 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
     const newB = group === 'b'
       ? [...groupBIds.filter(id => id !== playerId), playerId]
       : groupBIds.filter(id => id !== playerId);
-    // Auto-assign leader if group was empty
-    const newLeaderA = group === 'a' && groupAIds.length === 0
-      ? playerId
-      : (leaderAId === playerId ? null : leaderAId);
-    const newLeaderB = group === 'b' && groupBIds.length === 0
-      ? playerId
-      : (leaderBId === playerId ? null : leaderBId);
     setGroupAIds(newA);
     setGroupBIds(newB);
-    setLeaderAId(newLeaderA);
-    setLeaderBId(newLeaderB);
-    await persistGroups(newA, newB, newLeaderA, newLeaderB);
-  }, [groupAIds, groupBIds, leaderAId, leaderBId, persistGroups]);
-
-  const toggleLeader = useCallback(async (playerId: string, group: 'a' | 'b') => {
-    const newLeaderA = group === 'a' ? (leaderAId === playerId ? null : playerId) : leaderAId;
-    const newLeaderB = group === 'b' ? (leaderBId === playerId ? null : playerId) : leaderBId;
-    setLeaderAId(newLeaderA);
-    setLeaderBId(newLeaderB);
-    await persistGroups(groupAIds, groupBIds, newLeaderA, newLeaderB);
-  }, [leaderAId, leaderBId, groupAIds, groupBIds, persistGroups]);
+    await persistGroups(newA, newB);
+  }, [groupAIds, groupBIds, persistGroups]);
 
   const handleStart = async () => {
     try {
@@ -108,16 +82,10 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
     </div>
   );
 
-  const renderGroupCard = (participant: Participant, group: 'a' | 'b') => {
+  const renderGroupCard = (participant: Participant) => {
     const pid = participant.userId;
-    const isLeader = (group === 'a' && leaderAId === pid) || (group === 'b' && leaderBId === pid);
     return (
-      <div key={pid} className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-2 mb-2 ${isLeader ? 'border-yellow-400' : 'border-transparent'}`}>
-        {isAdmin ? (
-          <button type="button" onClick={() => toggleLeader(pid, group)} className="text-base hover:scale-110 transition-transform" title="Set as leader">
-            <span>{isLeader ? '👑' : <span className="opacity-20">👑</span>}</span>
-          </button>
-        ) : isLeader ? <span>👑</span> : null}
+      <div key={pid} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border-2 border-transparent mb-2">
         <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-white truncate">{getDisplayName(participant.userName, game.showSurnames ?? false)}</span>
         {isAdmin && (
           <button type="button" onClick={() => assignToGroup(pid, null)} className="text-gray-400 hover:text-red-500 text-xs px-1">✕</button>
@@ -146,7 +114,7 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
             <p className="text-center text-xs font-bold text-blue-700 dark:text-blue-300 mb-2">{t('game.ui.clash.groupA')}</p>
             {groupAIds.map(id => {
               const p = eligibleParticipants.find(pt => pt.userId === id)!;
-              return p ? renderGroupCard(p, 'a') : null;
+              return p ? renderGroupCard(p) : null;
             })}
             {groupAIds.length === 0 && (
               <p className="text-center text-xs text-gray-400 py-2">{t('game.ui.clash.emptyGroup')}</p>
@@ -158,7 +126,7 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
             <p className="text-center text-xs font-bold text-purple-700 dark:text-purple-300 mb-2">{t('game.ui.clash.groupB')}</p>
             {groupBIds.map(id => {
               const p = eligibleParticipants.find(pt => pt.userId === id)!;
-              return p ? renderGroupCard(p, 'b') : null;
+              return p ? renderGroupCard(p) : null;
             })}
             {groupBIds.length === 0 && (
               <p className="text-center text-xs text-gray-400 py-2">{t('game.ui.clash.emptyGroup')}</p>

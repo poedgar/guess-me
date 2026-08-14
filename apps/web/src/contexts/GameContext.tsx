@@ -1,4 +1,4 @@
-import { auth, db, generateGameId, sortParticipantsByJoin, buildJoinIndexById, generateBasketSchedule, generateClashSchedule, generateIdeaSchedule } from '@mirror/shared';
+import { auth, db, generateGameId, sortParticipantsByJoin, buildJoinIndexById, generateBasketSchedule, generateClashSchedule, generateClashLeaderRotation, getClashLeader, generateIdeaSchedule } from '@mirror/shared';
 import type { BasketAssignment, BasketRound, ClashAssignment, ClashRound } from '@mirror/shared';
 import { useAuth } from './AuthContext';
 import {
@@ -173,8 +173,14 @@ export interface BasketData {
 }
 
 export interface ClashGroup {
-  leaderId: string;
-  memberIds: string[]; // includes leaderId
+  // Legacy static leader field — no longer set by new games (leaders are
+  // now chosen automatically via leaderRotation). Kept for backward
+  // compatibility with games created before this field existed.
+  leaderId?: string;
+  // Random permutation of memberIds, one leader per round — see
+  // generateClashLeaderRotation. Indexed by clashData.currentRoundIndex.
+  leaderRotation?: string[];
+  memberIds: string[];
 }
 
 export interface ClashComment {
@@ -2287,8 +2293,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (!currentGame || auth.currentUser.uid !== currentGame.adminId) throw new Error("Only the admin can set up groups");
     if (groupA.memberIds.length !== groupB.memberIds.length) throw new Error("Both groups must have the same number of players");
     if (groupA.memberIds.length === 0) throw new Error("Groups cannot be empty");
-    if (!groupA.memberIds.includes(groupA.leaderId)) throw new Error("Group A leader must be a group member");
-    if (!groupB.memberIds.includes(groupB.leaderId)) throw new Error("Group B leader must be a group member");
     const overlap = groupA.memberIds.filter(id => groupB.memberIds.includes(id));
     if (overlap.length > 0) throw new Error("Groups cannot share members");
     try {
@@ -2318,6 +2322,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         status: 'clash_writing',
         clashData: {
           ...cd,
+          groupA: { ...cd.groupA, leaderRotation: generateClashLeaderRotation(cd.groupA.memberIds) },
+          groupB: { ...cd.groupB, leaderRotation: generateClashLeaderRotation(cd.groupB.memberIds) },
           schedule,
           currentRoundIndex: 0,
           currentRoundCommentsA: [],
@@ -2409,7 +2415,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         if (!cd) throw new Error("No active clash game");
         const currentGroup = cd.currentGuessingGroup;
         if (!currentGroup) throw new Error("Not in guessing phase");
-        const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+        const activeLeaderId = getClashLeader(currentGroup === 'a' ? cd.groupA : cd.groupB, cd.currentRoundIndex);
         if (uid !== activeLeaderId) throw new Error("Only the active leader can submit guesses");
         const oppositeComments = currentGroup === 'a' ? cd.currentRoundCommentsB : cd.currentRoundCommentsA;
         const comment = oppositeComments.find((c: ClashComment) => c.writerId === commentWriterId);
@@ -2451,7 +2457,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         if (!cd) throw new Error("No active clash game");
         const currentGroup = cd.currentGuessingGroup;
         if (!currentGroup) throw new Error("Not in guessing phase");
-        const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+        const activeLeaderId = getClashLeader(currentGroup === 'a' ? cd.groupA : cd.groupB, cd.currentRoundIndex);
         if (uid !== activeLeaderId) throw new Error("Only the active leader can submit guesses");
         const guesses = currentGroup === 'a' ? cd.currentRoundGuessesA : cd.currentRoundGuessesB;
         const existing = guesses.find((g: ClashGuess) => g.commentWriterId === commentWriterId);
@@ -2545,11 +2551,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           'clashData.teamScores.a': (cd.teamScores.a ?? 0) - pointsA,
           'clashData.teamScores.b': (cd.teamScores.b ?? 0) - pointsB,
         };
-        if (pointsA > 0) {
-          updates[`scores.${cd.groupA.leaderId}`] = (gameData.scores?.[cd.groupA.leaderId] ?? 0) - pointsA;
+        const leaderA = getClashLeader(cd.groupA, cd.currentRoundIndex);
+        const leaderB = getClashLeader(cd.groupB, cd.currentRoundIndex);
+        if (pointsA > 0 && leaderA) {
+          updates[`scores.${leaderA}`] = (gameData.scores?.[leaderA] ?? 0) - pointsA;
         }
-        if (pointsB > 0) {
-          updates[`scores.${cd.groupB.leaderId}`] = (gameData.scores?.[cd.groupB.leaderId] ?? 0) - pointsB;
+        if (pointsB > 0 && leaderB) {
+          updates[`scores.${leaderB}`] = (gameData.scores?.[leaderB] ?? 0) - pointsB;
         }
 
         transaction.update(gameRef, updates);

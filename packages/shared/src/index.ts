@@ -5,7 +5,7 @@ export { GameColors, Colors, StatusColors, ModalStyles } from './constants/gameC
 export { generateGameId } from './utils/gameIdGenerator';
 export { sortParticipantsByJoin, buildJoinIndexById } from './utils/participants';
 export { generateBasketSchedule, type BasketAssignment, type BasketRound } from './utils/basketSchedule';
-export { generateClashSchedule, type ClashAssignment, type ClashRound } from './utils/clashSchedule';
+export { generateClashSchedule, generateClashLeaderRotation, getClashLeader, type ClashAssignment, type ClashRound } from './utils/clashSchedule';
 export { generateIdeaSchedule } from './utils/ideaSchedule';
 export { toSafeDate } from './utils/dates';
 export { calculateSimilarPairs, type SimilarPair } from './utils/playerSimilarity';

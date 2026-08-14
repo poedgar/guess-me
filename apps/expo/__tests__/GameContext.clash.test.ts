@@ -66,6 +66,44 @@ function mockTransactionOn(mockTxn: { get: jest.Mock; update: jest.Mock }, gameD
   });
 }
 
+// ── startClashGame ──────────────────────────────────────────────────────────
+// Regression coverage: leaders used to be admin-picked (native) or
+// auto-assigned to the first member added to a group (web bug). Both are
+// replaced with a random per-round rotation generated when the game starts,
+// guaranteeing every member leads exactly one round.
+describe('startClashGame — generates a random leader rotation for each group', () => {
+  const game = {
+    ...BASE_GAME,
+    status: 'waiting',
+    adminId: 'leader-a',
+    clashData: {
+      groupA: { memberIds: ['leader-a', 'member-a'] },
+      groupB: { memberIds: ['leader-b', 'member-b'] },
+      schedule: [],
+      currentRoundIndex: 0,
+      currentRoundCommentsA: [],
+      currentRoundCommentsB: [],
+      lastGroupToFinish: null,
+      currentGuessingGroup: null,
+      currentRoundGuessesA: [],
+      currentRoundGuessesB: [],
+      teamScores: { a: 0, b: 0 },
+    },
+  };
+
+  it('writes a leaderRotation for each group that is a permutation of its memberIds', async () => {
+    const { result, gameDoc } = await enterWithGame(game);
+    const f = require('firebase/firestore');
+    f.updateDoc.mockClear();
+
+    await act(async () => { await result.current.startClashGame(); });
+
+    const arg = f.updateDoc.mock.calls.find((c: any[]) => c[0] === gameDoc)?.[1];
+    expect(arg.clashData.groupA.leaderRotation.slice().sort()).toEqual(['leader-a', 'member-a']);
+    expect(arg.clashData.groupB.leaderRotation.slice().sort()).toEqual(['leader-b', 'member-b']);
+  });
+});
+
 // ── submitClashGuess ────────────────────────────────────────────────────────
 // Regression coverage: this used to read clashData from the client's cached
 // currentGame and write currentRoundGuessesA/B back as a plain full-array
@@ -116,6 +154,46 @@ describe('submitClashGuess', () => {
     config.auth.currentUser = { uid: 'member-a', displayName: 'MemberA', email: 'membera@example.com', photoURL: null };
     const { result } = await enterWithGame(game);
     mockTransactionOn(mockTxn, game);
+
+    await expect(
+      act(async () => { await result.current.submitClashGuess('member-b', 'leader-a'); })
+    ).rejects.toThrow('Only the active leader can submit guesses');
+  });
+
+  it('gates on the CURRENT ROUND leader from leaderRotation, not a static leaderId', async () => {
+    // Round 1's leader for group A is member-a (per rotation), not leader-a.
+    const round1Game = {
+      ...game,
+      clashData: {
+        ...game.clashData,
+        groupA: { leaderRotation: ['leader-a', 'member-a'], memberIds: ['leader-a', 'member-a'] },
+        currentRoundIndex: 1,
+      },
+    };
+    const config = require('@/config/firebase');
+    config.auth.currentUser = { uid: 'member-a', displayName: 'MemberA', email: 'membera@example.com', photoURL: null };
+    const { result } = await enterWithGame(round1Game);
+    mockTransactionOn(mockTxn, round1Game);
+
+    await act(async () => { await result.current.submitClashGuess('member-b', 'leader-a'); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ 'scores.member-a': 1 }),
+    );
+  });
+
+  it('rejects round 0\'s leader once the rotation has moved on to round 1', async () => {
+    const round1Game = {
+      ...game,
+      clashData: {
+        ...game.clashData,
+        groupA: { leaderRotation: ['leader-a', 'member-a'], memberIds: ['leader-a', 'member-a'] },
+        currentRoundIndex: 1,
+      },
+    };
+    const { result } = await enterWithGame(round1Game); // acting user is still leader-a (round 0's leader)
+    mockTransactionOn(mockTxn, round1Game);
 
     await expect(
       act(async () => { await result.current.submitClashGuess('member-b', 'leader-a'); })
@@ -347,6 +425,29 @@ describe('restartClashRound', () => {
     await expect(
       act(async () => { await result.current.restartClashRound(); })
     ).rejects.toThrow('Only the admin can restart the round');
+  });
+
+  it('deducts points from the CURRENT ROUND leader per leaderRotation, not a static leaderId', async () => {
+    // Round 1's leader for group A is member-a, not leader-a — the points
+    // earned this round were credited to member-a and must be deducted from
+    // member-a, not the group's round-0 leader.
+    const round1Game = {
+      ...game,
+      scores: { 'leader-a': 0, 'member-a': 2, 'leader-b': 5 },
+      clashData: {
+        ...game.clashData,
+        groupA: { leaderRotation: ['leader-a', 'member-a'], memberIds: ['leader-a', 'member-a'] },
+        currentRoundIndex: 1,
+      },
+    };
+    const { result } = await enterWithGame(round1Game);
+    mockTransactionOn(round1Game);
+
+    await act(async () => { await result.current.restartClashRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg['scores.member-a']).toBe(0); // 2 - 2
+    expect(arg['scores.leader-a']).toBeUndefined(); // round-0 leader untouched
   });
 });
 

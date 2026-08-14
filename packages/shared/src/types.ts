@@ -153,7 +153,13 @@ export interface BasketData {
 }
 
 export interface ClashGroup {
-  leaderId: string;
+  // Legacy static leader field — no longer set by new games (leaders are
+  // now chosen automatically via leaderRotation). Kept for backward
+  // compatibility with games created before this field existed.
+  leaderId?: string;
+  // Random permutation of memberIds, one leader per round — see
+  // generateClashLeaderRotation. Indexed by clashData.currentRoundIndex.
+  leaderRotation?: string[];
   memberIds: string[];
 }
 

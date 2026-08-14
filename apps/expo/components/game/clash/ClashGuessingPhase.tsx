@@ -15,6 +15,7 @@ import { ActivityIndicator, Animated, Platform, StyleSheet, TouchableOpacity, Vi
 import { ScrollIntoView } from 'react-native-scroll-into-view';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
+import { getClashLeader } from '@/utils/clashSchedule';
 
 interface Props {
   game: Game;
@@ -58,7 +59,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({
   const totalRounds = cd.schedule.length;
   const uid = user?.uid ?? '';
   const currentGroup = cd.currentGuessingGroup!;
-  const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+  const activeLeaderId = getClashLeader(currentGroup === 'a' ? cd.groupA : cd.groupB, currentRoundIndex);
   const isActiveLeader = uid === activeLeaderId;
 
   const activeLeaderParticipant = game.participants.find(p => p.userId === activeLeaderId);
