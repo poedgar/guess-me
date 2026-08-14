@@ -84,14 +84,17 @@ export const ActivePhase: React.FC<Props> = ({
     face: '😊',
   });
 
+  // Mirrors expectedCommenters' filter logic below: everyone except the
+  // round's target, and except the admin when adminWritesComments is off.
   const requiredComments = useMemo(() => {
     if (!game.currentRound) return 0;
     const targetUserId = game.currentRound.targetUserId;
-    const isTargetAdmin = targetUserId === game.adminId;
-    if (!game.adminWritesComments) return game.participants.length - 2;
-    if (isTargetAdmin) return game.participants.length - 1;
-    return game.participants.length - 2;
-  }, [game.currentRound, game.adminId, game.adminWritesComments, game.participants.length]);
+    return game.participants.filter((p) => {
+      if (p.userId === targetUserId) return false;
+      if (p.userId === game.adminId && !game.adminWritesComments) return false;
+      return true;
+    }).length;
+  }, [game.currentRound, game.adminId, game.adminWritesComments, game.participants]);
 
   const getMaxPoints = () => {
     // Maximum points is participants count minus 1 (excluding the target themselves)
