@@ -8,6 +8,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { AdminRoundTools } from '../AdminRoundTools';
 import { PostGuessingPointsPanel } from './PostGuessingPointsPanel';
+import { TargetControlPanel } from './TargetControlPanel';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
 import { getDisplayName } from '../../../utils/displayName';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
@@ -313,6 +314,8 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
               <AdminRoundTools isAdmin={isAdmin} onRestart={restartMirrorRound} onSkip={skipMirrorRound} />
             </div>
           )}
+
+          {isAdmin && <TargetControlPanel game={game} />}
         </div>
 
         <Leaderboard

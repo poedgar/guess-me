@@ -7,6 +7,7 @@ import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { getDisplayName } from '../../../utils/displayName';
+import { TargetControlPanel } from './TargetControlPanel';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
@@ -276,6 +277,10 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             )}
           </div>
         </div>
+
+        {isAdmin && (game.gameType ?? 'mirror') !== 'clash' && (
+          <TargetControlPanel game={game} />
+        )}
 
         {game.scores && Object.keys(game.scores).length > 0 && (
           <Leaderboard
