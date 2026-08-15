@@ -28,4 +28,17 @@ class GameController extends Controller
 
         return redirect("/games/{$game->id}");
     }
+
+    public function join(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['code' => ['required', 'string']]);
+
+        try {
+            $game = $this->lifecycle->joinGame($request->user(), $validated['code']);
+        } catch (\App\Exceptions\GameNotFoundException) {
+            throw ValidationException::withMessages(['code' => 'No game found with that code.']);
+        }
+
+        return redirect("/games/{$game->id}");
+    }
 }

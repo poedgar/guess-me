@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::post('games', [GameController::class, 'store'])->name('games.store');
+    Route::post('games/join', [GameController::class, 'join'])->name('games.join');
 });
 
 require __DIR__.'/auth.php';

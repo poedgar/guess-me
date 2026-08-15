@@ -32,4 +32,19 @@ class GameLifecycleService
             return $game;
         });
     }
+
+    public function joinGame(User $user, string $code): Game
+    {
+        $game = Game::where('code', $code)->first();
+        if (! $game) {
+            throw new \App\Exceptions\GameNotFoundException();
+        }
+
+        GameParticipant::firstOrCreate(
+            ['game_id' => $game->id, 'user_id' => $user->id],
+            ['joined_at' => now()],
+        );
+
+        return $game;
+    }
 }
