@@ -2,15 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\GameResource;
+use App\Models\Game;
 use App\Services\GameLifecycleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Inertia\Response;
 
 class GameController extends Controller
 {
     public function __construct(private GameLifecycleService $lifecycle)
     {
+    }
+
+    public function show(Game $game): Response
+    {
+        $this->authorize('view', $game);
+
+        $game->load(['participants.user', 'scores', 'guessResults']);
+
+        return inertia('Game/Show', [
+            'game' => new GameResource($game),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
