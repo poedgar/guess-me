@@ -50,6 +50,10 @@ class CommentPhaseService
             throw new RuntimeException('Only the target person can give points');
         }
 
+        if ($comment->points !== null) {
+            throw new RuntimeException('Points have already been awarded to this comment');
+        }
+
         DB::transaction(function () use ($comment, $round, $points) {
             $comment->update(['points' => $points]);
             GameScore::incrementFor($round->game, $comment->author, $points);

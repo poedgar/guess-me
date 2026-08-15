@@ -36,6 +36,11 @@ class CommentController extends Controller
     public function awardPoints(Request $request, Game $game, \App\Models\Comment $comment): RedirectResponse
     {
         $this->authorize('view', $game);
+
+        if ($comment->round->game_id !== $game->id) {
+            abort(404);
+        }
+
         $validated = $request->validate(['points' => ['required', 'integer', 'min:0']]);
 
         try {

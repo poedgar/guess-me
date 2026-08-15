@@ -8,6 +8,38 @@ use App\Models\Round;
 use App\Models\User;
 use App\Services\CommentPhaseService;
 
+test('re-awarding points to a comment that has already been awarded is rejected', function () {
+    $game = Game::factory()->create();
+    $target = User::factory()->create();
+    $round = Round::factory()->create(['game_id' => $game->id, 'target_user_id' => $target->id]);
+    $author = User::factory()->create();
+    $comment = Comment::factory()->create(['round_id' => $round->id, 'author_id' => $author->id]);
+
+    app(CommentPhaseService::class)->awardCommentPoints($comment, $target, 3);
+
+    expect(fn () => app(CommentPhaseService::class)->awardCommentPoints($comment->fresh(), $target, 5))
+        ->toThrow(RuntimeException::class, 'Points have already been awarded to this comment');
+
+    // Score wasn't double-credited by the rejected re-award.
+    expect(GameScore::where('game_id', $game->id)->where('user_id', $author->id)->value('points'))->toBe(3);
+});
+
+test('POST comment-points route rejects a comment that belongs to a different game', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id]);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+
+    $otherGame = Game::factory()->create();
+    $otherTarget = User::factory()->create();
+    $otherRound = Round::factory()->create(['game_id' => $otherGame->id, 'target_user_id' => $otherTarget->id]);
+    $foreignComment = Comment::factory()->create(['round_id' => $otherRound->id]);
+
+    $response = $this->actingAs($admin)->post("/games/{$game->id}/comment-points/{$foreignComment->id}", ['points' => 3]);
+
+    $response->assertNotFound();
+    expect($foreignComment->fresh()->points)->toBeNull();
+});
+
 test('the target can award points to a comment author, accumulating across multiple comments', function () {
     $game = Game::factory()->create();
     $target = User::factory()->create();
