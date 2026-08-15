@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Comment;
+use App\Models\GameScore;
 use App\Models\Round;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -40,5 +41,27 @@ class CommentPhaseService
     public function showComments(Round $round): void
     {
         $round->update(['comments_visible' => true]);
+    }
+
+    public function awardCommentPoints(Comment $comment, User $target, int $points): void
+    {
+        $round = $comment->round;
+        if ($target->id !== $round->target_user_id) {
+            throw new RuntimeException('Only the target person can give points');
+        }
+
+        DB::transaction(function () use ($comment, $round, $points) {
+            $comment->update(['points' => $points]);
+            GameScore::incrementFor($round->game, $comment->author, $points);
+        });
+    }
+
+    public function finishAwardingPoints(Round $round, User $target): void
+    {
+        if ($target->id !== $round->target_user_id) {
+            throw new RuntimeException('Only the target can finish giving points');
+        }
+
+        $round->update(['points_given' => true]);
     }
 }

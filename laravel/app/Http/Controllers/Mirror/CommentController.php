@@ -32,4 +32,36 @@ class CommentController extends Controller
 
         return redirect("/games/{$game->id}");
     }
+
+    public function awardPoints(Request $request, Game $game, \App\Models\Comment $comment): RedirectResponse
+    {
+        $this->authorize('view', $game);
+        $validated = $request->validate(['points' => ['required', 'integer', 'min:0']]);
+
+        try {
+            $this->comments->awardCommentPoints($comment, $request->user(), $validated['points']);
+        } catch (\RuntimeException $e) {
+            abort(403, $e->getMessage());
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+
+    public function finishAwarding(Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+        $round = $game->rounds()->latest('round_number')->firstOrFail();
+
+        try {
+            $this->comments->finishAwardingPoints($round, $request->user());
+        } catch (\RuntimeException $e) {
+            abort(403, $e->getMessage());
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
 }

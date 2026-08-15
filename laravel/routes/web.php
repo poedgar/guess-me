@@ -32,6 +32,8 @@ Route::middleware('auth')->group(function () {
     Route::post('games/{game}/start', [GameController::class, 'start'])->name('games.start');
     Route::post('games/{game}/comments', [CommentController::class, 'store'])->name('games.comments.store');
     Route::post('games/{game}/show-comments', [RoundController::class, 'showComments'])->name('games.show-comments');
+    Route::post('games/{game}/comment-points/{comment}', [CommentController::class, 'awardPoints'])->name('games.comment-points');
+    Route::post('games/{game}/finish-awarding-points', [CommentController::class, 'finishAwarding'])->name('games.finish-awarding-points');
 });
 
 require __DIR__.'/auth.php';
