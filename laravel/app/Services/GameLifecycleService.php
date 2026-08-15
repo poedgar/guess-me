@@ -77,4 +77,45 @@ class GameLifecycleService
             $game->update(['status' => 'active']);
         });
     }
+
+    public function startNextRound(Game $game): void
+    {
+        DB::transaction(function () use ($game) {
+            $usedTargetIds = $game->rounds()->pluck('target_user_id')->all();
+
+            $eligible = $game->participants()
+                ->whereNotIn('user_id', $usedTargetIds)
+                ->when(! $game->admin_writes_comments, fn ($q) => $q->where('user_id', '!=', $game->admin_id))
+                ->orderBy('joined_at')
+                ->get();
+
+            if ($eligible->isEmpty()) {
+                $game->update(['status' => 'finished']);
+
+                return;
+            }
+
+            $target = $game->target_selection_mode === 'chronological'
+                ? $eligible->first()
+                : $eligible->random();
+
+            $scoresSnapshot = $game->scores()->get()->mapWithKeys(fn ($s) => [(string) $s->user_id => $s->points])->all();
+            $guessResultsSnapshot = $game->guessResults()->get()->mapWithKeys(fn ($r) => [(string) $r->user_id => $r->correct_guesses])->all();
+
+            Round::create([
+                'game_id' => $game->id,
+                'round_number' => $game->rounds()->count() + 1,
+                'target_user_id' => $target->user_id,
+                'started_at' => now(),
+                'start_scores_snapshot' => $scoresSnapshot,
+                'start_guess_results_snapshot' => $guessResultsSnapshot,
+            ]);
+
+            $game->update([
+                'post_guessing_point_phase' => false,
+                'players_who_awarded_post_guess_points' => [],
+                'players_who_completed_post_comment_phase' => [],
+            ]);
+        });
+    }
 }

@@ -23,4 +23,14 @@ class RoundController extends Controller
 
         return redirect("/games/{$game->id}");
     }
+
+    public function next(Game $game): RedirectResponse
+    {
+        $this->authorize('manage', $game);
+
+        app(\App\Services\GameLifecycleService::class)->startNextRound($game);
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
 }
