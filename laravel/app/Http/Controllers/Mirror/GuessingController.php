@@ -22,4 +22,27 @@ class GuessingController extends Controller
 
         return redirect("/games/{$game->id}");
     }
+
+    public function submitGuess(\Illuminate\Http\Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+        $validated = $request->validate([
+            'comment_id' => ['required', 'integer'],
+            'guessed_author_id' => ['required', 'integer'],
+        ]);
+
+        $round = $game->rounds()->latest('round_number')->firstOrFail();
+        $comment = \App\Models\Comment::where('round_id', $round->id)->findOrFail($validated['comment_id']);
+        $guessedAuthor = \App\Models\User::findOrFail($validated['guessed_author_id']);
+
+        try {
+            $this->guessing->submitGuess($round, $request->user(), $comment, $guessedAuthor);
+        } catch (\RuntimeException $e) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['guess' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
 }
