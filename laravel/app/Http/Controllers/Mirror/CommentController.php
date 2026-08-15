@@ -64,4 +64,37 @@ class CommentController extends Controller
 
         return redirect("/games/{$game->id}");
     }
+
+    public function giveTargetPoints(Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+        $validated = $request->validate(['points' => ['sometimes', 'integer', 'min:1']]);
+        $round = $game->rounds()->latest('round_number')->firstOrFail();
+
+        try {
+            $this->comments->givePointsToTarget($round, $request->user(), $validated['points'] ?? 1);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['points' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+
+    public function skipPostCommentPhase(Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+        $round = $game->rounds()->latest('round_number')->firstOrFail();
+
+        try {
+            $this->comments->skipPostCommentPhase($round, $request->user());
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['phase' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
 }

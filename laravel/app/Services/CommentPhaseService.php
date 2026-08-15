@@ -64,4 +64,51 @@ class CommentPhaseService
 
         $round->update(['points_given' => true]);
     }
+
+    public function givePointsToTarget(Round $round, User $giver, int $points = 1): void
+    {
+        $alreadyGiven = in_array((string) $giver->id, $round->target_points_given_by ?? [], true);
+        if ($alreadyGiven) {
+            throw new RuntimeException('You already gave points to this target this round');
+        }
+
+        DB::transaction(function () use ($round, $giver, $points) {
+            $round->update([
+                'target_points' => $round->target_points + $points,
+                'target_points_given_by' => [...($round->target_points_given_by ?? []), (string) $giver->id],
+                'target_points_by_player' => [
+                    ...($round->target_points_by_player ?? []),
+                    (string) $giver->id => $points,
+                ],
+            ]);
+
+            GameScore::incrementFor($round->game, $round->target, $points);
+
+            $game = $round->game;
+            $completed = $game->players_who_completed_post_comment_phase ?? [];
+            if (! in_array((string) $giver->id, $completed, true)) {
+                $game->update(['players_who_completed_post_comment_phase' => [...$completed, (string) $giver->id]]);
+            }
+        });
+    }
+
+    public function skipPostCommentPhase(Round $round, User $skipper): void
+    {
+        if (! $round->points_given) {
+            throw new RuntimeException('Target has not finished giving points yet');
+        }
+
+        $game = $round->game;
+        $completed = $game->players_who_completed_post_comment_phase ?? [];
+
+        if (in_array((string) $skipper->id, $completed, true)) {
+            throw new RuntimeException('You have already completed this phase');
+        }
+
+        if ($skipper->id === $round->target_user_id) {
+            throw new RuntimeException('Target cannot skip this phase');
+        }
+
+        $game->update(['players_who_completed_post_comment_phase' => [...$completed, (string) $skipper->id]]);
+    }
 }
