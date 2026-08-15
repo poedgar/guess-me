@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\Mirror\CommentController;
+use App\Http\Controllers\Mirror\GuessingController;
 use App\Http\Controllers\Mirror\RoundController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
@@ -36,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::post('games/{game}/finish-awarding-points', [CommentController::class, 'finishAwarding'])->name('games.finish-awarding-points');
     Route::post('games/{game}/target-points', [CommentController::class, 'giveTargetPoints'])->name('games.target-points');
     Route::post('games/{game}/skip-post-comment-phase', [CommentController::class, 'skipPostCommentPhase'])->name('games.skip-post-comment-phase');
+    Route::post('games/{game}/start-guessing', [GuessingController::class, 'start'])->name('games.start-guessing');
 });
 
 require __DIR__.'/auth.php';
