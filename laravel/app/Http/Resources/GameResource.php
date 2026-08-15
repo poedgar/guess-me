@@ -52,6 +52,33 @@ class GameResource extends JsonResource
             ] : null,
             'scores' => $this->scores->mapWithKeys(fn ($s) => [$s->user_id => $s->points]),
             'guessResults' => $this->guessResults->mapWithKeys(fn ($r) => [$r->user_id => $r->correct_guesses]),
+            'leaderboard' => $this->buildLeaderboard($currentRound),
         ];
+    }
+
+    private function buildLeaderboard($currentRound)
+    {
+        $liveScores = $this->scores->mapWithKeys(fn ($s) => [(string) $s->user_id => $s->points]);
+        $liveGuessResults = $this->guessResults->mapWithKeys(fn ($r) => [(string) $r->user_id => $r->correct_guesses]);
+
+        $displayedScores = $this->status === 'finished'
+            ? $liveScores
+            : collect($currentRound?->start_scores_snapshot ?? $liveScores->all());
+        $displayedGuessResults = $this->status === 'finished'
+            ? $liveGuessResults
+            : collect($currentRound?->start_guess_results_snapshot ?? $liveGuessResults->all());
+
+        return $this->participants->map(function ($p) use ($displayedScores, $displayedGuessResults) {
+            $gamePoints = (int) ($displayedScores[(string) $p->user_id] ?? 0);
+            $guessPoints = (int) ($displayedGuessResults[(string) $p->user_id] ?? 0);
+
+            return [
+                'userId' => $p->user_id,
+                'name' => $p->user->name,
+                'gamePoints' => $gamePoints,
+                'guessPoints' => $guessPoints,
+                'totalPoints' => $gamePoints + $guessPoints,
+            ];
+        })->sortByDesc('totalPoints')->values();
     }
 }
