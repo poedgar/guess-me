@@ -86,4 +86,15 @@ class GuessingController extends Controller
 
         return redirect("/games/{$game->id}");
     }
+
+    public function finalize(Game $game): RedirectResponse
+    {
+        $this->authorize('manage', $game);
+
+        $round = $game->rounds()->latest('round_number')->firstOrFail();
+        $this->guessing->finalizeGuessingPhase($game, $round);
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
 }

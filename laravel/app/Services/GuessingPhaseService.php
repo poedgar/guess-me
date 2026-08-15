@@ -181,4 +181,12 @@ class GuessingPhaseService
             ]);
         });
     }
+
+    public function finalizeGuessingPhase(Game $game, Round $round): void
+    {
+        DB::transaction(function () use ($game, $round) {
+            $round->update(['guesses_finalized' => true, 'single_round_guessing_active' => false]);
+            $game->update(['status' => 'active']);
+        });
+    }
 }
