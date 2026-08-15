@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Comment;
 use App\Models\Game;
+use App\Models\GameGuessResult;
 use App\Models\Guess;
 use App\Models\Round;
 use App\Models\User;
@@ -92,6 +93,45 @@ class GuessingPhaseService
             }
 
             return $guess;
+        });
+    }
+
+    public function markPlayerGuessesSubmitted(Game $game, Round $round, User $caller, ?User $player = null): void
+    {
+        $player ??= $caller;
+
+        if ($player->id !== $caller->id && $caller->id !== $game->admin_id) {
+            throw new RuntimeException('Only the admin can mark another player as submitted');
+        }
+
+        DB::transaction(function () use ($game, $round, $player) {
+            $submitted = $round->guessing_players_submitted ?? [];
+            if (! in_array((string) $player->id, $submitted, true)) {
+                $submitted[] = (string) $player->id;
+            }
+
+            $allSubmitted = count($submitted) >= 1; // exactly one guesser (the round's target) in per-round guessing
+
+            $round->update([
+                'guessing_players_submitted' => $submitted,
+                'guessing_all_submitted' => $allSubmitted,
+            ]);
+
+            $roundIds = $game->rounds()->pluck('id');
+            $correctGuessCount = Guess::whereIn('round_id', $roundIds)
+                ->where('guesser_id', $player->id)
+                ->where('correct', true)
+                ->count();
+
+            $resultRow = GameGuessResult::firstOrCreate(
+                ['game_id' => $game->id, 'user_id' => $player->id],
+                ['correct_guesses' => 0],
+            );
+            $resultRow->update(['correct_guesses' => $correctGuessCount]);
+
+            if ($allSubmitted) {
+                $game->update(['post_guessing_point_phase' => true, 'players_who_awarded_post_guess_points' => []]);
+            }
         });
     }
 }

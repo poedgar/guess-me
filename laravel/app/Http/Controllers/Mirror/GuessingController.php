@@ -45,4 +45,23 @@ class GuessingController extends Controller
 
         return redirect("/games/{$game->id}");
     }
+
+    public function markSubmitted(\Illuminate\Http\Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+        $validated = $request->validate(['player_id' => ['sometimes', 'integer']]);
+
+        $round = $game->rounds()->latest('round_number')->firstOrFail();
+        $player = isset($validated['player_id']) ? \App\Models\User::findOrFail($validated['player_id']) : null;
+
+        try {
+            $this->guessing->markPlayerGuessesSubmitted($game, $round, $request->user(), $player);
+        } catch (\RuntimeException $e) {
+            abort(403, $e->getMessage());
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
 }

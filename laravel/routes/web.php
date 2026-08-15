@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
     Route::post('games/{game}/skip-post-comment-phase', [CommentController::class, 'skipPostCommentPhase'])->name('games.skip-post-comment-phase');
     Route::post('games/{game}/start-guessing', [GuessingController::class, 'start'])->name('games.start-guessing');
     Route::post('games/{game}/guesses', [GuessingController::class, 'submitGuess'])->name('games.guesses.store');
+    Route::post('games/{game}/mark-guesses-submitted', [GuessingController::class, 'markSubmitted'])->name('games.mark-guesses-submitted');
 });
 
 require __DIR__.'/auth.php';
