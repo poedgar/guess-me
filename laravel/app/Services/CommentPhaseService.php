@@ -36,4 +36,9 @@ class CommentPhaseService
             ]);
         });
     }
+
+    public function showComments(Round $round): void
+    {
+        $round->update(['comments_visible' => true]);
+    }
 }
