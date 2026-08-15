@@ -28,4 +28,9 @@ class GameUpdated implements ShouldBroadcast
     {
         return ['gameId' => $this->gameId];
     }
+
+    public function broadcastAs(): string
+    {
+        return 'GameUpdated';
+    }
 }
