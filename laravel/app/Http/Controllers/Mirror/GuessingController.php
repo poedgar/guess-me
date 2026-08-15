@@ -17,7 +17,12 @@ class GuessingController extends Controller
     {
         $this->authorize('manage', $game);
 
-        $this->guessing->startGuessingPhase($game);
+        try {
+            $this->guessing->startGuessingPhase($game);
+        } catch (\RuntimeException $e) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['game' => $e->getMessage()]);
+        }
+
         broadcast(new \App\Events\GameUpdated($game->id));
 
         return redirect("/games/{$game->id}");
@@ -92,7 +97,13 @@ class GuessingController extends Controller
         $this->authorize('manage', $game);
 
         $round = $game->rounds()->latest('round_number')->firstOrFail();
-        $this->guessing->finalizeGuessingPhase($game, $round);
+
+        try {
+            $this->guessing->finalizeGuessingPhase($game, $round);
+        } catch (\RuntimeException $e) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['game' => $e->getMessage()]);
+        }
+
         broadcast(new \App\Events\GameUpdated($game->id));
 
         return redirect("/games/{$game->id}");

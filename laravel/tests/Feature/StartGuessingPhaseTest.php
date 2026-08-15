@@ -41,6 +41,15 @@ test('starting the guessing phase requires comments to be visible and points to 
         ->toThrow(RuntimeException::class, 'Cannot start the guessing phase until comments have been shown and points have been awarded.');
 });
 
+test('POST /games/{game}/start-guessing returns a validation error, not a 500, when players have not completed the post-comment phase', function () {
+    ['game' => $game, 'admin' => $admin] = makeRoundReadyForGuessing();
+
+    $response = $this->actingAs($admin)->post("/games/{$game->id}/start-guessing");
+
+    $response->assertInvalid(['game']);
+    expect($game->fresh()->status)->toBe('active');
+});
+
 test('starting the guessing phase succeeds once all non-target participants have completed the post-comment phase', function () {
     ['game' => $game, 'author' => $author, 'round' => $round] = makeRoundReadyForGuessing();
     $game->update(['players_who_completed_post_comment_phase' => [(string) $author->id]]);
