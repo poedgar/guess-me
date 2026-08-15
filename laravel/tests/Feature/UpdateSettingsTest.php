@@ -38,6 +38,17 @@ test('only the admin can update settings', function () {
         ->toThrow(RuntimeException::class, 'Only the admin can update this setting');
 });
 
+test('POST settings route rejects an invalid target selection mode value', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'waiting']);
+    \App\Models\GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+
+    $response = $this->actingAs($admin)->post("/games/{$game->id}/settings/target-selection-mode", ['value' => 'nonsense']);
+
+    $response->assertInvalid(['value']);
+    expect($game->fresh()->target_selection_mode)->not->toBe('nonsense');
+});
+
 test('POST settings route updates target selection mode', function () {
     $admin = User::factory()->create();
     $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'waiting']);

@@ -26,7 +26,17 @@ class SettingsController extends Controller
 
     public function targetSelectionMode(Request $request, Game $game): RedirectResponse
     {
-        return $this->apply($request, $game, 'value', fn ($v) => $this->settings->updateTargetSelectionMode($game, $request->user(), $v));
+        $validated = $request->validate(['value' => ['required', \Illuminate\Validation\Rule::in(['random', 'chronological'])]]);
+
+        try {
+            $this->settings->updateTargetSelectionMode($game, $request->user(), $validated['value']);
+        } catch (\RuntimeException $e) {
+            abort(403, $e->getMessage());
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
     }
 
     public function showGuessResults(Request $request, Game $game): RedirectResponse
