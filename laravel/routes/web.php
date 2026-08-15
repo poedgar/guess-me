@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::post('games/join', [GameController::class, 'join'])->name('games.join');
     Route::get('games/{game}', [GameController::class, 'show'])->name('games.show');
     Route::post('games/{game}/start', [GameController::class, 'start'])->name('games.start');
+    Route::post('games/{game}/leave', [GameController::class, 'leave'])->name('games.leave');
     Route::post('games/{game}/comments', [CommentController::class, 'store'])->name('games.comments.store');
     Route::post('games/{game}/show-comments', [RoundController::class, 'showComments'])->name('games.show-comments');
     Route::post('games/{game}/next-round', [RoundController::class, 'next'])->name('games.next-round');

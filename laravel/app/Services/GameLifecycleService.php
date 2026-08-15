@@ -118,4 +118,20 @@ class GameLifecycleService
             ]);
         });
     }
+
+    public function leaveGame(Game $game, User $user): void
+    {
+        DB::transaction(function () use ($game, $user) {
+            $game->participants()->where('user_id', $user->id)->delete();
+
+            if ($game->admin_id === $user->id) {
+                $game->update([
+                    'status' => 'finished',
+                    'admin_left' => true,
+                    'admin_next_target_preference' => null,
+                    'players_who_completed_post_comment_phase' => [],
+                ]);
+            }
+        });
+    }
 }

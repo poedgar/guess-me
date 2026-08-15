@@ -53,6 +53,16 @@ class GameController extends Controller
         return redirect("/games/{$game->id}");
     }
 
+    public function leave(Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+
+        $this->lifecycle->leaveGame($game, $request->user());
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect('/dashboard');
+    }
+
     public function join(Request $request): RedirectResponse
     {
         $validated = $request->validate(['code' => ['required', 'string']]);
