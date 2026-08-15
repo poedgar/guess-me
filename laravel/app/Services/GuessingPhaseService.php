@@ -12,6 +12,10 @@ class GuessingPhaseService
     {
         $round = $game->rounds()->latest('round_number')->firstOrFail();
 
+        if (! $round->comments_visible || ! $round->points_given) {
+            throw new RuntimeException('Cannot start the guessing phase until comments have been shown and points have been awarded.');
+        }
+
         $nonTargetParticipants = $game->participants()
             ->where('user_id', '!=', $round->target_user_id)
             ->when(! $game->admin_writes_comments, fn ($q) => $q->where('user_id', '!=', $game->admin_id))

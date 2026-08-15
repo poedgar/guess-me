@@ -32,6 +32,15 @@ test('starting the guessing phase requires all non-target participants to have c
         ->toThrow(RuntimeException::class, 'Cannot start guessing phase. Waiting for 1 player(s) to complete the post-comment phase.');
 });
 
+test('starting the guessing phase requires comments to be visible and points to have been given', function () {
+    ['game' => $game, 'author' => $author, 'round' => $round] = makeRoundReadyForGuessing();
+    $game->update(['players_who_completed_post_comment_phase' => [(string) $author->id]]);
+    $round->update(['comments_visible' => false]);
+
+    expect(fn () => app(GuessingPhaseService::class)->startGuessingPhase($game->fresh()))
+        ->toThrow(RuntimeException::class, 'Cannot start the guessing phase until comments have been shown and points have been awarded.');
+});
+
 test('starting the guessing phase succeeds once all non-target participants have completed the post-comment phase', function () {
     ['game' => $game, 'author' => $author, 'round' => $round] = makeRoundReadyForGuessing();
     $game->update(['players_who_completed_post_comment_phase' => [(string) $author->id]]);
