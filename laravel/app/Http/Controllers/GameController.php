@@ -20,11 +20,21 @@ class GameController extends Controller
     {
         $this->authorize('view', $game);
 
-        $game->load(['participants.user', 'scores', 'guessResults']);
+        $game->load(['participants.user', 'scores', 'guessResults', 'rounds.comments', 'rounds.target']);
 
         return inertia('Game/Show', [
             'game' => new GameResource($game),
         ]);
+    }
+
+    public function start(Game $game): RedirectResponse
+    {
+        $this->authorize('manage', $game);
+
+        $this->lifecycle->startGame($game);
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
     }
 
     public function store(Request $request): RedirectResponse

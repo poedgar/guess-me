@@ -11,4 +11,9 @@ class GamePolicy
     {
         return $game->admin_id === $user->id || $game->participants()->where('user_id', $user->id)->exists();
     }
+
+    public function manage(User $user, Game $game): bool
+    {
+        return $game->admin_id === $user->id;
+    }
 }
