@@ -6,7 +6,7 @@ use App\Support\GameCodeGenerator;
 test('generateUnique returns a lowercase two-word code', function () {
     $code = (new GameCodeGenerator())->generateUnique();
 
-    expect($code)->toMatch('/^[a-zа-яїієґ\'-]+ [a-zа-яїієґ\'-]+$/u');
+    expect($code)->toMatch('/^[a-zа-яїієґ\'ʼ-]+ [a-zа-яїієґ\'ʼ-]+$/u');
 });
 
 test('generateUnique retries when the first code is already taken', function () {
