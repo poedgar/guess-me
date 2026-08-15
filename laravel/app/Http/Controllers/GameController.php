@@ -73,6 +73,8 @@ class GameController extends Controller
             throw ValidationException::withMessages(['code' => 'No game found with that code.']);
         }
 
+        broadcast(new \App\Events\GameUpdated($game->id));
+
         return redirect("/games/{$game->id}");
     }
 }
