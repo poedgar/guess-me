@@ -23,7 +23,12 @@ class GameScore extends Model
 
     public static function incrementFor(Game $game, User $user, int $by): void
     {
-        $row = static::firstOrCreate(['game_id' => $game->id, 'user_id' => $user->id], ['points' => 0]);
+        try {
+            $row = static::firstOrCreate(['game_id' => $game->id, 'user_id' => $user->id], ['points' => 0]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Lost the create race to a concurrent request — the row exists now, fetch it.
+            $row = static::where(['game_id' => $game->id, 'user_id' => $user->id])->firstOrFail();
+        }
         $row->increment('points', $by);
     }
 }
