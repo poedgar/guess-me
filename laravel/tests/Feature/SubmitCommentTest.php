@@ -59,6 +59,14 @@ test('a second comment from the same author in the same round is rejected', func
         ->toThrow(RuntimeException::class, 'You have already submitted a comment for this round');
 });
 
+test('a comment cannot be submitted once comments have already been made visible for the round', function () {
+    ['author' => $author, 'round' => $round] = makeActiveGame();
+    $round->update(['comments_visible' => true]);
+
+    expect(fn () => app(CommentPhaseService::class)->submitComment($round->fresh(), $author, 'Too late'))
+        ->toThrow(RuntimeException::class, 'Comments are already visible for this round');
+});
+
 test('POST comments route stores a comment for the current round', function () {
     ['game' => $game, 'author' => $author, 'round' => $round] = makeActiveGame();
 

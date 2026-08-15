@@ -51,6 +51,10 @@ class GameLifecycleService
 
     public function startGame(Game $game): void
     {
+        if ($game->status !== 'waiting') {
+            throw new \RuntimeException('The game has already started');
+        }
+
         $participants = $game->participants()->orderBy('joined_at')->orderBy('id')->get();
 
         if ($participants->count() < 2) {

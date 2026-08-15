@@ -31,7 +31,12 @@ class GameController extends Controller
     {
         $this->authorize('manage', $game);
 
-        $this->lifecycle->startGame($game);
+        try {
+            $this->lifecycle->startGame($game);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['participants' => $e->getMessage()]);
+        }
+
         broadcast(new \App\Events\GameUpdated($game->id));
 
         return redirect("/games/{$game->id}");

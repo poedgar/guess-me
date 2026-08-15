@@ -39,6 +39,39 @@ test('starting a game with fewer than 2 participants throws', function () {
         ->toThrow(RuntimeException::class, 'Need at least 2 participants to start the game');
 });
 
+test('starting a game that has already started throws', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'active']);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+    $other = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $other->id]);
+
+    expect(fn () => app(GameLifecycleService::class)->startGame($game->fresh()))
+        ->toThrow(RuntimeException::class, 'The game has already started');
+});
+
+test('POST /games/{game}/start on an already-started game returns a validation error, not a 500', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'active']);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+
+    $response = $this->actingAs($admin)->post("/games/{$game->id}/start");
+
+    $response->assertInvalid(['participants']);
+    expect($game->fresh()->status)->toBe('active');
+});
+
+test('POST /games/{game}/start with fewer than 2 participants returns a validation error, not a 500', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id]);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+
+    $response = $this->actingAs($admin)->post("/games/{$game->id}/start");
+
+    $response->assertInvalid(['participants']);
+    expect($game->fresh()->status)->toBe('waiting');
+});
+
 test('POST /games/{game}/start is admin-only', function () {
     $admin = User::factory()->create();
     $game = Game::factory()->create(['admin_id' => $admin->id]);

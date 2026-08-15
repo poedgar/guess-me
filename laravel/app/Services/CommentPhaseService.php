@@ -17,6 +17,10 @@ class CommentPhaseService
             throw new RuntimeException('You cannot comment about yourself');
         }
 
+        if ($round->comments_visible) {
+            throw new RuntimeException('Comments are already visible for this round');
+        }
+
         $trimmed = trim($text);
         if ($trimmed === '') {
             throw new RuntimeException('Comment cannot be empty');
@@ -71,6 +75,10 @@ class CommentPhaseService
 
     public function givePointsToTarget(Round $round, User $giver, int $points = 1): void
     {
+        if (! $round->points_given) {
+            throw new RuntimeException('Target has not finished giving points yet');
+        }
+
         $alreadyGiven = in_array((string) $giver->id, $round->target_points_given_by ?? [], true);
         if ($alreadyGiven) {
             throw new RuntimeException('You already gave points to this target this round');
