@@ -64,4 +64,26 @@ class GuessingController extends Controller
 
         return redirect("/games/{$game->id}");
     }
+
+    public function awardPoints(\Illuminate\Http\Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+        $validated = $request->validate([
+            'awards' => ['required', 'array', 'min:1'],
+            'awards.*.recipientId' => ['required', 'integer'],
+            'awards.*.points' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $round = $game->rounds()->latest('round_number')->firstOrFail();
+
+        try {
+            $this->guessing->awardPointsToPlayers($game, $round, $request->user(), $validated['awards']);
+        } catch (\RuntimeException $e) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['awards' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
 }

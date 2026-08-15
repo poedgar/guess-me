@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Comment;
 use App\Models\Game;
 use App\Models\GameGuessResult;
+use App\Models\GameScore;
 use App\Models\Guess;
 use App\Models\Round;
 use App\Models\User;
@@ -132,6 +133,52 @@ class GuessingPhaseService
             if ($allSubmitted) {
                 $game->update(['post_guessing_point_phase' => true, 'players_who_awarded_post_guess_points' => []]);
             }
+        });
+    }
+
+    public function awardPointsToPlayers(Game $game, Round $round, User $awarder, array $awards): void
+    {
+        if (! $game->post_guessing_point_phase) {
+            throw new RuntimeException('Post-guessing point phase is not active');
+        }
+
+        $alreadyAwarded = $game->players_who_awarded_post_guess_points ?? [];
+        if (in_array((string) $awarder->id, $alreadyAwarded, true)) {
+            throw new RuntimeException('You have already awarded points in this phase');
+        }
+
+        if (count($awards) === 0) {
+            throw new RuntimeException('No awards specified');
+        }
+
+        foreach ($awards as $award) {
+            if ((int) $award['recipientId'] === $awarder->id) {
+                throw new RuntimeException('You cannot award points to yourself');
+            }
+        }
+
+        DB::transaction(function () use ($game, $round, $awarder, $awards, $alreadyAwarded) {
+            foreach ($awards as $award) {
+                $recipient = User::findOrFail($award['recipientId']);
+                GameScore::incrementFor($game, $recipient, (int) $award['points']);
+            }
+
+            $history = $game->admin_awards ?? [];
+            $history[(string) $awarder->id] = [
+                ...($history[(string) $awarder->id] ?? []),
+                ...array_map(fn ($award) => [
+                    'recipientId' => (string) $award['recipientId'],
+                    'points' => (int) $award['points'],
+                    'awardedBy' => (string) $awarder->id,
+                    'awardedAt' => now()->toIso8601String(),
+                    'roundNumber' => $round->round_number,
+                ], $awards),
+            ];
+
+            $game->update([
+                'players_who_awarded_post_guess_points' => [...$alreadyAwarded, (string) $awarder->id],
+                'admin_awards' => $history,
+            ]);
         });
     }
 }
