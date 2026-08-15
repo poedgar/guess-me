@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\Mirror\CommentController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::post('games/join', [GameController::class, 'join'])->name('games.join');
     Route::get('games/{game}', [GameController::class, 'show'])->name('games.show');
     Route::post('games/{game}/start', [GameController::class, 'start'])->name('games.start');
+    Route::post('games/{game}/comments', [CommentController::class, 'store'])->name('games.comments.store');
 });
 
 require __DIR__.'/auth.php';
