@@ -4,6 +4,7 @@ use App\Http\Controllers\GameController;
 use App\Http\Controllers\Mirror\CommentController;
 use App\Http\Controllers\Mirror\GuessingController;
 use App\Http\Controllers\Mirror\RoundController;
+use App\Http\Controllers\Mirror\SettingsController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +45,10 @@ Route::middleware('auth')->group(function () {
     Route::post('games/{game}/mark-guesses-submitted', [GuessingController::class, 'markSubmitted'])->name('games.mark-guesses-submitted');
     Route::post('games/{game}/post-guessing-awards', [GuessingController::class, 'awardPoints'])->name('games.post-guessing-awards');
     Route::post('games/{game}/finalize-guessing', [GuessingController::class, 'finalize'])->name('games.finalize-guessing');
+    Route::post('games/{game}/settings/admin-writes-comments', [SettingsController::class, 'adminWritesComments'])->name('games.settings.admin-writes-comments');
+    Route::post('games/{game}/settings/show-surnames', [SettingsController::class, 'showSurnames'])->name('games.settings.show-surnames');
+    Route::post('games/{game}/settings/target-selection-mode', [SettingsController::class, 'targetSelectionMode'])->name('games.settings.target-selection-mode');
+    Route::post('games/{game}/settings/show-guess-results', [SettingsController::class, 'showGuessResults'])->name('games.settings.show-guess-results');
 });
 
 require __DIR__.'/auth.php';
