@@ -131,6 +131,10 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
             </form>
         </template>
 
+        <template v-else-if="myComment && !round.commentsVisible">
+            <p class="text-sm text-green-700">{{ $t('game.commentSentWaitingShow') }}</p>
+        </template>
+
         <template v-else-if="round.pointsGiven && !iAlreadyCompletedPostComment">
             <h2 class="font-semibold">{{ $t('game.awardPointsToTarget') }}</h2>
             <div class="flex items-center gap-2">
@@ -144,12 +148,12 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
             </div>
         </template>
 
-        <template v-else-if="round.pointsGiven && iAlreadyCompletedPostComment && !myComment">
-            <p class="text-sm text-green-700">{{ $t('game.commentSentWaitingShow') }}</p>
+        <template v-else-if="round.pointsGiven && iAlreadyCompletedPostComment">
+            <p class="text-sm text-gray-500">{{ $t('game.waitingForAllPlayers') }}</p>
         </template>
 
-        <template v-else-if="myComment && round.pointsGiven">
-            <p class="text-sm text-gray-500">{{ $t('game.waitingForAllPlayers') }}</p>
+        <template v-else>
+            <p class="text-sm text-gray-500">{{ $t('game.waitingForTargetPoints') }}</p>
         </template>
 
         <button
