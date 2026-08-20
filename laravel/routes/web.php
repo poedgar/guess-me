@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\Mirror\CommentController;
 use App\Http\Controllers\Mirror\GuessingController;
 use App\Http\Controllers\Mirror\RoundController;
@@ -24,6 +25,8 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('rules', fn () => Inertia::render('Rules'))->name('rules');
+
+Route::post('locale', [LocaleController::class, 'update'])->name('locale.update');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

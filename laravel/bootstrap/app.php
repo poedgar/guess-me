@@ -13,7 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // SetLocale must run before HandleInertiaRequests: Inertia's middleware
+        // shares props (including `locale`) synchronously in its own "before"
+        // phase, so the locale needs to already be resolved by that point.
+        // It still runs after the framework's default web group (StartSession,
+        // auth.session, ...), since `append` is added after those.
         $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
