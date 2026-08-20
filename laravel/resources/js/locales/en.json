@@ -22,6 +22,7 @@
     },
     "game": {
         "waiting": "Waiting for Players",
+        "waitingForAdminStart": "Waiting for the admin to start the game...",
         "youAreAdmin": "You are admin",
         "adminSettings": "Admin Settings",
         "startGame": "Start Game",
