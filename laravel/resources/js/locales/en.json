@@ -55,6 +55,7 @@
         "waitingForAllPlayers": "Waiting for all players to submit their responses...",
         "waitingForTargetPoints": "Waiting for target to award points to comments...",
         "waitingForAdminToStartGuessing": "Waiting for the admin to start the guessing phase for your round.",
+        "waitingForTargetGuesses": "Waiting for target to guess the authors...",
         "postGuessingStartPhaseDesc": "Target has submitted guesses. Start the point awarding phase to award points.",
         "postGuessingAlreadyAwarded": "You have already awarded points in this phase.",
         "finalizeGuessing": "Finalize & Show Results",

@@ -55,6 +55,7 @@
         "waitingForAllPlayers": "Чекаємо, поки всі гравці надішлють відповіді...",
         "waitingForTargetPoints": "Очікування на нарахування балів цільовим гравцем...",
         "waitingForAdminToStartGuessing": "Очікування, поки адміністратор розпочне фазу вгадування для вашого раунду.",
+        "waitingForTargetGuesses": "Очікування на вгадування цільового гравця...",
         "postGuessingStartPhaseDesc": "Ціль надіслала відповіді. Розпочніть фазу нарахування балів.",
         "postGuessingAlreadyAwarded": "Ви вже нарахували бали в цій фазі.",
         "finalizeGuessing": "Завершити і показати результати",

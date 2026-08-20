@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import Waiting from './Mirror/Waiting.vue';
 import Active from './Mirror/Active.vue';
+import Guessing from './Mirror/Guessing.vue';
 import Results from './Mirror/Results.vue';
 
 const props = defineProps({ game: Object });
@@ -12,7 +13,7 @@ const phaseComponent = computed(() => {
     if (props.game.status === 'active') {
         return props.game.currentRound?.guessesFinalized ? Results : Active;
     }
-    if (props.game.status === 'guessing_phase') return Results; // replaced with Guessing in Task 11
+    if (props.game.status === 'guessing_phase') return Guessing;
     return Waiting;
 });
 
