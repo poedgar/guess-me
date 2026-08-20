@@ -1,5 +1,6 @@
 <script setup>
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import LocaleSwitcher from '@/Components/LocaleSwitcher.vue';
 import { Link } from '@inertiajs/vue3';
 </script>
 
@@ -12,6 +13,8 @@ import { Link } from '@inertiajs/vue3';
                 <ApplicationLogo class="h-20 w-20 fill-current text-gray-500" />
             </Link>
         </div>
+
+        <LocaleSwitcher class="mb-4" />
 
         <div
             class="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg"
