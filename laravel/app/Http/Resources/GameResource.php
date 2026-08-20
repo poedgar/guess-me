@@ -47,7 +47,11 @@ class GameResource extends JsonResource
                 'targetCorrectGuesses' => $currentRound->target_correct_guesses,
                 'comments' => $currentRound->comments()->with('author')->get()->map(fn ($c) => [
                     'id' => $c->id,
-                    'authorId' => ($currentRound->comments_visible || $c->author_id === $userId) ? $c->author_id : null,
+                    // Gated on guesses_finalized, not comments_visible: comments_visible flips
+                    // true as soon as the admin reveals comments (still in the comment-writing
+                    // phase) and stays true throughout guessing_phase. Using it here would hand
+                    // the target the answer key while they're actively guessing authorship.
+                    'authorId' => ($currentRound->guesses_finalized || $c->author_id === $userId || $this->admin_id === $userId) ? $c->author_id : null,
                     'text' => ($currentRound->comments_visible || $c->author_id === $userId || $this->admin_id === $userId) ? $c->text : null,
                     'points' => $c->points,
                 ]),
@@ -55,8 +59,17 @@ class GameResource extends JsonResource
                 'guesses' => $currentRound->guesses->map(fn ($g) => [
                     'commentId' => $g->comment_id,
                     'guesserId' => $g->guesser_id,
-                    'guessedAuthorId' => $g->guessed_author_id,
-                    'correct' => $g->correct,
+                    // The guesser sees their own submitted guesses (Guessing.vue's "already
+                    // guessed this comment" check needs it); the admin sees everything. Nobody
+                    // else sees anyone's guessedAuthorId before finalization, since only the
+                    // target guesses in this mode and other participants have no legitimate
+                    // reason to see the target's in-progress guesses.
+                    'guessedAuthorId' => ($currentRound->guesses_finalized || $g->guesser_id === $userId || $this->admin_id === $userId) ? $g->guessed_author_id : null,
+                    // `correct` is withheld from the guesser too (not just other participants)
+                    // until finalization: telling the target whether an early guess was right
+                    // is itself a spoiler for their remaining guesses via elimination. The admin
+                    // is exempt, consistent with the admin exception on `text` above.
+                    'correct' => ($currentRound->guesses_finalized || $this->admin_id === $userId) ? $g->correct : null,
                 ]),
                 'targetPointsGivenBy' => $currentRound->target_points_given_by ?? [],
                 'guessingAllSubmitted' => $currentRound->guessing_all_submitted,
