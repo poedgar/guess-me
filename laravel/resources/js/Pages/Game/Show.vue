@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Waiting from './Mirror/Waiting.vue';
 import Active from './Mirror/Active.vue';
 import Guessing from './Mirror/Guessing.vue';
@@ -29,5 +30,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <component :is="phaseComponent" :game="game" />
+    <AuthenticatedLayout>
+        <component :is="phaseComponent" :game="game" />
+    </AuthenticatedLayout>
 </template>
