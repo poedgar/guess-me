@@ -37,9 +37,22 @@ const submit = () => {
             {{ status }}
         </div>
 
+        <a
+            :href="route('auth.google.redirect')"
+            class="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        >
+            {{ $t('auth.signInWithGoogle') }}
+        </a>
+
+        <div class="my-4 flex items-center gap-3 text-xs text-gray-400">
+            <div class="h-px flex-1 bg-gray-200" />
+            {{ $t('auth.signIn') }}
+            <div class="h-px flex-1 bg-gray-200" />
+        </div>
+
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="$t('auth.email')" />
 
                 <TextInput
                     id="email"
@@ -55,7 +68,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" :value="$t('auth.password')" />
 
                 <TextInput
                     id="password"
@@ -72,9 +85,7 @@ const submit = () => {
             <div class="mt-4 block">
                 <label class="flex items-center">
                     <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
+                    <span class="ms-2 text-sm text-gray-600">Remember me</span>
                 </label>
             </div>
 
@@ -84,7 +95,7 @@ const submit = () => {
                     :href="route('password.request')"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
-                    Forgot your password?
+                    {{ $t('auth.forgotPassword') }}
                 </Link>
 
                 <PrimaryButton
@@ -92,8 +103,14 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Log in
+                    {{ $t('auth.signIn') }}
                 </PrimaryButton>
+            </div>
+
+            <div class="mt-4 text-sm">
+                <Link :href="route('register')" class="text-gray-600 underline">
+                    {{ $t('auth.needAccount') }}
+                </Link>
             </div>
         </form>
     </GuestLayout>
