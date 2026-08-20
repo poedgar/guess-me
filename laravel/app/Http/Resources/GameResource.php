@@ -48,7 +48,7 @@ class GameResource extends JsonResource
                 'comments' => $currentRound->comments()->with('author')->get()->map(fn ($c) => [
                     'id' => $c->id,
                     'authorId' => ($currentRound->comments_visible || $c->author_id === $userId) ? $c->author_id : null,
-                    'text' => $c->text,
+                    'text' => ($currentRound->comments_visible || $c->author_id === $userId || $this->admin_id === $userId) ? $c->text : null,
                     'points' => $c->points,
                 ]),
                 'guessingPossibleAuthors' => $currentRound->guessing_possible_authors ?? [],
