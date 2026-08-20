@@ -2,14 +2,17 @@
 import { computed, onMounted, onUnmounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import Waiting from './Mirror/Waiting.vue';
+import Active from './Mirror/Active.vue';
 import Results from './Mirror/Results.vue';
 
 const props = defineProps({ game: Object });
 
 const phaseComponent = computed(() => {
     if (props.game.status === 'finished') return Results;
-    // 'active' and 'guessing_phase' route to Active.vue / Guessing.vue, added in later tasks
-    // of this same phase (not shown here to keep this task's diff focused on the leaderboard).
+    if (props.game.status === 'active') {
+        return props.game.currentRound?.guessesFinalized ? Results : Active;
+    }
+    if (props.game.status === 'guessing_phase') return Results; // replaced with Guessing in Task 11
     return Waiting;
 });
 
