@@ -49,6 +49,7 @@ const leave = () => leaveForm.post(route('games.leave', props.game.id));
                         <span class="block text-gray-500">{{ $t('game.adminWritesCommentsDescription') }}</span>
                     </span>
                 </label>
+                <p v-if="settingsForm.errors.value" class="text-sm text-red-600">{{ settingsForm.errors.value }}</p>
 
                 <label class="mt-3 flex items-start gap-2">
                     <input
@@ -61,6 +62,7 @@ const leave = () => leaveForm.post(route('games.leave', props.game.id));
                         <span class="block text-gray-500">{{ $t('game.showSurnamesDescription') }}</span>
                     </span>
                 </label>
+                <p v-if="settingsForm.errors.value" class="text-sm text-red-600">{{ settingsForm.errors.value }}</p>
 
                 <label class="mt-3 flex items-start gap-2">
                     <input
@@ -73,6 +75,7 @@ const leave = () => leaveForm.post(route('games.leave', props.game.id));
                         <span class="block text-gray-500">{{ $t('game.showGuessResultsDescription') }}</span>
                     </span>
                 </label>
+                <p v-if="settingsForm.errors.value" class="text-sm text-red-600">{{ settingsForm.errors.value }}</p>
 
                 <div class="mt-3">
                     <span class="text-sm font-medium">{{ $t('game.targetSelectionModeTitle') }}</span>
@@ -85,6 +88,7 @@ const leave = () => leaveForm.post(route('games.leave', props.game.id));
                         <option value="random">{{ $t('game.targetSelectionRandom') }}</option>
                         <option value="chronological">{{ $t('game.targetSelectionChronological') }}</option>
                     </select>
+                    <p v-if="settingsForm.errors.value" class="text-sm text-red-600">{{ settingsForm.errors.value }}</p>
                 </div>
             </div>
 
@@ -96,6 +100,7 @@ const leave = () => leaveForm.post(route('games.leave', props.game.id));
             >
                 {{ $t('game.startGame') }}
             </button>
+            <p v-if="startForm.errors.participants" class="text-sm text-red-600">{{ startForm.errors.participants }}</p>
         </template>
         <p v-else class="text-sm text-gray-500">{{ $t('game.waitingForAdminStart') }}</p>
     </div>

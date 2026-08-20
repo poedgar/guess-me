@@ -24,7 +24,7 @@ const canShowComments = computed(
 );
 
 const pointsByComment = reactive({});
-const awardForms = {};
+const awardForms = reactive({});
 const awardPoints = (commentId) => {
     if (!awardForms[commentId]) {
         awardForms[commentId] = useForm({ points: 0 });
@@ -89,6 +89,7 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
                                 {{ comment.points !== null ? comment.points : $t('game.givePoints') }}
                             </button>
                         </div>
+                        <p v-if="awardForms[comment.id]?.errors.points" class="text-sm text-red-600">{{ awardForms[comment.id].errors.points }}</p>
                     </li>
                 </ul>
                 <button
@@ -99,6 +100,7 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
                 >
                     {{ $t('game.finishAwarding') }}
                 </button>
+                <p v-if="finishAwardingForm.errors.game" class="text-sm text-red-600">{{ finishAwardingForm.errors.game }}</p>
             </template>
 
             <p v-else class="text-sm text-gray-500">
@@ -146,6 +148,8 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
                     {{ $t('game.skip') }}
                 </button>
             </div>
+            <p v-if="targetPointsForm.errors.points" class="text-sm text-red-600">{{ targetPointsForm.errors.points }}</p>
+            <p v-if="skipForm.errors.phase" class="text-sm text-red-600">{{ skipForm.errors.phase }}</p>
         </template>
 
         <template v-else-if="round.pointsGiven && iAlreadyCompletedPostComment">

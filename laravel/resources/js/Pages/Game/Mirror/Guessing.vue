@@ -85,6 +85,7 @@ const hasAnyBonusPoints = computed(() => otherParticipants.value.some((p) => (bo
                         </div>
                     </li>
                 </ul>
+                <p v-if="guessForm.errors.guess" class="text-sm text-red-600">{{ guessForm.errors.guess }}</p>
                 <button
                     v-if="allGuessed"
                     type="button"
@@ -93,6 +94,7 @@ const hasAnyBonusPoints = computed(() => otherParticipants.value.some((p) => (bo
                 >
                     {{ $t('game.finishGuesses') }}
                 </button>
+                <p v-if="markSubmittedForm.errors.game" class="text-sm text-red-600">{{ markSubmittedForm.errors.game }}</p>
             </template>
 
             <p v-else class="text-sm text-gray-500">{{ $t('game.waitingForTargetGuesses') }}</p>
@@ -122,6 +124,7 @@ const hasAnyBonusPoints = computed(() => otherParticipants.value.some((p) => (bo
                 >
                     {{ $t('game.givePoints') }}
                 </button>
+                <p v-if="awardsForm.errors.awards" class="text-sm text-red-600">{{ awardsForm.errors.awards }}</p>
             </template>
             <p v-else class="text-sm text-gray-500">{{ $t('game.postGuessingAlreadyAwarded') }}</p>
         </template>
@@ -134,5 +137,6 @@ const hasAnyBonusPoints = computed(() => otherParticipants.value.some((p) => (bo
         >
             {{ $t('game.finalizeGuessing') }}
         </button>
+        <p v-if="finalizeForm.errors.game" class="text-sm text-red-600">{{ finalizeForm.errors.game }}</p>
     </div>
 </template>
