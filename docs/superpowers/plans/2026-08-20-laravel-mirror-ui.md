@@ -1279,6 +1279,7 @@ git commit -m "Extend GameResource with guessing and points-given tracking data"
 
 **Files:**
 - Modify: `laravel/resources/js/Pages/Game/Mirror/Waiting.vue`
+- Modify: `laravel/resources/js/locales/en.json`, `laravel/resources/js/locales/uk.json` (one new key each — see Step 3)
 - Test: `laravel/tests/Feature/WaitingPageTest.php`
 
 **Interfaces:**
