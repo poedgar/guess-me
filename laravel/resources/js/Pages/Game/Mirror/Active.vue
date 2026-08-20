@@ -23,8 +23,6 @@ const canShowComments = computed(
     () => props.game.isAdmin && round.value?.comments.length > 0 && !round.value?.commentsVisible,
 );
 
-// One local point value per comment, keyed by comment id — the award form for each
-// comment is independent (a comment can be awarded once its own points input is set).
 const pointsByComment = reactive({});
 const awardForms = {};
 const awardPoints = (commentId) => {
@@ -41,6 +39,21 @@ const finishAwarding = () => finishAwardingForm.post(route('games.finish-awardin
 const allCommentsAwarded = computed(
     () => round.value?.comments.length > 0 && round.value.comments.every((c) => c.points !== null),
 );
+
+// "Post-comment phase": once the target has finished awarding, everyone else either
+// gives the target bonus points or explicitly skips — tracked per-user so a reload
+// shows a waiting message instead of the action buttons again.
+const iAlreadyCompletedPostComment = computed(
+    () => props.game.playersWhoCompletedPostCommentPhase.includes(String(currentUserId.value)),
+);
+const targetPointsForm = useForm({ points: 1 });
+const giveTargetPoints = () => targetPointsForm.post(route('games.target-points', props.game.id));
+
+const skipForm = useForm({});
+const skipPostComment = () => skipForm.post(route('games.skip-post-comment-phase', props.game.id));
+
+const startGuessingForm = useForm({});
+const startGuessing = () => startGuessingForm.post(route('games.start-guessing', props.game.id));
 </script>
 
 <template>
@@ -97,11 +110,7 @@ const allCommentsAwarded = computed(
             <p class="text-sm text-gray-500">{{ $t('game.adminNotParticipating') }}</p>
         </template>
 
-        <template v-else-if="myComment">
-            <p class="text-sm text-green-700">{{ $t('game.commentSentWaitingShow') }}</p>
-        </template>
-
-        <template v-else>
+        <template v-else-if="!myComment && !round.pointsGiven">
             <form @submit.prevent="submitComment" class="space-y-2">
                 <textarea
                     v-model="commentForm.text"
@@ -122,6 +131,27 @@ const allCommentsAwarded = computed(
             </form>
         </template>
 
+        <template v-else-if="round.pointsGiven && !iAlreadyCompletedPostComment">
+            <h2 class="font-semibold">{{ $t('game.awardPointsToTarget') }}</h2>
+            <div class="flex items-center gap-2">
+                <input type="number" min="1" v-model.number="targetPointsForm.points" class="w-20 rounded border-gray-300 text-sm" />
+                <button type="button" class="rounded bg-indigo-600 px-3 py-1 text-sm text-white" @click="giveTargetPoints">
+                    {{ $t('game.givePoints') }}
+                </button>
+                <button type="button" class="text-sm text-gray-500 underline" @click="skipPostComment">
+                    {{ $t('game.skip') }}
+                </button>
+            </div>
+        </template>
+
+        <template v-else-if="round.pointsGiven && iAlreadyCompletedPostComment && !myComment">
+            <p class="text-sm text-green-700">{{ $t('game.commentSentWaitingShow') }}</p>
+        </template>
+
+        <template v-else-if="myComment && round.pointsGiven">
+            <p class="text-sm text-gray-500">{{ $t('game.waitingForAllPlayers') }}</p>
+        </template>
+
         <button
             v-if="canShowComments"
             type="button"
@@ -130,5 +160,15 @@ const allCommentsAwarded = computed(
         >
             {{ $t('game.showComments') }}
         </button>
+
+        <button
+            v-if="game.isAdmin && round.commentsVisible && round.pointsGiven"
+            type="button"
+            class="mt-2 w-full rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+            @click="startGuessing"
+        >
+            {{ $t('game.guessingPhase') }}
+        </button>
+        <p v-if="startGuessingForm.errors.game" class="text-sm text-red-600">{{ startGuessingForm.errors.game }}</p>
     </div>
 </template>
