@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, reactive } from 'vue';
 import { usePage, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({ game: Object });
@@ -22,6 +22,25 @@ const showComments = () => showCommentsForm.post(route('games.show-comments', pr
 const canShowComments = computed(
     () => props.game.isAdmin && round.value?.comments.length > 0 && !round.value?.commentsVisible,
 );
+
+// One local point value per comment, keyed by comment id — the award form for each
+// comment is independent (a comment can be awarded once its own points input is set).
+const pointsByComment = reactive({});
+const awardForms = {};
+const awardPoints = (commentId) => {
+    if (!awardForms[commentId]) {
+        awardForms[commentId] = useForm({ points: 0 });
+    }
+    awardForms[commentId].points = pointsByComment[commentId] ?? 0;
+    awardForms[commentId].post(route('games.comment-points', [props.game.id, commentId]));
+};
+
+const finishAwardingForm = useForm({});
+const finishAwarding = () => finishAwardingForm.post(route('games.finish-awarding-points', props.game.id));
+
+const allCommentsAwarded = computed(
+    () => round.value?.comments.length > 0 && round.value.comments.every((c) => c.points !== null),
+);
 </script>
 
 <template>
@@ -30,10 +49,48 @@ const canShowComments = computed(
 
         <template v-if="isTarget">
             <p class="text-sm text-gray-700">{{ $t('game.youAreTarget') }}</p>
+
             <p v-if="!round.commentsVisible" class="text-sm text-gray-500">
                 {{ $t('game.waitingForCommentsAboutYou') }}
             </p>
-            <!-- The revealed-comments view for the target is added in Task 9. -->
+
+            <template v-else-if="!round.pointsGiven">
+                <h2 class="font-semibold">{{ $t('game.awardPointsToComments') }}</h2>
+                <ul class="space-y-3">
+                    <li v-for="comment in round.comments" :key="comment.id" class="rounded border p-3">
+                        <p class="text-sm">{{ comment.text }}</p>
+                        <div class="mt-2 flex items-center gap-2">
+                            <input
+                                type="number"
+                                min="0"
+                                v-model.number="pointsByComment[comment.id]"
+                                class="w-20 rounded border-gray-300 text-sm"
+                                :disabled="comment.points !== null"
+                            />
+                            <button
+                                type="button"
+                                class="rounded bg-indigo-600 px-3 py-1 text-sm text-white disabled:opacity-25"
+                                :disabled="comment.points !== null"
+                                @click="awardPoints(comment.id)"
+                            >
+                                {{ comment.points !== null ? comment.points : $t('game.givePoints') }}
+                            </button>
+                        </div>
+                    </li>
+                </ul>
+                <button
+                    type="button"
+                    class="w-full rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-25"
+                    :disabled="!allCommentsAwarded"
+                    @click="finishAwarding"
+                >
+                    {{ $t('game.finishAwarding') }}
+                </button>
+            </template>
+
+            <p v-else class="text-sm text-gray-500">
+                {{ $t('game.finishedAwardingPointsWaitAdmin') }}
+            </p>
         </template>
 
         <template v-else-if="isAdminNotWriting">

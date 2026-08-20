@@ -1,0 +1,29 @@
+<?php
+
+use App\Models\Comment;
+use App\Models\Game;
+use App\Models\GameParticipant;
+use App\Models\Round;
+use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
+
+test('once comments are visible, the target sees the comment text and existing points', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'active']);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+    $target = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $target->id]);
+    $author = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $author->id]);
+    $round = Round::factory()->create([
+        'game_id' => $game->id, 'round_number' => 1, 'target_user_id' => $target->id, 'comments_visible' => true,
+    ]);
+    Comment::factory()->create(['round_id' => $round->id, 'author_id' => $author->id, 'text' => 'Great teammate', 'points' => 2]);
+
+    $response = $this->actingAs($target)->get("/games/{$game->id}");
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('game.currentRound.comments.0.text', 'Great teammate')
+        ->where('game.currentRound.comments.0.points', 2)
+    );
+});
