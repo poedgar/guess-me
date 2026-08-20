@@ -31,11 +31,11 @@ class GameSettingsService
     private function update(Game $game, User $caller, array $attributes): void
     {
         if ($caller->id !== $game->admin_id) {
-            throw new RuntimeException('Only the admin can update this setting');
+            throw new RuntimeException(__('Only the admin can update this setting'));
         }
 
         if ($game->status !== 'waiting') {
-            throw new RuntimeException('This setting can only be updated before the game starts');
+            throw new RuntimeException(__('This setting can only be updated before the game starts'));
         }
 
         $game->update($attributes);

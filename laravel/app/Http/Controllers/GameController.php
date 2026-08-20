@@ -50,7 +50,7 @@ class GameController extends Controller
         ]);
 
         if ($validated['password'] !== config('game.admin_password')) {
-            throw ValidationException::withMessages(['password' => 'Incorrect admin password.']);
+            throw ValidationException::withMessages(['password' => __('Incorrect admin password.')]);
         }
 
         $game = $this->lifecycle->createGame($request->user(), $validated['admin_writes_comments'] ?? false);
@@ -75,7 +75,7 @@ class GameController extends Controller
         try {
             $game = $this->lifecycle->joinGame($request->user(), $validated['code']);
         } catch (\App\Exceptions\GameNotFoundException) {
-            throw ValidationException::withMessages(['code' => 'No game found with that code.']);
+            throw ValidationException::withMessages(['code' => __('No game found with that code.')]);
         }
 
         broadcast(new \App\Events\GameUpdated($game->id));

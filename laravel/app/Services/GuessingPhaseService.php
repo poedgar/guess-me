@@ -19,7 +19,7 @@ class GuessingPhaseService
         $round = $game->rounds()->latest('round_number')->firstOrFail();
 
         if (! $round->comments_visible || ! $round->points_given) {
-            throw new RuntimeException('Cannot start the guessing phase until comments have been shown and points have been awarded.');
+            throw new RuntimeException(__('Cannot start the guessing phase until comments have been shown and points have been awarded.'));
         }
 
         $nonTargetParticipants = $game->participants()
@@ -32,7 +32,7 @@ class GuessingPhaseService
 
         if ($incomplete->isNotEmpty()) {
             throw new RuntimeException(
-                "Cannot start guessing phase. Waiting for {$incomplete->count()} player(s) to complete the post-comment phase."
+                __('Cannot start guessing phase. Waiting for :count player(s) to complete the post-comment phase.', ['count' => $incomplete->count()])
             );
         }
 
@@ -56,11 +56,11 @@ class GuessingPhaseService
     public function submitGuess(Round $round, User $guesser, Comment $comment, User $guessedAuthor): Guess
     {
         if ($guesser->id !== $round->target_user_id) {
-            throw new RuntimeException('Only the target can make guesses');
+            throw new RuntimeException(__('Only the target can make guesses'));
         }
 
         if (Guess::where('comment_id', $comment->id)->where('guesser_id', $guesser->id)->exists()) {
-            throw new RuntimeException('You already guessed for this comment');
+            throw new RuntimeException(__('You already guessed for this comment'));
         }
 
         return DB::transaction(function () use ($round, $guesser, $comment, $guessedAuthor) {
@@ -102,7 +102,7 @@ class GuessingPhaseService
         $player ??= $caller;
 
         if ($player->id !== $caller->id && $caller->id !== $game->admin_id) {
-            throw new RuntimeException('Only the admin can mark another player as submitted');
+            throw new RuntimeException(__('Only the admin can mark another player as submitted'));
         }
 
         DB::transaction(function () use ($game, $round, $player) {
@@ -139,21 +139,21 @@ class GuessingPhaseService
     public function awardPointsToPlayers(Game $game, Round $round, User $awarder, array $awards): void
     {
         if (! $game->post_guessing_point_phase) {
-            throw new RuntimeException('Post-guessing point phase is not active');
+            throw new RuntimeException(__('Post-guessing point phase is not active'));
         }
 
         $alreadyAwarded = $game->players_who_awarded_post_guess_points ?? [];
         if (in_array((string) $awarder->id, $alreadyAwarded, true)) {
-            throw new RuntimeException('You have already awarded points in this phase');
+            throw new RuntimeException(__('You have already awarded points in this phase'));
         }
 
         if (count($awards) === 0) {
-            throw new RuntimeException('No awards specified');
+            throw new RuntimeException(__('No awards specified'));
         }
 
         foreach ($awards as $award) {
             if ((int) $award['recipientId'] === $awarder->id) {
-                throw new RuntimeException('You cannot award points to yourself');
+                throw new RuntimeException(__('You cannot award points to yourself'));
             }
         }
 

@@ -52,13 +52,13 @@ class GameLifecycleService
     public function startGame(Game $game): void
     {
         if ($game->status !== 'waiting') {
-            throw new \RuntimeException('The game has already started');
+            throw new \RuntimeException(__('The game has already started'));
         }
 
         $participants = $game->participants()->orderBy('joined_at')->orderBy('id')->get();
 
         if ($participants->count() < 2) {
-            throw new \RuntimeException('Need at least 2 participants to start the game');
+            throw new \RuntimeException(__('Need at least 2 participants to start the game'));
         }
 
         DB::transaction(function () use ($game, $participants) {
