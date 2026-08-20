@@ -85,10 +85,16 @@ class GameResource extends JsonResource
         $liveScores = $this->scores->mapWithKeys(fn ($s) => [(string) $s->user_id => $s->points]);
         $liveGuessResults = $this->guessResults->mapWithKeys(fn ($r) => [(string) $r->user_id => $r->correct_guesses]);
 
-        $displayedScores = $this->status === 'finished'
+        // Only a round that's still genuinely in progress should show the frozen start-of-round
+        // snapshot. Once the game is finished, or the current round's guesses are finalized (the
+        // "between rounds" state — see Show.vue's phaseComponent), the round it was captured for
+        // has already fully played out, so live scores are shown instead.
+        $roundIsOver = $this->status === 'finished' || ($currentRound?->guesses_finalized ?? false);
+
+        $displayedScores = $roundIsOver
             ? $liveScores
             : collect($currentRound?->start_scores_snapshot ?? $liveScores->all());
-        $displayedGuessResults = $this->status === 'finished'
+        $displayedGuessResults = $roundIsOver
             ? $liveGuessResults
             : collect($currentRound?->start_guess_results_snapshot ?? $liveGuessResults->all());
 
