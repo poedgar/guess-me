@@ -62,7 +62,7 @@ class GuessingController extends Controller
         try {
             $this->guessing->markPlayerGuessesSubmitted($game, $round, $request->user(), $player);
         } catch (\RuntimeException $e) {
-            abort(403, $e->getMessage());
+            throw \Illuminate\Validation\ValidationException::withMessages(['game' => $e->getMessage()]);
         }
 
         broadcast(new \App\Events\GameUpdated($game->id));

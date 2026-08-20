@@ -31,7 +31,7 @@ class SettingsController extends Controller
         try {
             $this->settings->updateTargetSelectionMode($game, $request->user(), $validated['value']);
         } catch (\RuntimeException $e) {
-            abort(403, $e->getMessage());
+            throw \Illuminate\Validation\ValidationException::withMessages(['value' => $e->getMessage()]);
         }
 
         broadcast(new \App\Events\GameUpdated($game->id));
@@ -51,7 +51,7 @@ class SettingsController extends Controller
         try {
             $fn($validated[$field]);
         } catch (\RuntimeException $e) {
-            abort(403, $e->getMessage());
+            throw \Illuminate\Validation\ValidationException::withMessages([$field => $e->getMessage()]);
         }
 
         broadcast(new \App\Events\GameUpdated($game->id));

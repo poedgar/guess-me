@@ -46,7 +46,7 @@ class CommentController extends Controller
         try {
             $this->comments->awardCommentPoints($comment, $request->user(), $validated['points']);
         } catch (\RuntimeException $e) {
-            abort(403, $e->getMessage());
+            throw ValidationException::withMessages(['points' => $e->getMessage()]);
         }
 
         broadcast(new \App\Events\GameUpdated($game->id));
@@ -62,7 +62,7 @@ class CommentController extends Controller
         try {
             $this->comments->finishAwardingPoints($round, $request->user());
         } catch (\RuntimeException $e) {
-            abort(403, $e->getMessage());
+            throw ValidationException::withMessages(['game' => $e->getMessage()]);
         }
 
         broadcast(new \App\Events\GameUpdated($game->id));

@@ -59,3 +59,29 @@ test('POST settings route updates target selection mode', function () {
     $response->assertRedirect("/games/{$game->id}");
     expect($game->fresh()->target_selection_mode)->toBe('chronological');
 });
+
+test('POST settings/target-selection-mode route surfaces a RuntimeException as a validation error, not a 403', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'waiting']);
+    $other = User::factory()->create();
+    \App\Models\GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $other->id]);
+
+    $response = $this->actingAs($other)->post("/games/{$game->id}/settings/target-selection-mode", ['value' => 'chronological']);
+
+    $response->assertInvalid(['value']);
+    expect($response->status())->not->toBe(403);
+    expect($game->fresh()->target_selection_mode)->not->toBe('chronological');
+});
+
+test('POST settings/admin-writes-comments route surfaces a RuntimeException as a validation error, not a 403', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'waiting']);
+    $other = User::factory()->create();
+    \App\Models\GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $other->id]);
+
+    $response = $this->actingAs($other)->post("/games/{$game->id}/settings/admin-writes-comments", ['value' => true]);
+
+    $response->assertInvalid(['value']);
+    expect($response->status())->not->toBe(403);
+    expect($game->fresh()->admin_writes_comments)->toBeFalse();
+});

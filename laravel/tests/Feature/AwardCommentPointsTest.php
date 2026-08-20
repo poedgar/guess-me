@@ -74,6 +74,38 @@ test('only the target can finish awarding points', function () {
         ->toThrow(RuntimeException::class, 'Only the target can finish giving points');
 });
 
+test('POST comment-points route surfaces a RuntimeException as a validation error, not a 403', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id]);
+    $target = User::factory()->create();
+    $round = Round::factory()->create(['game_id' => $game->id, 'target_user_id' => $target->id]);
+    $author = User::factory()->create();
+    $comment = Comment::factory()->create(['round_id' => $round->id, 'author_id' => $author->id]);
+    $notTarget = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $notTarget->id]);
+
+    $response = $this->actingAs($notTarget)->post("/games/{$game->id}/comment-points/{$comment->id}", ['points' => 3]);
+
+    $response->assertInvalid(['points']);
+    expect($response->status())->not->toBe(403);
+    expect($comment->fresh()->points)->toBeNull();
+});
+
+test('POST finish-awarding-points route surfaces a RuntimeException as a validation error, not a 403', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id]);
+    $target = User::factory()->create();
+    $round = Round::factory()->create(['game_id' => $game->id, 'target_user_id' => $target->id]);
+    $notTarget = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $notTarget->id]);
+
+    $response = $this->actingAs($notTarget)->post("/games/{$game->id}/finish-awarding-points");
+
+    $response->assertInvalid(['game']);
+    expect($response->status())->not->toBe(403);
+    expect($round->fresh()->points_given)->toBeFalse();
+});
+
 test('finishAwardingPoints marks the round pointsGiven', function () {
     $target = User::factory()->create();
     $round = Round::factory()->create(['target_user_id' => $target->id]);

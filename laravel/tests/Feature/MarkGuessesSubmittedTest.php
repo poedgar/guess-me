@@ -53,3 +53,18 @@ test('the admin can mark a different player as submitted', function () {
 
     expect(GameGuessResult::where('game_id', $game->id)->where('user_id', $target->id)->exists())->toBeTrue();
 });
+
+test('POST mark-guesses-submitted route surfaces a RuntimeException as a validation error, not a 403', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id]);
+    $caller = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $caller->id]);
+    $otherPlayer = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $otherPlayer->id]);
+    Round::factory()->create(['game_id' => $game->id]);
+
+    $response = $this->actingAs($caller)->post("/games/{$game->id}/mark-guesses-submitted", ['player_id' => $otherPlayer->id]);
+
+    $response->assertInvalid(['game']);
+    expect($response->status())->not->toBe(403);
+});
