@@ -30,6 +30,9 @@ const allGuessed = computed(() => round.value.comments.every((c) => c.id in myGu
 const markSubmittedForm = useForm({});
 const markSubmitted = () => markSubmittedForm.post(route('games.mark-guesses-submitted', props.game.id));
 
+const finalizeForm = useForm({});
+const finalize = () => finalizeForm.post(route('games.finalize-guessing', props.game.id));
+
 // Post-guessing bonus points: any participant except yourself, once per phase.
 const iAlreadyAwarded = computed(
     () => props.game.playersWhoAwardedPostGuessPoints.includes(String(currentUserId.value)),
@@ -122,5 +125,14 @@ const hasAnyBonusPoints = computed(() => otherParticipants.value.some((p) => (bo
             </template>
             <p v-else class="text-sm text-gray-500">{{ $t('game.postGuessingAlreadyAwarded') }}</p>
         </template>
+
+        <button
+            v-if="game.isAdmin && game.postGuessingPointPhase"
+            type="button"
+            class="mt-4 w-full rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+            @click="finalize"
+        >
+            {{ $t('game.finalizeGuessing') }}
+        </button>
     </div>
 </template>
