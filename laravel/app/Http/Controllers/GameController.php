@@ -20,7 +20,7 @@ class GameController extends Controller
     {
         $this->authorize('view', $game);
 
-        $game->load(['participants.user', 'scores', 'guessResults', 'rounds.comments', 'rounds.target']);
+        $game->load(['participants.user', 'scores', 'guessResults', 'rounds.comments', 'rounds.target', 'rounds.guesses']);
 
         return inertia('Game/Show', [
             'game' => new GameResource($game),
