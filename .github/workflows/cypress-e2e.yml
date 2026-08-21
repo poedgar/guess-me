@@ -12,7 +12,7 @@ on:
     # check independent of pushes, since paths filters only apply to the
     # push trigger above (a scheduled run always executes regardless of
     # what, if anything, changed).
-    - cron: '0 */6 * * *'
+    - cron: '0 */24 * * *'
 
 concurrency:
   group: cypress-e2e
