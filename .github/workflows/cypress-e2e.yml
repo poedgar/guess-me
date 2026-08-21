@@ -4,15 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/web/**'
-      - 'packages/shared/**'
+      - "apps/web/**"
+      - "packages/shared/**"
   workflow_dispatch: {}
   schedule:
-    # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC) — a periodic health
+    # Every 24 hours (00:00 UTC) — a periodic health
     # check independent of pushes, since paths filters only apply to the
     # push trigger above (a scheduled run always executes regardless of
     # what, if anything, changed).
-    - cron: '0 */24 * * *'
+    - cron: "0 */24 * * *"
 
 concurrency:
   group: cypress-e2e
@@ -28,8 +28,8 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Cache Cypress binary
         uses: actions/cache@v4
