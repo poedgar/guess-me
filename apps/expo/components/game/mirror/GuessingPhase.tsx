@@ -11,6 +11,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     Platform,
     ScrollView,
     StyleSheet,
@@ -19,6 +20,10 @@ import {
 } from 'react-native';
 import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface GuessResult {
   correct: boolean;
@@ -38,6 +43,7 @@ interface Props {
   user: { uid: string } | null;
   participantsByJoin: Participant[];
   joinIndexById: Record<string, number>;
+  playerNumbers?: Record<string, number>;
   getDisplayName: (name: string) => string;
   commentsForPlayer: Comment[];
   showFancyAlert: ShowFancyAlertFn;
@@ -50,13 +56,14 @@ export const GuessingPhase: React.FC<Props> = ({
   user,
   participantsByJoin,
   joinIndexById,
+  playerNumbers,
   getDisplayName,
   commentsForPlayer,
   showFancyAlert,
   locale,
 }) => {
   const { playSound } = useSound();
-  const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound } = useGame();
+  const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound, restartMirrorRound, skipMirrorRound } = useGame();
 
   const [selectedGuesses, setSelectedGuesses] = useState<{ [commentId: string]: string }>({});
   const [hasSubmittedGuesses, setHasSubmittedGuesses] = useState(false);
@@ -245,10 +252,17 @@ export const GuessingPhase: React.FC<Props> = ({
       playSound('roundComplete').catch(() => {});
       try {
         await startNextRound();
-      } catch (e) {
-        console.warn('startNextRound after finalize failed or game finished', e);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      } catch (error: unknown) {
+        // startNextRound() resolves normally (no throw) when the game
+        // legitimately ends — a throw here is always a real failure
+        // (e.g. network/Firestore error), so surface it rather than
+        // swallowing it. ActivePhase shows a retry control for this state.
+        // Do not fire the success haptic below on this path.
+        if (isMounted.current) {
+          showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.startNextRoundFailed', { locale }));
+        }
       }
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (error: unknown) {
       if (!isMounted.current) return;
       playSound('error').catch(() => {});
@@ -258,6 +272,15 @@ export const GuessingPhase: React.FC<Props> = ({
       if (isMounted.current) setIsFinalizingGuesses(false);
     }
   };
+
+  const playerPulse = usePulseBorderOnChange(
+    `${singleTargetId ?? 'legacy'}:${hasSubmittedGuesses || (game.guessingData?.playersWhoSubmittedGuesses?.includes(user?.uid || '') ?? false)}`,
+    GameColors.purple,
+  );
+  const adminPulse = usePulseBorderOnChange(
+    `${singleTargetId ?? 'legacy'}:${targetSubmitted}:${game.guessingData?.allPlayersSubmitted ?? false}`,
+    GameColors.purple,
+  );
 
   if (!game.guessingData) return null;
 
@@ -290,10 +313,18 @@ export const GuessingPhase: React.FC<Props> = ({
           </ThemedText>
         </View>
 
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${singleTargetId ?? 'legacy'}:${hasSubmittedGuesses || game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '')}`}
+          align="top"
+          animated
+          insets={SCROLL_INSETS}
+        >
+        <Animated.View style={playerPulse}>
         {(hasSubmittedGuesses || game.guessingData.playersWhoSubmittedGuesses?.includes(user?.uid || '')) ? (
           (() => {
             const playerResult = game.guessResults?.[user?.uid ?? ''];
-            if (playerResult) {
+            if (playerResult && game.showGuessResults) {
               return (
                 <View style={styles.guessResultsContainer}>
                   <ThemedText type="subtitle" style={styles.guessResultsTitle}>
@@ -357,7 +388,10 @@ export const GuessingPhase: React.FC<Props> = ({
                             styles.authorName,
                             selectedGuesses[comment.id] === author.userId && styles.selectedAuthorName,
                           ]}>
-                            {joinIndexById[author.userId] ? `${joinIndexById[author.userId]}. ` : ''}{getDisplayName(author.userName)}
+                            {(() => {
+                              const numbers = playerNumbers ?? joinIndexById;
+                              return numbers[author.userId] ? `${numbers[author.userId]}. ` : '';
+                            })()}{getDisplayName(author.userName)}
                           </ThemedText>
                         </TouchableOpacity>
                       ))}
@@ -406,6 +440,8 @@ export const GuessingPhase: React.FC<Props> = ({
             </ThemedText>
           )
         )}
+        </Animated.View>
+        </ScrollIntoView>
 
         {/* Admin Target Control */}
         {isAdmin && (
@@ -416,12 +452,15 @@ export const GuessingPhase: React.FC<Props> = ({
         )}
 
         {isAdmin && (
-          (() => {
-            const singleTargetId = game.guessingData?.singleRoundTargetId;
-            const targetSubmitted = singleTargetId
-              ? game.guessingData?.playersWhoSubmittedGuesses?.includes(singleTargetId)
-              : false;
-
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${singleTargetId ?? 'legacy'}:${targetSubmitted}:${game.guessingData.allPlayersSubmitted}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          <Animated.View style={adminPulse}>
+          {(() => {
             if (singleTargetId && targetSubmitted) {
               return (
                 <View style={styles.adminControls}>
@@ -503,8 +542,17 @@ export const GuessingPhase: React.FC<Props> = ({
                 </TouchableOpacity>
               </View>
             );
-          })()
+          })()}
+          </Animated.View>
+          </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartMirrorRound}
+          onSkip={skipMirrorRound}
+        />
       </View>
 
       {/* Post-Guessing Point Panel */}

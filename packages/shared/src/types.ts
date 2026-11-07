@@ -2,14 +2,44 @@ import { Timestamp } from 'firebase/firestore';
 import { BasketAssignment, BasketRound } from './utils/basketSchedule';
 import { ClashAssignment, ClashRound } from './utils/clashSchedule';
 
+export interface Idea {
+  id: string;
+  authorId: string;
+  text: string;
+  submittedAt: number;
+  // Sum of all rating points this idea has received. Optional for
+  // backward compatibility with ideas submitted before this field existed.
+  score?: number;
+}
+
+export interface IdeaRating {
+  raterId: string;
+  ideaId: string;
+  points: number; // 0-5
+  comment?: string; // only ever set in incognito mode
+}
+
+export interface IdeaGameData {
+  incognitoMode: boolean;
+  ideas: Idea[];
+  schedule: string[];
+  currentRoundIndex: number;
+  currentRoundRatings: IdeaRating[];
+}
+
 export interface Game {
   id: string;
   adminId: string;
   adminName: string;
   adminEmail: string;
   participants: Participant[];
+  // Plain UIDs mirroring participants, kept in sync at create/join/leave.
+  // Exists so Firestore rules can check membership — rules can't search
+  // inside an array of objects for a matching field, only exact-value
+  // membership over primitive arrays.
+  participantIds?: string[];
   createdAt: Date | Timestamp;
-  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing";
+  status: "waiting" | "active" | "guessing_phase" | "finished" | "basket_writing" | "basket_guessing" | "clash_writing" | "clash_guessing" | "idea_writing" | "idea_rating";
   postGuessingPointPhase?: boolean;
   playersWhoAwardedPostGuessPoints?: string[];
   adminAwards?: {
@@ -31,11 +61,23 @@ export interface Game {
   showSurnames?: boolean;
   showGuessResults?: boolean;
   targetSelectionMode?: "random" | "chronological";
-  gameType?: 'mirror' | 'basket' | 'clash';
+  gameType?: 'mirror' | 'basket' | 'clash' | 'ideas';
   basketData?: BasketData;
   clashData?: ClashData;
+  ideaData?: IdeaGameData;
+  // Whether ratings/comments in Group Ideas mode stay anonymous (default: true)
+  ideaIncognitoMode?: boolean;
   adminNextTargetPreference?: string;
   adminSkippedTargets?: string[];
+  // Stable per-participant display numbers, assigned once when the game starts.
+  // Frozen for the lifetime of the game — does not shift if participants later leave.
+  playerNumbers?: { [userId: string]: number };
+  // Snapshot of scores/guessResults taken the instant the current round began.
+  // Leaderboard displays use these (not the live scores/guessResults fields)
+  // while a round is in progress, so round-in-progress scoring stays hidden
+  // until the round ends and a fresh snapshot is taken.
+  roundStartScores?: { [userId: string]: number };
+  roundStartGuessResults?: { [userId: string]: { correctGuesses: number } };
 }
 
 export interface Participant {
@@ -111,7 +153,13 @@ export interface BasketData {
 }
 
 export interface ClashGroup {
-  leaderId: string;
+  // Legacy static leader field — no longer set by new games (leaders are
+  // now chosen automatically via leaderRotation). Kept for backward
+  // compatibility with games created before this field existed.
+  leaderId?: string;
+  // Random permutation of memberIds, one leader per round — see
+  // generateClashLeaderRotation. Indexed by clashData.currentRoundIndex.
+  leaderRotation?: string[];
   memberIds: string[];
 }
 

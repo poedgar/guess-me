@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
+import { IdeaLeaderboard } from '@/components/game/ideas/IdeaLeaderboard';
 import { GameColors } from '@/constants/theme';
 import type { Comment, Round } from '@/contexts/GameContext';
 import { useGame } from '@/contexts/GameContext';
@@ -18,9 +19,18 @@ export default function TabTwoScreen() {
 
   const joinIndexById = buildJoinIndexById(participantsByJoin);
 
+  const displayedScores =
+    currentGame?.status === 'finished'
+      ? currentGame?.scores
+      : (currentGame?.roundStartScores ?? currentGame?.scores);
+  const displayedGuessResults =
+    currentGame?.status === 'finished'
+      ? currentGame?.guessResults
+      : (currentGame?.roundStartGuessResults ?? currentGame?.guessResults);
+
   const participantsWithScores = (currentGame?.participants || []).map(p => {
-    const gamePoints = currentGame?.scores?.[p.userId] || 0;
-    const guessPoints = currentGame?.guessResults?.[p.userId]?.correctGuesses || 0;
+    const gamePoints = displayedScores?.[p.userId] || 0;
+    const guessPoints = displayedGuessResults?.[p.userId]?.correctGuesses || 0;
     return { ...p, gamePoints, guessPoints, totalPoints: gamePoints + guessPoints };
   }).sort((a, b) => b.totalPoints - a.totalPoints);
 
@@ -46,22 +56,33 @@ export default function TabTwoScreen() {
       {/* Show participants and leaderboard here when game is started */}
       {currentGame && currentGame.status !== 'waiting' && (
         <View style={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-          <ThemedText type="subtitle" style={{ marginTop: 16, marginBottom: 8 }}>
-            🏆 {t('results.leaderboardTitle', { locale })}
-          </ThemedText>
-          
-          <ScrollView style={styles.leaderboardScroll}>
-            {participantsWithScores.map((p, idx) => (
-              <View key={p.userId} style={styles.leaderboardRow}>
-                <ThemedText style={styles.leaderboardName}>{idx < 3 ? ['🥇','🥈','🥉'][idx] : `#${idx+1}`} {joinIndexById[p.userId] ? `${joinIndexById[p.userId]}. ` : ''}{p.userName}</ThemedText>
-                <ThemedText style={styles.points}>
-                  {p.totalPoints}
-                  {p.guessPoints ? ` (${p.guessPoints})` : ''}
-                </ThemedText>
-              </View>
-            ))}
-          </ScrollView>
-          
+          {currentGame.gameType === 'ideas' ? (
+            <IdeaLeaderboard
+              ideas={currentGame.ideaData?.ideas ?? []}
+              locale={locale}
+              title={`🏆 ${t('game.ui.ideas.finalLeaderboardTitle', { locale })}`}
+              scrollHeight={260}
+            />
+          ) : (
+            <>
+              <ThemedText type="subtitle" style={{ marginTop: 16, marginBottom: 8 }}>
+                🏆 {t('results.leaderboardTitle', { locale })}
+              </ThemedText>
+
+              <ScrollView style={styles.leaderboardScroll}>
+                {participantsWithScores.map((p, idx) => (
+                  <View key={p.userId} style={styles.leaderboardRow}>
+                    <ThemedText style={styles.leaderboardName}>{idx < 3 ? ['🥇','🥈','🥉'][idx] : `#${idx+1}`} {joinIndexById[p.userId] ? `${joinIndexById[p.userId]}. ` : ''}{p.userName}</ThemedText>
+                    <ThemedText style={styles.points}>
+                      {p.totalPoints}
+                      {p.guessPoints ? ` (${p.guessPoints})` : ''}
+                    </ThemedText>
+                  </View>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
           {/* Round History */}
           {(() => {
             const allRounds = currentGame.rounds || [];

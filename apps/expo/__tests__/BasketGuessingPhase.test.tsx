@@ -41,7 +41,7 @@ jest.mock('@/components/themed-text', () => {
 jest.mock('@/constants/theme', () => ({
   Fonts: { sans: 'System' },
   GameColors: {
-    white: '#fff', blue: '#007AFF', green: '#34C759',
+    white: '#fff', blue: '#007AFF', green: '#34C759', purple: '#AF52DE',
     correct: '#34C759', incorrect: '#FF3B30', shadow: '#000',
     cardBg: '#fafafa', cardBorder: '#eee', admin: '#FF9500',
   },

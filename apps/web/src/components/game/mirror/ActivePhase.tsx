@@ -6,6 +6,12 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
+import { AdminRoundTools } from '../AdminRoundTools';
+import { PostGuessingPointsPanel } from './PostGuessingPointsPanel';
+import { getPlayerNumber } from '../../../utils/playerNumbers';
+import { getDisplayName } from '../../../utils/displayName';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
 interface ActivePhaseProps {
@@ -22,6 +28,9 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     finishAwardingPoints,
     givePointsToTarget,
     startGuessingPhase,
+    startNextRound,
+    restartMirrorRound,
+    skipMirrorRound,
   } = useGame();
   const { playSound } = useSound();
   const { showAlert, AlertModal } = useAlert();
@@ -31,15 +40,78 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
   const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
   const [pointsGiven, setPointsGiven] = useState<Record<string, number>>({});
+  const [isStartingNextRound, setIsStartingNextRound] = useState(false);
 
   const currentRound = game.currentRound;
-  if (!currentRound) return null;
 
-  const targetUserId = currentRound.targetUserId;
+  const targetUserId = currentRound?.targetUserId;
   const isAdmin = user?.uid === game.adminId;
   const isTarget = user?.uid === targetUserId;
-  const commentsVisible = currentRound.commentsVisible ?? false;
-  const targetFinishedPoints = currentRound.pointsGiven ?? false;
+  const commentsVisible = currentRound?.commentsVisible ?? false;
+  const targetFinishedPoints = currentRound?.pointsGiven ?? false;
+
+  // Hooks must run unconditionally on every render (Rules of Hooks), so these
+  // are declared before the `!currentRound` early return below, with
+  // null-safe trigger-key expressions. `adminScrollRef` is declared LAST so
+  // its effect wins when both `isAdmin` and `!isTarget` are true (the admin
+  // is never the round's target in mirror mode, so those two conditions
+  // overlap for every admin, every round).
+  const targetScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound?.roundNumber ?? 'none'}:target:${commentsVisible}:${targetFinishedPoints}`,
+    'start',
+    PULSE_COLORS.green,
+  );
+  const otherScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound?.roundNumber ?? 'none'}:other:${commentsVisible}:${targetFinishedPoints}`,
+    'start',
+    PULSE_COLORS.green,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRound?.roundNumber ?? 'none'}:admin:${commentsVisible}`,
+    'center',
+    PULSE_COLORS.green,
+  );
+
+  const handleStartNextRound = async () => {
+    setIsStartingNextRound(true);
+    try {
+      await startNextRound();
+    } catch (error) {
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.startNextRoundFailed'),
+      );
+    } finally {
+      setIsStartingNextRound(false);
+    }
+  };
+
+  if (!currentRound) {
+    // The round transition between guessing and the next round is two
+    // sequential awaits (finalizeGuessingPhase then startNextRound) — if
+    // the second one fails (e.g. a network blip), the game is left here:
+    // status 'active' with no currentRound. Give the admin a retry control
+    // instead of leaving the game silently stuck.
+    return (
+      <>
+        {AlertModal}
+        <div className="text-center py-12">
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={handleStartNextRound}
+              disabled={isStartingNextRound}
+              className="bg-game-green text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isStartingNextRound ? t('common.loading') : t('game.nextRound')}
+            </button>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 text-sm">{t('game.waitingForAdmin')}</p>
+          )}
+        </div>
+      </>
+    );
+  }
 
   const alreadyGaveTargetPoints =
     currentRound.targetPointsGivenBy?.includes(user?.uid ?? '') ?? false;
@@ -64,6 +136,9 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   const allPlayersCompletedPointsPhase = nonTargetPlayers.every(p =>
     completedPlayers.includes(p.userId)
   );
+
+  const submittedAuthorIds = new Set(currentRound.comments?.map(c => c.authorId) ?? []);
+  const submittedCount = nonTargetPlayers.filter(p => submittedAuthorIds.has(p.userId)).length;
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +252,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
       {AlertModal}
       <div className="space-y-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-green">
-          <div className="text-center mb-4">
+          <div className="text-center mb-4" data-cy="round-info" data-cy-round={currentRound.roundNumber}>
             <p className="text-sm text-gray-500 dark:text-gray-400">Round {currentRound.roundNumber}</p>
             <p className="text-lg font-semibold text-gray-900 dark:text-white">
               {t('game.ui.target')}: {currentRound.targetUserName}
@@ -186,35 +261,75 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
           {/* Admin controls */}
           {isAdmin && (
-            <div className="flex justify-center gap-3 mb-6">
+            <div className="mb-6" ref={adminScrollRef}>
               {!commentsVisible && (
-                <button
-                  type="button"
-                  onClick={handleShowComments}
-                  disabled={loading || (currentRound.comments?.length ?? 0) === 0}
-                  className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                >
-                  {loading ? t('common.loading') : t('game.ui.showComments')}
-                </button>
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-center text-gray-700 dark:text-gray-300 mb-1">
+                    {t('game.ui.commentersStatusTitle')}
+                  </p>
+                  <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">
+                    {t('game.ui.commentsProgress', { received: submittedCount, required: nonTargetPlayers.length })}
+                  </p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {nonTargetPlayers.map(p => {
+                      const hasSubmitted = submittedAuthorIds.has(p.userId);
+                      return (
+                        <div
+                          key={p.userId}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700"
+                        >
+                          <span className="text-sm text-gray-500 dark:text-gray-400 w-6">
+                            {getPlayerNumber(game, p.userId)}.
+                          </span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
+                            {getDisplayName(p.userName, game.showSurnames ?? false)}
+                          </span>
+                          <span
+                            className={`text-xs font-semibold ${
+                              hasSubmitted ? 'text-game-green' : 'text-gray-400'
+                            }`}
+                          >
+                            {hasSubmitted ? `✅ ${t('game.ui.submitted')}` : `⏳ ${t('game.ui.pending')}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
-              {commentsVisible && (
-                <button
-                  type="button"
-                  onClick={handleStartGuessing}
-                  disabled={loading || !targetFinishedPoints || !allPlayersCompletedPointsPhase}
-                  className="bg-game-purple text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                >
-                  {loading ? t('common.loading') : t('game.ui.startGuessingPhase')}
-                </button>
-              )}
+              <div className="flex justify-center gap-3">
+                {!commentsVisible && (
+                  <button
+                    type="button"
+                    onClick={handleShowComments}
+                    disabled={loading || (currentRound.comments?.length ?? 0) === 0}
+                    data-cy="show-comments-button"
+                    className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {loading ? t('common.loading') : t('game.ui.showComments')}
+                  </button>
+                )}
+                {commentsVisible && (
+                  <button
+                    type="button"
+                    onClick={handleStartGuessing}
+                    disabled={loading || !targetFinishedPoints || !allPlayersCompletedPointsPhase}
+                    data-cy="start-guessing-button"
+                    className="bg-game-purple text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {loading ? t('common.loading') : t('game.ui.startGuessingPhase')}
+                  </button>
+                )}
+              </div>
+              <AdminRoundTools isAdmin={isAdmin} onRestart={restartMirrorRound} onSkip={skipMirrorRound} />
             </div>
           )}
 
           {/* Target player view */}
           {isTarget && (
-            <div>
+            <div ref={targetScrollRef}>
               {!commentsVisible ? (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                <p className="text-center text-gray-500 dark:text-gray-400 py-4" data-cy="target-waiting-view">
                   {t('game.ui.waitingForCommentsAboutYou')}
                 </p>
               ) : !targetFinishedPoints ? (
@@ -229,6 +344,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                             type="button"
                             onClick={() => handleGivePoints(comment.id)}
                             disabled={!!givingPoints[comment.id] || loading}
+                            data-cy="award-comment-points-button"
                             className="bg-game-green text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                           >
                             {givingPoints[comment.id] ? t('common.loading') : '+ 1 point'}
@@ -246,6 +362,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                       type="button"
                       onClick={handleFinishGivingPoints}
                       disabled={loading}
+                      data-cy="finish-awarding-points-button"
                       className="bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                     >
                       {loading ? t('common.loading') : t('game.ui.finishAwardingPoints')}
@@ -262,7 +379,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
 
           {/* Non-target player view */}
           {!isTarget && (
-            <div>
+            <div ref={otherScrollRef}>
               {!commentsVisible ? (
                 <>
                   {!userComment && shouldWriteComments ? (
@@ -277,6 +394,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                         maxLength={500}
                         rows={4}
                         disabled={isSubmittingComment}
+                        data-cy="comment-input"
                         className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-green bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none disabled:opacity-50"
                       />
                       <div className="flex justify-between items-center">
@@ -286,6 +404,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                         <button
                           type="submit"
                           disabled={!commentText.trim() || isSubmittingComment}
+                          data-cy="submit-comment-button"
                           className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                         >
                           {isSubmittingComment ? t('common.loading') : t('game.ui.submitComment')}
@@ -330,6 +449,8 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                             type="button"
                             onClick={() => handleGivePointsToTarget(points)}
                             disabled={givingPointsToTarget || loading}
+                            data-cy="give-points-to-target-button"
+                            data-cy-points={points}
                             className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-600 border-2 border-gray-300 dark:border-gray-500 text-lg font-semibold hover:border-game-gold hover:bg-game-gold/10 disabled:opacity-50 transition-all"
                           >
                             {points}
@@ -351,11 +472,15 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
         </div>
 
         <Leaderboard
+          game={game}
           participants={game.participants}
-          scores={game.scores}
-          guessResults={game.guessResults}
+          scores={game.roundStartScores ?? game.scores}
+          guessResults={game.roundStartGuessResults ?? game.guessResults}
           maxHeight="max-h-80"
+          showSurnames={game.showSurnames}
         />
+
+        {game.postGuessingPointPhase && <PostGuessingPointsPanel game={game} />}
       </div>
     </>
   );

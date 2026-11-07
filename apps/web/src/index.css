@@ -7,3 +7,23 @@ body {
   padding: 0;
   font-family: 'Philosopher', system-ui, sans-serif;
 }
+
+/* One-time "look here" pulse for the auto-scrolled active section. Color is
+   set per-element via the --pulse-color custom property (see
+   useScrollIntoViewOnChange.ts). Skipped entirely when the user prefers
+   reduced motion — the class is simply never added in that case. */
+@keyframes active-section-pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 var(--pulse-color, rgba(0, 122, 255, 0.55));
+  }
+  70% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.active-section-pulse {
+  animation: active-section-pulse-glow 0.9s ease-out;
+}

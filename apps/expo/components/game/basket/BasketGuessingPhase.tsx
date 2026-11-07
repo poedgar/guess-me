@@ -1,3 +1,4 @@
+import { AdminRoundTools } from "@/components/game/AdminRoundTools";
 import { ShowFancyAlertFn } from "@/components/game/GameHeader";
 import { gameStyles } from "@/components/game/gameStyles";
 import { ThemedText } from "@/components/themed-text";
@@ -11,11 +12,15 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Platform,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -40,6 +45,8 @@ export const BasketGuessingPhase: React.FC<Props> = ({
     submitBasketCommentGuess,
     submitBasketAuthorGuess,
     startNextBasketRound,
+    restartBasketRound,
+    skipBasketRound,
   } = useGame();
   const { playSound } = useSound();
 
@@ -60,6 +67,15 @@ export const BasketGuessingPhase: React.FC<Props> = ({
     [],
   );
 
+  const playerPulse = usePulseBorderOnChange(
+    `${game.basketData?.currentRoundIndex ?? 0}:${authorSubmitted}:${isCommentCorrect}:${selectedWriterId !== null}`,
+    GameColors.purple,
+  );
+  const adminPulse = usePulseBorderOnChange(
+    `${game.basketData?.currentRoundIndex ?? 0}:${game.basketData?.currentRoundGuesses.length ?? 0}`,
+    GameColors.purple,
+  );
+
   if (!game.basketData) return null;
   const {
     schedule,
@@ -77,10 +93,6 @@ export const BasketGuessingPhase: React.FC<Props> = ({
   const actualComment = currentRoundComments.find(
     (c) => c.subjectId === guesserId,
   );
-  console.log("basketData exists", !!game.basketData);
-  console.log("currentRoundIndex", currentRoundIndex);
-  console.log("schedule", schedule);
-  console.log("schedule[currentRoundIndex]", schedule[currentRoundIndex]);
   const writerIds = new Set(
     schedule[currentRoundIndex].assignments.map((a) => a.writerId),
   );
@@ -255,6 +267,14 @@ export const BasketGuessingPhase: React.FC<Props> = ({
       </View>
 
       <View style={gameStyles.gameFlowContainer}>
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${currentRoundIndex}:${isDone || showWrong}:${showAuthorPrompt}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
+        <Animated.View style={playerPulse}>
         {isDone || showWrong ? (
           <View style={styles.doneCard}>
             {showWrong && (
@@ -330,9 +350,18 @@ export const BasketGuessingPhase: React.FC<Props> = ({
             )}
           </View>
         )}
+        </Animated.View>
+        </ScrollIntoView>
 
         {isAdmin && (
-          <View style={styles.adminSection}>
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${currentRoundIndex}:${allGuessersDone}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          <Animated.View style={[styles.adminSection, adminPulse]}>
             {isLastRound && (
               <ThemedText style={styles.finishLabel}>
                 {t("game.ui.basket.finishGame", { locale })}
@@ -367,8 +396,16 @@ export const BasketGuessingPhase: React.FC<Props> = ({
                 {t("game.ui.basket.nextRound", { locale })}
               </ThemedText>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
+          </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartBasketRound}
+          onSkip={skipBasketRound}
+        />
       </View>
     </View>
   );

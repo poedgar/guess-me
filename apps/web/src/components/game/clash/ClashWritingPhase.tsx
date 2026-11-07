@@ -5,8 +5,12 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
 import { ClashScoreboard } from './ClashScoreboard';
+import { AdminRoundTools } from '../AdminRoundTools';
 import type { ClashAssignment } from '@mirror/shared';
+import { getDisplayName } from '../../../utils/displayName';
 
 interface Props {
   game: Game;
@@ -14,7 +18,7 @@ interface Props {
 
 export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, submitClashComment, revealClashComments } = useGame();
+  const { loading, submitClashComment, revealClashComments, restartClashRound, skipClashRound } = useGame();
   const { playSound } = useSound();
   const { t } = useLanguage();
   const { showAlert, AlertModal } = useAlert();
@@ -34,7 +38,9 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
     : schedule[currentRoundIndex].assignmentsB;
   const myAssignment = myAssignments.find((a: ClashAssignment) => a.writerId === uid);
   const subjectParticipant = game.participants.find(p => p.userId === myAssignment?.subjectId);
-  const subjectName = subjectParticipant?.userName ?? '?';
+  const subjectName = subjectParticipant
+    ? getDisplayName(subjectParticipant.userName, game.showSurnames ?? false)
+    : '?';
 
   const groupSize = cd.groupA.memberIds.length;
   const alreadySubmitted = submitted
@@ -42,6 +48,17 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
   const countA = currentRoundCommentsA.length;
   const countB = currentRoundCommentsB.length;
   const allSubmitted = countA >= groupSize && countB >= groupSize;
+
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${alreadySubmitted}`,
+    'center',
+    PULSE_COLORS.orange,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${allSubmitted}`,
+    'center',
+    PULSE_COLORS.orange,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,48 +100,52 @@ export const ClashWritingPhase: React.FC<Props> = ({ game }) => {
           </span>
         </div>
 
-        {alreadySubmitted ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              {t('game.ui.clash.waitingForGroup', { a: countA, b: countB, n: groupSize })}
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center">
-              <p className="text-xs text-gray-400 mb-1">{t('game.ui.clash.yourSubject')}</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{subjectName}</p>
+        <div ref={playerScrollRef}>
+          {alreadySubmitted ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center">
+              <p className="text-gray-500 dark:text-gray-400">
+                {t('game.ui.clash.waitingForGroup', { a: countA, b: countB, n: groupSize })}
+              </p>
             </div>
-            <textarea
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              placeholder={t('game.ui.clash.writeComment')}
-              maxLength={500}
-              rows={4}
-              disabled={isSubmitting}
-              className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none disabled:opacity-50"
-            />
-            <div className="flex justify-between items-center">
-              <span className={`text-sm ${commentText.length >= 450 ? 'text-red-500' : 'text-gray-400'}`}>
-                {commentText.length}/500
-              </span>
-              <button type="submit" disabled={!commentText.trim() || isSubmitting}
-                className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
-                {isSubmitting ? t('common.loading') : t('game.ui.clash.submit')}
-              </button>
-            </div>
-          </form>
-        )}
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center">
+                <p className="text-xs text-gray-400 mb-1">{t('game.ui.clash.yourSubject')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{subjectName}</p>
+              </div>
+              <textarea
+                data-cy="clash-comment-input"
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                placeholder={t('game.ui.clash.writeComment')}
+                maxLength={500}
+                rows={4}
+                disabled={isSubmitting}
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-game-orange bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none disabled:opacity-50"
+              />
+              <div className="flex justify-between items-center">
+                <span className={`text-sm ${commentText.length >= 450 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {commentText.length}/500
+                </span>
+                <button type="submit" data-cy="clash-submit-comment-button" disabled={!commentText.trim() || isSubmitting}
+                  className="bg-game-blue text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
+                  {isSubmitting ? t('common.loading') : t('game.ui.clash.submit')}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
 
         {isAdmin && (
-          <div className="flex flex-col items-center gap-2 pt-2 border-t border-orange-200 dark:border-orange-800">
+          <div className="flex flex-col items-center gap-2 pt-2 border-t border-orange-200 dark:border-orange-800" ref={adminScrollRef}>
             <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} />
             <p className="text-sm text-gray-400">{countA}/{groupSize} · {countB}/{groupSize}</p>
-            <button type="button" onClick={handleReveal}
+            <button type="button" data-cy="clash-reveal-comments-button" onClick={handleReveal}
               disabled={isRevealing || loading || !allSubmitted}
               className="bg-game-orange text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
               {isRevealing ? t('common.loading') : t('game.ui.clash.revealComments')}
             </button>
+            <AdminRoundTools isAdmin={isAdmin} onRestart={restartClashRound} onSkip={skipClashRound} />
           </div>
         )}
       </div>

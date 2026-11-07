@@ -2,48 +2,37 @@ import React, { useState } from 'react';
 import { Game } from '@mirror/shared';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { PlayerAvatar } from '../../ui/PlayerAvatar';
+import { getDisplayName } from '../../../utils/displayName';
+import { getPlayerNumber } from '../../../utils/playerNumbers';
 
-interface Props {
+const POINT_VALUES = [-3, -2, -1, 1, 2, 3];
+
+interface PostGuessingPointsPanelProps {
   game: Game;
 }
 
-const POINT_OPTIONS = [-3, -2, -1, 1, 2, 3];
-
-const PostGuessingPointsPanel: React.FC<Props> = ({ game }) => {
+export const PostGuessingPointsPanel: React.FC<PostGuessingPointsPanelProps> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, startPostGuessingPointPhase, awardPointsToPlayers } = useGame();
+  const { awardPointsToPlayers } = useGame();
   const { playSound } = useSound();
-  const { t } = useLanguage();
   const { showAlert, AlertModal } = useAlert();
+  const { t } = useLanguage();
 
-  const [selected, setSelected] = useState<Record<string, number>>({});
-  const [isAwardingPoints, setIsAwardingPoints] = useState(false);
-  const [isStartingPhase, setIsStartingPhase] = useState(false);
+  const [selectedPlayersForPoints, setSelectedPlayersForPoints] = useState<Record<string, number>>({});
+  const [isAwarding, setIsAwarding] = useState(false);
 
   const isAdmin = user?.uid === game.adminId;
-  const uid = user?.uid ?? '';
 
-  const handleStartPhase = async () => {
-    try {
-      setIsStartingPhase(true);
-      await startPostGuessingPointPhase();
-      await playSound('success');
-    } catch (error) {
-      showAlert(
-        t('common.error'),
-        (error instanceof Error && error.message) || t('game.alerts.postGuessingStartFailed'),
-      );
-    } finally {
-      setIsStartingPhase(false);
-    }
-  };
+  if (!game.postGuessingPointPhase || !isAdmin) return null;
 
-  const handleTogglePoints = (playerId: string, points: number) => {
-    setSelected(prev => {
+  const alreadyAwarded = game.playersWhoAwardedPostGuessPoints?.includes(user?.uid ?? '') ?? false;
+
+  const handleSelect = (playerId: string, points: number) => {
+    setSelectedPlayersForPoints((prev) => {
       if (prev[playerId] === points) {
         const next = { ...prev };
         delete next[playerId];
@@ -53,154 +42,113 @@ const PostGuessingPointsPanel: React.FC<Props> = ({ game }) => {
     });
   };
 
-  const handleAwardPoints = async () => {
-    const awards = Object.entries(selected).map(([recipientId, points]) => ({ recipientId, points }));
+  const handleSubmit = async () => {
+    const awards = Object.entries(selectedPlayersForPoints).map(([recipientId, points]) => ({
+      recipientId,
+      points,
+    }));
     if (awards.length === 0) {
       showAlert(t('common.error'), t('game.alerts.selectAtLeastOnePlayer'));
       return;
     }
     try {
-      setIsAwardingPoints(true);
+      setIsAwarding(true);
+      await playSound('click');
       await awardPointsToPlayers(awards);
       await playSound('points');
-      setSelected({});
-    } catch (error) {
-      showAlert(
-        t('common.error'),
-        (error instanceof Error && error.message) || t('game.alerts.awardPointsFailed'),
-      );
+      setSelectedPlayersForPoints({});
+    } catch (error: unknown) {
+      await playSound('error');
+      showAlert(t('common.error'), (error instanceof Error && error.message) || t('game.alerts.awardPointsFailed'));
     } finally {
-      setIsAwardingPoints(false);
+      setIsAwarding(false);
     }
   };
 
-  const totalPoints = Object.values(selected).reduce((sum, p) => sum + p, 0);
-  const alreadyAwarded = game.playersWhoAwardedPostGuessPoints?.includes(uid);
-
-  // Admin sees "Start Point Awards" button after target submitted guesses
-  if (
-    isAdmin &&
-    game.guessingData?.singleRoundTargetId &&
-    game.guessingData?.playersWhoSubmittedGuesses?.includes(game.guessingData.singleRoundTargetId) &&
-    !game.postGuessingPointPhase
-  ) {
-    return (
-      <>
-        {AlertModal}
-        <div className="mt-4 bg-gray-50 dark:bg-gray-700 rounded-xl p-4 space-y-3">
-          <p className="text-center font-semibold text-gray-900 dark:text-white">
-            {t('game.ui.postGuessing.startPhaseTitle')}
-          </p>
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-            {t('game.ui.postGuessing.startPhaseDesc')}
-          </p>
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={handleStartPhase}
-              disabled={isStartingPhase || loading}
-              className="bg-game-orange text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {isStartingPhase ? t('common.loading') : t('game.ui.postGuessing.startPhaseTitle')}
-            </button>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  if (!game.postGuessingPointPhase) return null;
-  if (!isAdmin) return null;
+  const total = Object.values(selectedPlayersForPoints).reduce((sum, points) => sum + points, 0);
 
   return (
-    <>
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border-2 border-game-gold mt-6">
       {AlertModal}
-      <div className="mt-4 bg-gray-50 dark:bg-gray-700 rounded-xl p-4 space-y-4">
-        <div className="text-center">
-          <p className="font-semibold text-gray-900 dark:text-white">
-            {t('game.ui.postGuessing.awardTitle')}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t('game.ui.postGuessing.awardDesc')}
-          </p>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 text-center">
+        {t('game.ui.postGuessing.awardTitle')}
+      </h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 text-center">
+        {t('game.ui.postGuessing.awardDesc')}
+      </p>
+
+      {alreadyAwarded ? (
+        <div className="bg-game-green/10 border border-game-green text-game-green rounded-lg p-4 text-center">
+          <p className="font-semibold mb-1">{t('game.ui.postGuessing.alreadyAwardedTitle')}</p>
+          <p>{t('game.ui.postGuessing.alreadyAwardedText')}</p>
+          <p className="text-sm opacity-80 mt-1">{t('game.ui.postGuessing.waitNextRound')}</p>
         </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t('game.ui.postGuessing.instructions')}
+          </p>
 
-        {alreadyAwarded ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 text-center space-y-1">
-            <p className="font-semibold text-game-green">{t('game.ui.postGuessing.alreadyAwardedTitle')}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('game.ui.postGuessing.alreadyAwardedText')}</p>
-            <p className="text-xs text-gray-400">{t('game.ui.postGuessing.waitNextRound')}</p>
-          </div>
-        ) : (
-          <>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('game.ui.postGuessing.instructions')}
-            </p>
-
-            <div className="space-y-3 max-h-72 overflow-y-auto">
-              {game.participants
-                .filter(p => p.userId !== uid)
-                .map(participant => {
-                  const selectedPoints = selected[participant.userId];
-                  return (
-                    <div key={participant.userId} className="bg-white dark:bg-gray-800 rounded-lg p-3">
-                      <div className="flex items-center gap-3 mb-3">
-                        <PlayerAvatar name={participant.userName} photoURL={participant.photoURL} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">
-                            {participant.userName}
-                            {participant.userId === game.adminId && ' 👑'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex justify-center gap-2 flex-wrap">
-                        {POINT_OPTIONS.map(points => {
-                          const isNeg = points < 0;
-                          const isChosen = selectedPoints === points;
-                          return (
-                            <button
-                              key={points}
-                              type="button"
-                              onClick={() => handleTogglePoints(participant.userId, points)}
-                              className={`w-10 h-10 rounded-full text-sm font-bold border-2 transition-all ${
-                                isChosen
-                                  ? isNeg
-                                    ? 'bg-red-500 border-red-500 text-white'
-                                    : 'bg-game-green border-game-green text-white'
-                                  : isNeg
-                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 text-red-500'
-                                    : 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-300'
-                              } hover:opacity-80`}
-                            >
-                              {points > 0 ? `+${points}` : points}
-                            </button>
-                          );
-                        })}
-                      </div>
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {game.participants
+              .filter((p) => p.userId !== user?.uid)
+              .map((participant) => {
+                const selectedPoints = selectedPlayersForPoints[participant.userId];
+                return (
+                  <div
+                    key={participant.userId}
+                    data-cy="post-guessing-points-row"
+                    data-cy-user-id={participant.userId}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700"
+                  >
+                    <PlayerAvatar name={getDisplayName(participant.userName, game.showSurnames ?? false)} photoURL={participant.photoURL} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 dark:text-white truncate text-sm">
+                        {getPlayerNumber(game, participant.userId)}. {getDisplayName(participant.userName, game.showSurnames ?? false)}
+                      </p>
                     </div>
-                  );
-                })}
-            </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {POINT_VALUES.map((points) => {
+                        const isSelected = selectedPoints === points;
+                        const isNegative = points < 0;
+                        return (
+                          <button
+                            key={points}
+                            type="button"
+                            onClick={() => handleSelect(participant.userId, points)}
+                            className={`w-8 h-8 rounded-full border text-xs font-semibold transition-colors ${
+                              isSelected
+                                ? isNegative
+                                  ? 'bg-red-500 border-red-500 text-white'
+                                  : 'bg-game-green border-game-green text-white'
+                                : isNegative
+                                  ? 'bg-red-500/10 border-red-500/30 text-red-500'
+                                  : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200'
+                            }`}
+                          >
+                            {points}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
 
-            {Object.keys(selected).length > 0 && (
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={handleAwardPoints}
-                  disabled={isAwardingPoints || loading}
-                  className="bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                >
-                  {isAwardingPoints
-                    ? t('common.loading')
-                    : t('game.ui.postGuessing.awardButton', { total: totalPoints })}
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </>
+          {Object.keys(selectedPlayersForPoints).length > 0 && (
+            <button
+              type="button"
+              data-testid="award-points-submit"
+              onClick={handleSubmit}
+              disabled={isAwarding}
+              className="w-full bg-game-green text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {isAwarding ? t('common.loading') : t('game.ui.postGuessing.awardButton', { total })}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
-
-export default PostGuessingPointsPanel;

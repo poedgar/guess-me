@@ -5,8 +5,12 @@ import { Game } from '@/contexts/GameContext';
 import { t } from '@/i18n';
 import { calculateSimilarPairs } from '@/utils/playerSimilarity';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { Leaderboard } from '../Leaderboard';
+import { IdeaLeaderboard } from '../ideas/IdeaLeaderboard';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -24,7 +28,17 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
     3,
   );
 
+  const pulse = usePulseBorderOnChange(`finished:${!!game.adminLeft}`, GameColors.gold);
+
   return (
+    <ScrollIntoView
+      enabled
+      scrollIntoViewKey={`finished:${!!game.adminLeft}`}
+      align="center"
+      animated
+      insets={SCROLL_INSETS}
+    >
+    <Animated.View style={pulse}>
     <View style={[gameStyles.gameFlowContainer, styles.phaseWrapper]}>
       {game.adminLeft ? (
         <>
@@ -43,14 +57,22 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
           <ThemedText style={styles.finishedText}>
             {t('game.ui.gameFinishedMessage', { locale })}
           </ThemedText>
-          <Leaderboard
-            game={game}
-            user={user}
-            joinIndexById={joinIndexById}
-            getDisplayName={getDisplayName}
-            locale={locale}
-            title={t('game.ui.finalLeaderboardTitle', { locale })}
-          />
+          {game.gameType === 'ideas' ? (
+            <IdeaLeaderboard
+              ideas={game.ideaData?.ideas ?? []}
+              locale={locale}
+              title={t('game.ui.ideas.finalLeaderboardTitle', { locale })}
+            />
+          ) : (
+            <Leaderboard
+              game={game}
+              user={user}
+              joinIndexById={joinIndexById}
+              getDisplayName={getDisplayName}
+              locale={locale}
+              title={t('game.ui.finalLeaderboardTitle', { locale })}
+            />
+          )}
           <View style={styles.alignmentSection}>
             <ThemedText type="subtitle" style={styles.alignmentTitle}>
               {t('game.ui.mostAlignedTitle', { locale })}
@@ -85,6 +107,8 @@ export const ResultsPhase: React.FC<Props> = ({ game, user, joinIndexById, getDi
         </>
       )}
     </View>
+    </Animated.View>
+    </ScrollIntoView>
   );
 };
 

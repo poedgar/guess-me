@@ -5,6 +5,10 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAlert } from '../../../hooks/useAlert';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
+import { AdminRoundTools } from '../AdminRoundTools';
+import { getDisplayName } from '../../../utils/displayName';
 
 interface Props {
   game: Game;
@@ -12,7 +16,7 @@ interface Props {
 
 export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, submitBasketCommentGuess, submitBasketAuthorGuess, startNextBasketRound } = useGame();
+  const { loading, submitBasketCommentGuess, submitBasketAuthorGuess, startNextBasketRound, restartBasketRound, skipBasketRound } = useGame();
   const { playSound } = useSound();
   const { t } = useLanguage();
   const { showAlert, AlertModal } = useAlert();
@@ -24,19 +28,15 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
   const [isSubmittingAuthor, setIsSubmittingAuthor] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
 
-  if (!game.basketData) return null;
-
-  const { schedule, currentRoundIndex, currentRoundComments, currentRoundGuesses } = game.basketData;
-  const totalRounds = schedule.length;
+  // Hooks must run unconditionally on every render (Rules of Hooks), so these
+  // are declared before the `!game.basketData` early return below, with
+  // null-safe trigger-key expressions. Not currently reachable given today's
+  // Firestore write ordering, but kept safe against future ordering changes.
+  const basketData = game.basketData;
+  const currentRoundIndex = basketData?.currentRoundIndex ?? 0;
+  const currentRoundGuesses = basketData?.currentRoundGuesses ?? [];
   const guesserId = user?.uid ?? '';
-  const isAdmin = user?.uid === game.adminId;
-  const isLastRound = currentRoundIndex + 1 >= schedule.length;
-
   const existingGuess = currentRoundGuesses.find((g: any) => g.guesserId === guesserId);
-  const actualComment = currentRoundComments.find((c: any) => c.subjectId === guesserId);
-
-  const writerIds = new Set(schedule[currentRoundIndex].assignments.map((a: any) => a.writerId));
-  const otherPlayers = game.participants.filter(p => p.userId !== guesserId && writerIds.has(p.userId));
 
   const effectiveCorrect = isCommentCorrect !== null
     ? isCommentCorrect
@@ -52,11 +52,34 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
 
   const showWrong = effectiveCorrect === false && selectedWriterId !== null;
 
-  const subjectIds = schedule[currentRoundIndex]?.assignments.map((a: any) => a.subjectId) ?? [];
+  const subjectIds = basketData?.schedule[currentRoundIndex]?.assignments.map((a: any) => a.subjectId) ?? [];
   const allGuessersDone = subjectIds.length > 0 && subjectIds.every((subjectId: string) => {
     const guess = currentRoundGuesses.find((g: any) => g.guesserId === subjectId);
     return guess !== undefined && (!guess.commentCorrect || guess.authorGuessId !== undefined);
   });
+
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${isDone || showWrong}:${showAuthorPrompt}`,
+    'center',
+    PULSE_COLORS.purple,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${currentRoundIndex}:${allGuessersDone}`,
+    'center',
+    PULSE_COLORS.purple,
+  );
+
+  if (!game.basketData) return null;
+
+  const { schedule, currentRoundComments } = game.basketData;
+  const totalRounds = schedule.length;
+  const isAdmin = user?.uid === game.adminId;
+  const isLastRound = currentRoundIndex + 1 >= schedule.length;
+
+  const actualComment = currentRoundComments.find((c: any) => c.subjectId === guesserId);
+
+  const writerIds = new Set(schedule[currentRoundIndex].assignments.map((a: any) => a.writerId));
+  const otherPlayers = game.participants.filter(p => p.userId !== guesserId && writerIds.has(p.userId));
 
   const handleCommentSelect = async (commentWriterId: string) => {
     showAlert(
@@ -139,62 +162,69 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
           </span>
         </div>
 
-        {isDone || showWrong ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center space-y-2">
-            {showWrong && (
-              <p className="text-red-500 font-bold">{t('game.ui.basket.wrong')}</p>
-            )}
-            <p className="text-gray-500 dark:text-gray-400">
-              {t('game.ui.basket.waitingForGuesses', {
-                count: currentRoundGuesses.length,
-                total: game.participants.length,
-              })}
-            </p>
-          </div>
-        ) : showAuthorPrompt ? (
-          <div className="space-y-3">
-            <p className="text-game-green font-bold">{t('game.ui.basket.correct')}</p>
-            <p className="font-semibold text-gray-900 dark:text-white">{t('game.ui.basket.whoWroteIt')}</p>
-            {otherPlayers.map(p => (
-              <button
-                key={p.userId}
-                type="button"
-                onClick={() => handleAuthorSelect(p.userId, p.userName)}
-                disabled={isSubmittingAuthor || loading}
-                className="w-full text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 font-medium text-gray-900 dark:text-white hover:border-game-purple disabled:opacity-50 transition-colors"
-              >
-                {p.userName}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="font-semibold text-gray-900 dark:text-white">{t('game.ui.basket.whichIsAboutYou')}</p>
-            {currentRoundComments.map((comment: any) => (
-              <button
-                key={comment.writerId}
-                type="button"
-                onClick={() => handleCommentSelect(comment.writerId)}
-                disabled={selectedWriterId !== null || isSubmittingGuess || loading}
-                className={`w-full text-left bg-white dark:bg-gray-800 border-2 rounded-lg px-4 py-3 text-gray-900 dark:text-white hover:border-game-blue disabled:opacity-50 transition-colors ${
-                  selectedWriterId === comment.writerId
-                    ? 'border-game-blue'
-                    : 'border-gray-200 dark:border-gray-700'
-                }`}
-              >
-                {comment.text}
-              </button>
-            ))}
-          </div>
-        )}
+        <div ref={playerScrollRef}>
+          {isDone || showWrong ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center space-y-2">
+              {showWrong && (
+                <p className="text-red-500 font-bold">{t('game.ui.basket.wrong')}</p>
+              )}
+              <p className="text-gray-500 dark:text-gray-400">
+                {t('game.ui.basket.waitingForGuesses', {
+                  count: currentRoundGuesses.length,
+                  total: game.participants.length,
+                })}
+              </p>
+            </div>
+          ) : showAuthorPrompt ? (
+            <div className="space-y-3">
+              <p className="text-game-green font-bold">{t('game.ui.basket.correct')}</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{t('game.ui.basket.whoWroteIt')}</p>
+              {otherPlayers.map(p => (
+                <button
+                  key={p.userId}
+                  type="button"
+                  data-cy="basket-guess-author-button"
+                  data-cy-user-id={p.userId}
+                  onClick={() => handleAuthorSelect(p.userId, getDisplayName(p.userName, game.showSurnames ?? false))}
+                  disabled={isSubmittingAuthor || loading}
+                  className="w-full text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 font-medium text-gray-900 dark:text-white hover:border-game-purple disabled:opacity-50 transition-colors"
+                >
+                  {getDisplayName(p.userName, game.showSurnames ?? false)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="font-semibold text-gray-900 dark:text-white">{t('game.ui.basket.whichIsAboutYou')}</p>
+              {currentRoundComments.map((comment: any) => (
+                <button
+                  key={comment.writerId}
+                  type="button"
+                  data-cy="basket-guess-comment-button"
+                  data-cy-writer-id={comment.writerId}
+                  onClick={() => handleCommentSelect(comment.writerId)}
+                  disabled={selectedWriterId !== null || isSubmittingGuess || loading}
+                  className={`w-full text-left bg-white dark:bg-gray-800 border-2 rounded-lg px-4 py-3 text-gray-900 dark:text-white hover:border-game-blue disabled:opacity-50 transition-colors ${
+                    selectedWriterId === comment.writerId
+                      ? 'border-game-blue'
+                      : 'border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  {comment.text}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {isAdmin && (
-          <div className="flex flex-col items-center gap-2 pt-2 border-t border-purple-200 dark:border-purple-800">
+          <div className="flex flex-col items-center gap-2 pt-2 border-t border-purple-200 dark:border-purple-800" ref={adminScrollRef}>
             {isLastRound && (
               <p className="text-sm font-semibold text-game-green">{t('game.ui.basket.finishGame')}</p>
             )}
             <button
               type="button"
+              data-cy="basket-next-round-button"
               onClick={handleNextRound}
               disabled={isAdvancing || loading || !allGuessersDone}
               className={`px-6 py-3 rounded-full text-white font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity ${
@@ -203,6 +233,7 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
             >
               {isAdvancing ? t('common.loading') : t('game.ui.basket.nextRound')}
             </button>
+            <AdminRoundTools isAdmin={isAdmin} onRestart={restartBasketRound} onSkip={skipBasketRound} />
           </div>
         )}
       </div>

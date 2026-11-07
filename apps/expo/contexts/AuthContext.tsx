@@ -1,6 +1,17 @@
 import { auth } from '@/config/firebase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { signOut as firebaseSignOut, GoogleAuthProvider, onAuthStateChanged, signInWithCredential, signInWithPopup, User } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile,
+  User,
+} from 'firebase/auth';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
@@ -14,6 +25,9 @@ interface AuthContextType {
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   isSignedIn: boolean;
+  registerWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,12 +121,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const registerWithEmail = async (email: string, password: string, displayName: string) => {
+    let credential;
+    try {
+      setLoading(true);
+      credential = await createUserWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged fires from this write and resets loading, same as signIn().
+    } catch (error: unknown) {
+      console.error('Register error:', error);
+      setLoading(false);
+      throw error;
+    }
+    try {
+      await updateProfile(credential.user, { displayName });
+    } catch (error: unknown) {
+      // The account was already created (and the user signed in via
+      // onAuthStateChanged, which already reset loading) by this point — a
+      // display-name write failure is not a registration failure, so it
+      // must not be surfaced through the same error path signIn/register
+      // failures use, and must not touch loading again.
+      console.error('Failed to set display name after registration:', error);
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: unknown) {
+      console.error('Email sign-in error:', error);
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: unknown) {
+      console.error('Password reset error:', error);
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
     signIn,
     signOut,
     isSignedIn: !!user,
+    registerWithEmail,
+    signInWithEmail,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

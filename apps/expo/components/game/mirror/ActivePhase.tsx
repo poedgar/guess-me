@@ -12,6 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Platform,
   StyleSheet,
   TextInput,
@@ -20,6 +21,10 @@ import {
 } from 'react-native';
 import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -27,9 +32,10 @@ interface Props {
   user: { uid: string } | null;
   participantsByJoin: Participant[];
   joinIndexById: Record<string, number>;
+  playerNumbers?: Record<string, number>;
   getDisplayName: (name: string) => string;
   showFancyAlert: ShowFancyAlertFn;
-  showFaceMessage: (message: string, face?: string) => void; 
+  showFaceMessage: (message: string, face?: string) => void;
   locale: string;
   isDark: boolean;
 }
@@ -40,6 +46,7 @@ export const ActivePhase: React.FC<Props> = ({
   user,
   participantsByJoin,
   joinIndexById,
+  playerNumbers,
   getDisplayName,
   showFancyAlert,
   showFaceMessage,
@@ -56,7 +63,12 @@ export const ActivePhase: React.FC<Props> = ({
     givePointsToTarget,
     startGuessingPhase,
     skipPostCommentPhase,
+    startNextRound,
+    restartMirrorRound,
+    skipMirrorRound,
   } = useGame();
+
+  const [isStartingNextRound, setIsStartingNextRound] = useState(false);
 
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
@@ -72,14 +84,17 @@ export const ActivePhase: React.FC<Props> = ({
     face: '😊',
   });
 
+  // Mirrors expectedCommenters' filter logic below: everyone except the
+  // round's target, and except the admin when adminWritesComments is off.
   const requiredComments = useMemo(() => {
     if (!game.currentRound) return 0;
     const targetUserId = game.currentRound.targetUserId;
-    const isTargetAdmin = targetUserId === game.adminId;
-    if (!game.adminWritesComments) return game.participants.length - 2;
-    if (isTargetAdmin) return game.participants.length - 1;
-    return game.participants.length - 2;
-  }, [game.currentRound, game.adminId, game.adminWritesComments, game.participants.length]);
+    return game.participants.filter((p) => {
+      if (p.userId === targetUserId) return false;
+      if (p.userId === game.adminId && !game.adminWritesComments) return false;
+      return true;
+    }).length;
+  }, [game.currentRound, game.adminId, game.adminWritesComments, game.participants]);
 
   const getMaxPoints = () => {
     // Maximum points is participants count minus 1 (excluding the target themselves)
@@ -282,7 +297,76 @@ export const ActivePhase: React.FC<Props> = ({
     void doStartGuessingPhase();
   };
 
-  if (!game.currentRound) return null;
+  const adminPulse = usePulseBorderOnChange(
+    `${game.currentRound?.roundNumber ?? 'none'}:admin:${game.currentRound?.commentsVisible ?? false}`,
+    GameColors.green,
+  );
+  const targetPulse = usePulseBorderOnChange(
+    `${game.currentRound?.roundNumber ?? 'none'}:target:${game.currentRound?.commentsVisible ?? false}:${game.currentRound?.pointsGiven ?? false}`,
+    GameColors.green,
+  );
+  const otherPulse = usePulseBorderOnChange(
+    `${game.currentRound?.roundNumber ?? 'none'}:other:${game.currentRound?.commentsVisible ?? false}:${game.currentRound?.pointsGiven ?? false}`,
+    GameColors.green,
+  );
+
+  const doStartNextRound = async () => {
+    setIsStartingNextRound(true);
+    try {
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await startNextRound();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    } catch (error: unknown) {
+      if (!isMounted.current) return;
+      playSound('error').catch(() => {});
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.startNextRoundFailed', { locale }));
+    } finally {
+      if (isMounted.current) setIsStartingNextRound(false);
+    }
+  };
+
+  if (!game.currentRound) {
+    // The round transition between guessing and the next round is two
+    // sequential awaits (finalizeGuessingPhase then startNextRound) — if
+    // the second one fails (e.g. a network blip), the game is left here:
+    // status 'active' with no currentRound. Give the admin a retry control
+    // instead of leaving the game silently stuck.
+    return (
+      <View style={styles.phaseWrapper}>
+        {isAdmin ? (
+          <TouchableOpacity
+            style={[
+              styles.adminButton,
+              { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
+              isStartingNextRound && gameStyles.buttonDisabled,
+            ]}
+            onPress={doStartNextRound}
+            disabled={isStartingNextRound}
+            activeOpacity={0.8}
+            accessibilityLabel={t('game.nextRound', { locale })}
+            accessibilityRole="button"
+          >
+            {isStartingNextRound
+              ? <ActivityIndicator size="small" color={GameColors.white} />
+              : <IconSymbol name="forward.end.fill" size={16} color={GameColors.white} />}
+            <ThemedText style={styles.buttonText}>{t('game.nextRound', { locale })}</ThemedText>
+          </TouchableOpacity>
+        ) : (
+          <ThemedText style={styles.waitingText}>{t('game.waitingForAdmin', { locale })}</ThemedText>
+        )}
+      </View>
+    );
+  }
+
+  const numbers = playerNumbers ?? joinIndexById;
+  const expectedCommenters = game.participants.filter(p => {
+    if (p.userId === game.currentRound!.targetUserId) return false;
+    if (p.userId === game.adminId && !game.adminWritesComments) return false;
+    return true;
+  });
+  const submittedAuthorIds = new Set(game.currentRound.comments?.map((c: Comment) => c.authorId) ?? []);
+  const submittedCount = expectedCommenters.filter(p => submittedAuthorIds.has(p.userId)).length;
 
   return (
     <View style={styles.phaseWrapper}>
@@ -308,7 +392,38 @@ export const ActivePhase: React.FC<Props> = ({
 
         {/* Admin controls */}
         {isAdmin && (
-          <View style={styles.adminControls}>
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:admin:${game.currentRound.commentsVisible}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          <Animated.View style={[styles.adminControls, adminPulse]}>
+            {!game.currentRound.commentsVisible && (
+              <View style={styles.checklistContainer}>
+                <ThemedText style={styles.checklistTitle}>
+                  {t('game.ui.commentersStatusTitle', { locale })}
+                </ThemedText>
+                <ThemedText style={styles.checklistProgress}>
+                  {t('game.ui.commentsProgress', { locale, received: submittedCount, required: expectedCommenters.length })}
+                </ThemedText>
+                {expectedCommenters.map(p => {
+                  const hasSubmitted = submittedAuthorIds.has(p.userId);
+                  return (
+                    <View key={p.userId} style={styles.checklistRow}>
+                      <ThemedText style={styles.checklistNumber}>
+                        {numbers[p.userId] ? `${numbers[p.userId]}.` : ''}
+                      </ThemedText>
+                      <ThemedText style={styles.checklistName}>{getDisplayName(p.userName)}</ThemedText>
+                      <ThemedText style={hasSubmitted ? styles.checklistStatusDone : styles.checklistStatusPending}>
+                        {hasSubmitted ? `✅ ${t('game.ui.submitted', { locale })}` : `⏳ ${t('game.ui.pending', { locale })}`}
+                      </ThemedText>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
             <View style={styles.adminButtonsRow}>
               {!game.currentRound.commentsVisible && (
                 <TouchableOpacity
@@ -345,12 +460,27 @@ export const ActivePhase: React.FC<Props> = ({
                 </TouchableOpacity>
               )}
             </View>
-          </View>
+          </Animated.View>
+          </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartMirrorRound}
+          onSkip={skipMirrorRound}
+        />
 
         {/* User is the target */}
         {user?.uid === game.currentRound.targetUserId && (
-          <View style={styles.targetView}>
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:target:${game.currentRound.commentsVisible}:${game.currentRound.pointsGiven}`}
+            align="top"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          <Animated.View style={[styles.targetView, targetPulse]}>
             {!game.currentRound.commentsVisible ? (
               <ThemedText style={styles.waitingText}>
                 {t('game.ui.waitingForCommentsAboutYou', { locale })}
@@ -418,12 +548,20 @@ export const ActivePhase: React.FC<Props> = ({
                 {t('game.ui.finishedAwardingPointsWaitAdmin', { locale })}
               </ThemedText>
             )}
-          </View>
+          </Animated.View>
+          </ScrollIntoView>
         )}
 
         {/* User is not the target */}
         {user?.uid !== game.currentRound.targetUserId && (
-          <View style={styles.commentView}>
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:other:${game.currentRound.commentsVisible}:${game.currentRound.pointsGiven}`}
+            align="top"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          <Animated.View style={[styles.commentView, otherPulse]}>
             {(() => {
               const shouldUserWriteComments = !(
                 user?.uid === game.adminId &&
@@ -549,7 +687,8 @@ export const ActivePhase: React.FC<Props> = ({
                 );
               }
             })()}
-          </View>
+          </Animated.View>
+          </ScrollIntoView>
         )}
       </View>
 
@@ -585,6 +724,14 @@ roundTitle: { marginBottom: 8, textAlign: 'center', fontFamily: Fonts.sans },
 targetText: { textAlign: 'center', fontSize: 18, fontWeight: '600', fontFamily: Fonts.sans },
 adminControls: { marginTop: 24 },
 adminButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
+checklistContainer: { marginBottom: 12, padding: 12, borderRadius: 8, backgroundColor: GameColors.cardBg },
+checklistTitle: { textAlign: 'center', fontWeight: '600', fontSize: 14, marginBottom: 4, fontFamily: Fonts.sans },
+checklistProgress: { textAlign: 'center', fontSize: 12, opacity: 0.7, marginBottom: 8, fontFamily: Fonts.sans },
+checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+checklistNumber: { width: 20, fontSize: 13, opacity: 0.6, fontFamily: Fonts.sans },
+checklistName: { flex: 1, fontSize: 13, fontWeight: '500', fontFamily: Fonts.sans },
+checklistStatusDone: { fontSize: 12, fontWeight: '600', color: GameColors.green, fontFamily: Fonts.sans },
+checklistStatusPending: { fontSize: 12, fontWeight: '600', opacity: 0.5, fontFamily: Fonts.sans },
 adminButton: { flexDirection: 'row', borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 14, paddingHorizontal: 24, gap: 8, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
 buttonText: { color: GameColors.white, fontWeight: '600', fontSize: 15, fontFamily: Fonts.sans },
 targetView: { marginBottom: 20 },

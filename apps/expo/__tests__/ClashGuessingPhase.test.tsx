@@ -33,7 +33,7 @@ jest.mock('@/components/game/gameStyles', () => ({ gameStyles: { statusLabel: {}
 jest.mock('@/components/game/clash/ClashScoreboard', () => { const { Text } = require('react-native'); return { ClashScoreboard: () => <Text>scoreboard</Text> }; });
 jest.mock('@/constants/theme', () => ({
   Fonts: { sans: 'System' },
-  GameColors: { white: '#fff', blue: '#007AFF', green: '#34C759', correct: '#34C759', incorrect: '#FF3B30', shadow: '#000', cardBg: '#fafafa', cardBorder: '#eee', neutral: '#8E8E93' },
+  GameColors: { white: '#fff', blue: '#007AFF', green: '#34C759', correct: '#34C759', incorrect: '#FF3B30', danger: '#FF3B30', shadow: '#000', cardBg: '#fafafa', cardBorder: '#eee', neutral: '#8E8E93' },
   StatusColors: { clash_guessing: '#FF5000' },
 }));
 

@@ -1,23 +1,29 @@
 import React from 'react';
-import { Participant } from '@mirror/shared';
+import { Game, Participant } from '@mirror/shared';
 import { PlayerAvatar } from '../ui/PlayerAvatar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { getDisplayName } from '../../utils/displayName';
+import { getPlayerNumber } from '../../utils/playerNumbers';
 
 interface LeaderboardProps {
+  game: Game;
   participants: Participant[];
   scores?: { [userId: string]: number };
   guessResults?: { [userId: string]: { correctGuesses: number } };
   maxHeight?: string;
   title?: string;
+  showSurnames?: boolean;
 }
 
 export const Leaderboard: React.FC<LeaderboardProps> = ({
+  game,
   participants,
   scores,
   guessResults,
   maxHeight = 'max-h-96',
   title,
+  showSurnames = false,
 }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -45,6 +51,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
           return (
             <div
               key={p.userId}
+              data-cy="leaderboard-row"
+              data-cy-user-id={p.userId}
               className={`flex items-center gap-3 p-3 rounded-lg ${
                 idx === 0
                   ? 'bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-600'
@@ -63,11 +71,12 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                 )}
               </div>
 
-              <PlayerAvatar name={p.userName} photoURL={p.photoURL} size="sm" />
+              <PlayerAvatar name={getDisplayName(p.userName, showSurnames)} photoURL={p.photoURL} size="sm" />
 
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 dark:text-white truncate text-sm">
-                  {p.userName}
+                  {getPlayerNumber(game, p.userId)}. {getDisplayName(p.userName, showSurnames)}
+                  {p.userId === game.adminId && ' 👑'}
                   {isCurrentUser && (
                     <span className="ml-1 text-xs text-blue-500">
                       {t('game.ui.youLabel')}
@@ -85,7 +94,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
               </div>
 
               <div className="text-right flex-shrink-0">
-                <p className="text-xl font-bold text-game-green">{p.totalPoints}</p>
+                <p className="text-xl font-bold text-game-green" data-cy="leaderboard-total-points">{p.totalPoints}</p>
                 <p className="text-xs text-gray-400">{t('game.ui.pointsTotal')}</p>
               </div>
             </div>

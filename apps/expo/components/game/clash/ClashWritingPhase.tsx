@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
 import { gameStyles } from '@/components/game/gameStyles';
 import { ClashScoreboard } from './ClashScoreboard';
@@ -10,7 +11,10 @@ import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -26,7 +30,7 @@ interface Props {
 export const ClashWritingPhase: React.FC<Props> = ({
   game, user, isAdmin, locale, isDark, getDisplayName, showFancyAlert,
 }) => {
-  const { submitClashComment, revealClashComments } = useGame();
+  const { submitClashComment, revealClashComments, restartClashRound, skipClashRound } = useGame();
   const { playSound } = useSound();
   const inputTheme = themedInput(isDark);
   const isMounted = useRef(true);
@@ -55,6 +59,9 @@ export const ClashWritingPhase: React.FC<Props> = ({
   const countA = currentRoundCommentsA.length;
   const countB = currentRoundCommentsB.length;
   const allSubmitted = countA >= groupSize && countB >= groupSize;
+
+  const playerPulse = usePulseBorderOnChange(`${currentRoundIndex}:${alreadySubmitted}`, GameColors.admin);
+  const adminPulse = usePulseBorderOnChange(`${currentRoundIndex}:${allSubmitted}`, GameColors.admin);
 
   const handleSubmit = async () => {
     if (!commentText.trim()) return;
@@ -106,6 +113,14 @@ export const ClashWritingPhase: React.FC<Props> = ({
       </View>
 
       <View style={gameStyles.gameFlowContainer}>
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${currentRoundIndex}:${alreadySubmitted}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
+        <Animated.View style={playerPulse}>
         {alreadySubmitted ? (
           <View style={styles.waitingCard}>
             <ThemedText style={styles.waitingText}>
@@ -146,9 +161,18 @@ export const ClashWritingPhase: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
         )}
+        </Animated.View>
+        </ScrollIntoView>
 
         {isAdmin && (
-          <View style={styles.adminSection}>
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${currentRoundIndex}:${allSubmitted}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          <Animated.View style={[styles.adminSection, adminPulse]}>
             <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} locale={locale} />
             <ThemedText style={styles.adminCount}>{countA}/{groupSize} · {countB}/{groupSize}</ThemedText>
             <TouchableOpacity
@@ -163,8 +187,16 @@ export const ClashWritingPhase: React.FC<Props> = ({
                 : <IconSymbol name="eye.fill" size={16} color={GameColors.white} />}
               <ThemedText style={styles.wideButtonText}>{t('game.ui.clash.revealComments', { locale })}</ThemedText>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
+          </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartClashRound}
+          onSkip={skipClashRound}
+        />
       </View>
     </View>
   );

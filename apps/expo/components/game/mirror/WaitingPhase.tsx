@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Platform,
   ScrollView,
   StyleSheet,
@@ -22,6 +23,9 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import { Leaderboard } from '../Leaderboard';
 import { ShowFancyAlertFn } from '../GameHeader';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -49,11 +53,14 @@ export const WaitingPhase: React.FC<Props> = ({
   onCopyGameId,
 }) => {
   const { playSound } = useSound();
-  const { loading, startGame, startBasketGame, startClashGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, setGameType } = useGame();
+  const { loading, startGame, startBasketGame, startClashGame, startIdeaGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, updateIdeaIncognitoMode, setGameType } = useGame();
 
   const [isCopied, setIsCopied] = useState(false);
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
+
+  const clashSetupPulse = usePulseBorderOnChange(`clashSetup:${game.gameType}`, GameColors.admin);
+  const waitingPulse = usePulseBorderOnChange(`${isAdmin}:${game.gameType ?? 'mirror'}`, GameColors.admin);
 
   const handleCopyGameId = async () => {
     await onCopyGameId();
@@ -112,6 +119,11 @@ export const WaitingPhase: React.FC<Props> = ({
     updateShowGuessResults
   );
 
+  const handleToggleIdeaIncognitoMode = makeSettingToggler(
+    () => !(game.ideaIncognitoMode ?? true),
+    updateIdeaIncognitoMode
+  );
+
   const handleStartGame = async () => {
     if (isMounted.current === false) return;
     try {
@@ -121,6 +133,8 @@ export const WaitingPhase: React.FC<Props> = ({
         await startBasketGame();
       } else if (game.gameType === 'clash') {
         await startClashGame();
+      } else if (game.gameType === 'ideas') {
+        await startIdeaGame();
       } else {
         await startGame();
       }
@@ -313,8 +327,43 @@ export const WaitingPhase: React.FC<Props> = ({
                   {t('game.ui.gameTypeClash', { locale })}
                 </ThemedText>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.gameTypeButton,
+                  game.gameType === 'ideas' && styles.gameTypeButtonActive,
+                ]}
+                onPress={() => setGameType('ideas').catch(() => {})}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={[
+                  styles.gameTypeButtonText,
+                  game.gameType === 'ideas' && styles.gameTypeButtonTextActive,
+                ]}>
+                  {t('game.ui.gameTypeIdeas', { locale })}
+                </ThemedText>
+              </TouchableOpacity>
             </View>
           </View>
+
+          {game.gameType === 'ideas' && (
+            <View style={styles.toggleContainer}>
+              <View style={styles.toggleInfo}>
+                <ThemedText style={styles.toggleLabel}>
+                  {t('game.ui.ideaIncognitoModeTitle', { locale })}
+                </ThemedText>
+                <ThemedText style={styles.toggleDescription}>
+                  {t('game.ui.ideaIncognitoModeDescription', { locale })}
+                </ThemedText>
+              </View>
+              <Switch
+                value={game.ideaIncognitoMode ?? true}
+                onValueChange={handleToggleIdeaIncognitoMode}
+                trackColor={{ false: GameColors.neutral, true: GameColors.green }}
+                thumbColor={GameColors.white}
+                ios_backgroundColor={GameColors.neutral}
+              />
+            </View>
+          )}
         </>
       )}
 
@@ -328,14 +377,24 @@ export const WaitingPhase: React.FC<Props> = ({
 
       {/* Clash group setup */}
       {isAdmin && game.gameType === 'clash' && (
-        <ClashSetupPanel
-          game={game}
-          locale={locale}
-          isDark={isDark}
-          getDisplayName={getDisplayName}
-          isAdmin={isAdmin}
-          showFancyAlert={showFancyAlert}
-        />
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`clashSetup:${game.gameType}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
+          <Animated.View style={clashSetupPulse}>
+            <ClashSetupPanel
+              game={game}
+              locale={locale}
+              isDark={isDark}
+              getDisplayName={getDisplayName}
+              isAdmin={isAdmin}
+              showFancyAlert={showFancyAlert}
+            />
+          </Animated.View>
+        </ScrollIntoView>
       )}
 
       {/* Participants list */}
@@ -382,32 +441,42 @@ export const WaitingPhase: React.FC<Props> = ({
       )}
 
       {/* Start Game / Waiting */}
-      <View style={gameStyles.gameFlowContainer}>
-        {isAdmin && game.gameType !== 'clash' && (
-          <TouchableOpacity
-            style={[
-              styles.startGameButton,
-              { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
-              (loading || game.participants.length < 2) && gameStyles.buttonDisabled,
-            ]}
-            onPress={handleStartGame}
-            disabled={loading || game.participants.length < 2}
-            activeOpacity={0.8}
-            accessibilityLabel={t('game.ui.startGame', { locale })}
-            accessibilityRole="button"
-          >
-            {loading
-              ? <ActivityIndicator size="small" color={GameColors.white} />
-              : <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />}
-            <ThemedText style={styles.buttonText}>{t('game.ui.startGame', { locale })}</ThemedText>
-          </TouchableOpacity>
-        )}
-        {!isAdmin && (
-          <ThemedText style={styles.waitingText}>
-            {t('game.ui.waitingForAdminStart', { locale })}
-          </ThemedText>
-        )}
-      </View>
+      {/* Clash admins have their own controls in ClashSetupPanel above (wrapped separately) —
+          this section renders an empty box for them, so keep it out of the auto-scroll pass. */}
+      <ScrollIntoView
+        enabled={!(isAdmin && game.gameType === 'clash')}
+        scrollIntoViewKey={`${isAdmin}:${game.gameType ?? 'mirror'}`}
+        align="center"
+        animated
+        insets={SCROLL_INSETS}
+      >
+        <Animated.View style={[gameStyles.gameFlowContainer, waitingPulse]}>
+          {isAdmin && game.gameType !== 'clash' && (
+            <TouchableOpacity
+              style={[
+                styles.startGameButton,
+                { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
+                (loading || game.participants.length < 2) && gameStyles.buttonDisabled,
+              ]}
+              onPress={handleStartGame}
+              disabled={loading || game.participants.length < 2}
+              activeOpacity={0.8}
+              accessibilityLabel={t('game.ui.startGame', { locale })}
+              accessibilityRole="button"
+            >
+              {loading
+                ? <ActivityIndicator size="small" color={GameColors.white} />
+                : <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />}
+              <ThemedText style={styles.buttonText}>{t('game.ui.startGame', { locale })}</ThemedText>
+            </TouchableOpacity>
+          )}
+          {!isAdmin && (
+            <ThemedText style={styles.waitingText}>
+              {t('game.ui.waitingForAdminStart', { locale })}
+            </ThemedText>
+          )}
+        </Animated.View>
+      </ScrollIntoView>
     </View>
   );
 };

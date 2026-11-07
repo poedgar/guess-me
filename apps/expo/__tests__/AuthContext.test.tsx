@@ -121,5 +121,98 @@ describe('AuthContext', () => {
         })
       ).rejects.toThrow('popup closed');
     });
+
+    it('registerWithEmail calls createUserWithEmailAndPassword then updateProfile with the display name', async () => {
+      const { createUserWithEmailAndPassword, updateProfile } = require('firebase/auth');
+      const fakeUser = { uid: 'new-user' };
+      createUserWithEmailAndPassword.mockResolvedValueOnce({ user: fakeUser });
+      updateProfile.mockResolvedValueOnce(undefined);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        await result.current.registerWithEmail('alice@example.com', 'password123', 'Alice');
+      });
+
+      expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(), 'alice@example.com', 'password123',
+      );
+      expect(updateProfile).toHaveBeenCalledWith(fakeUser, { displayName: 'Alice' });
+    });
+
+    it('registerWithEmail rethrows errors without calling updateProfile', async () => {
+      const { createUserWithEmailAndPassword, updateProfile } = require('firebase/auth');
+      createUserWithEmailAndPassword.mockRejectedValueOnce(
+        Object.assign(new Error('email in use'), { code: 'auth/email-already-in-use' }),
+      );
+      updateProfile.mockClear();
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await expect(
+        act(async () => {
+          await result.current.registerWithEmail('taken@example.com', 'password123', 'Bob');
+        })
+      ).rejects.toThrow('email in use');
+      expect(updateProfile).not.toHaveBeenCalled();
+    });
+
+    it('signInWithEmail calls signInWithEmailAndPassword', async () => {
+      const { signInWithEmailAndPassword } = require('firebase/auth');
+      signInWithEmailAndPassword.mockResolvedValueOnce({ user: { uid: 'existing-user' } });
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        await result.current.signInWithEmail('alice@example.com', 'password123');
+      });
+
+      expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(), 'alice@example.com', 'password123',
+      );
+    });
+
+    it('signInWithEmail rethrows errors', async () => {
+      const { signInWithEmailAndPassword } = require('firebase/auth');
+      signInWithEmailAndPassword.mockRejectedValueOnce(
+        Object.assign(new Error('wrong password'), { code: 'auth/wrong-password' }),
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await expect(
+        act(async () => {
+          await result.current.signInWithEmail('alice@example.com', 'wrong');
+        })
+      ).rejects.toThrow('wrong password');
+    });
+
+    it('resetPassword calls sendPasswordResetEmail', async () => {
+      const { sendPasswordResetEmail } = require('firebase/auth');
+      sendPasswordResetEmail.mockResolvedValueOnce(undefined);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        await result.current.resetPassword('alice@example.com');
+      });
+
+      expect(sendPasswordResetEmail).toHaveBeenCalledWith(expect.anything(), 'alice@example.com');
+    });
+
+    it('resetPassword rethrows errors', async () => {
+      const { sendPasswordResetEmail } = require('firebase/auth');
+      sendPasswordResetEmail.mockRejectedValueOnce(
+        Object.assign(new Error('no user'), { code: 'auth/user-not-found' }),
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await expect(
+        act(async () => {
+          await result.current.resetPassword('nobody@example.com');
+        })
+      ).rejects.toThrow('no user');
+    });
   });
 });

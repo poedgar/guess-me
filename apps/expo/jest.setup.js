@@ -40,6 +40,10 @@ jest.mock('firebase/auth', () => ({
   signInWithCredential: jest.fn(),
   signOut: jest.fn(() => Promise.resolve()),
   GoogleAuthProvider: jest.fn(),
+  createUserWithEmailAndPassword: jest.fn(),
+  signInWithEmailAndPassword: jest.fn(),
+  sendPasswordResetEmail: jest.fn(),
+  updateProfile: jest.fn(),
   User: {},
 }));
 
@@ -115,6 +119,18 @@ jest.mock('react-native-reanimated', () => ({
   View: 'View',
 }));
 
+// Mock react-native-scroll-into-view
+// jest-expo's RN mock doesn't implement UIManager.measureInWindow, which this
+// library calls internally (via measureElement -> ContainerBase.scrollIntoView).
+// Mocking only measureInWindow isn't enough — the library then calls
+// getScrollResponder() on the mock ScrollView next and fails one step later.
+// Mock the whole module: wrapScrollView is a no-op passthrough, and
+// ScrollIntoView just renders its children without any scroll behavior.
+jest.mock('react-native-scroll-into-view', () => ({
+  wrapScrollView: (C) => C,
+  ScrollIntoView: ({ children }) => children,
+}));
+
 // Mock theme-related dependencies
 jest.mock('@/hooks/use-theme-color', () => ({
   useThemeColor: jest.fn(() => '#000000'),
@@ -170,6 +186,21 @@ jest.mock('@/constants/theme', () => ({
   },
   themedInput: () => ({ style: {}, placeholderTextColor: '#999' }),
 }));
+
+// Restore AccessibilityInfo.isReduceMotionEnabled's implementation before every test.
+// jest.config.js sets `resetMocks: true`, which calls jest.resetAllMocks() before each
+// test — this strips the implementation off ALL jest.fn()s, including the ones defined
+// in react-native's own jest manual mock for AccessibilityInfo
+// (node_modules/react-native/jest/mocks/AccessibilityInfo.js), turning
+// `isReduceMotionEnabled` into a bare `jest.fn()` that returns undefined instead of a
+// Promise. usePulseBorderOnChange (apps/expo/hooks/usePulseBorderOnChange.ts) calls
+// `AccessibilityInfo.isReduceMotionEnabled().then(...)` on mount, so any component that
+// uses it would crash with "Cannot read properties of undefined (reading 'then')" on
+// every test after the first in a file. Reassert a stable implementation each time.
+const { AccessibilityInfo } = require('react-native');
+beforeEach(() => {
+  AccessibilityInfo.isReduceMotionEnabled.mockImplementation(() => Promise.resolve(false));
+});
 
 // Extend jest-native matchers - do this after jest-expo setup completes
 // Using a try-catch to avoid breaking if jest-expo hasn't finished setup

@@ -11,6 +11,8 @@ export const LanguageSelector: React.FC = () => {
         <button type="button"
           key={lang}
           onClick={() => setLocale(lang)}
+          data-cy="language-button"
+          data-cy-lang={lang}
           className={`px-3 py-2 rounded-lg font-semibold transition-all ${
             locale === lang
               ? 'bg-game-blue text-white'

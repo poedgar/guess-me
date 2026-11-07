@@ -12,6 +12,7 @@ import { ResultsPhase } from './mirror/ResultsPhase';
 import { BasketScreen } from './basket/BasketScreen';
 import { ClashScreen } from './clash/ClashScreen';
 import { ClashSetupPanel } from './clash/ClashSetupPanel';
+import { IdeaScreen } from './ideas/IdeaScreen';
 
 export const GameScreen: React.FC = () => {
   const { currentGame, leaveGame } = useGame();
@@ -101,6 +102,16 @@ export const GameScreen: React.FC = () => {
             )}
             {(currentGame.status === 'clash_writing' || currentGame.status === 'clash_guessing') && (
               <ClashScreen game={currentGame} />
+            )}
+            {currentGame.status === 'finished' && <ResultsPhase game={currentGame} />}
+          </>
+        )}
+
+        {gameType === 'ideas' && (
+          <>
+            {currentGame.status === 'waiting' && <WaitingPhase game={currentGame} />}
+            {(currentGame.status === 'idea_writing' || currentGame.status === 'idea_rating') && (
+              <IdeaScreen game={currentGame} />
             )}
             {currentGame.status === 'finished' && <ResultsPhase game={currentGame} />}
           </>

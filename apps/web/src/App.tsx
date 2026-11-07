@@ -9,6 +9,7 @@ import { HomePage } from './pages/HomePage';
 import { GameJoinPage } from './pages/GameJoinPage';
 import { ResultsPage } from './pages/ResultsPage';
 import { RulesPage } from './pages/RulesPage';
+import { AdminCleanupPage } from './pages/AdminCleanupPage';
 import './App.css';
 
 function NavBar() {
@@ -26,7 +27,7 @@ function NavBar() {
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-around">
       <NavLink to="/" className={linkClass}>Home</NavLink>
       {hasResults && (
-        <NavLink to="/results" className={linkClass}>Results</NavLink>
+        <NavLink to="/results" className={linkClass} data-cy="nav-results">Results</NavLink>
       )}
       <NavLink to="/rules" className={linkClass}>Rules</NavLink>
     </nav>
@@ -47,6 +48,7 @@ export default function App() {
                     <Route path="/game/:gameId" element={<GameJoinPage />} />
                     <Route path="/results" element={<ResultsPage />} />
                     <Route path="/rules" element={<RulesPage />} />
+                    <Route path="/admin/cleanup" element={<AdminCleanupPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </main>

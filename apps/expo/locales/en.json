@@ -47,6 +47,8 @@
     "gameOver": "Game over",
     "youWin": "You win!",
     "tryAgain": "Try again",
+    "nextRound": "Next Round",
+    "waitingForAdmin": "Waiting for admin to start next round...",
     "alerts": {
       "updateSettingsFailed": "Failed to update settings.",
       "loginRequiredTitle": "Sign in required",
@@ -143,6 +145,9 @@
       "adminLeftMessage": "The admin has left and the game has ended. You will be returned to the lobby.",
       "participants": "Participants",
       "submitted": "Submitted",
+      "pending": "Pending",
+      "commentersStatusTitle": "Comment status",
+      "commentsProgress": "%{received} of %{required} submitted",
       "leaderboard": "Leaderboard",
       "youLabel": "(You)",
       "pointsGame": "Game",
@@ -247,6 +252,7 @@
       "gameTypeMirror": "In the Mirror",
       "gameTypeBasket": "Basket",
       "gameTypeClash": "Head-to-Head",
+      "gameTypeIdeas": "Group Ideas",
       "gameTypeSoon": "Soon",
       "basket": {
         "round": "Round %{current} of %{total}",
@@ -296,6 +302,26 @@
         "emptyGroup": "no players yet",
         "confirmSubjectGuess": "This comment is about %{name}?",
         "confirmAuthorGuess": "%{name} wrote this comment?"
+      },
+      "ideas": {
+        "yourIdeas": "Your ideas",
+        "writeIdea": "Write your idea...",
+        "addIdea": "Add idea",
+        "submittedCount": "%{count} participant(s) have submitted",
+        "startRating": "Start Rating Rounds",
+        "round": "Round %{current} of %{total}",
+        "pointsLabel": "Points",
+        "commentPlaceholder": "Optional anonymous comment...",
+        "submitRating": "Submit Rating",
+        "waitingForRatings": "%{count}/%{total} rated",
+        "nextRound": "Next Round",
+        "finishGame": "Finish Game",
+        "notEligibleToRate": "You are not participating in ratings this game.",
+        "commentsHeading": "Comments",
+        "confirmSubmitIdea": "Submit this idea?",
+        "confirmSubmitRating": "Submit this rating?",
+        "ideaIncognitoModeTitle": "Anonymous ratings",
+        "ideaIncognitoModeDescription": "If enabled, ratings and comments stay anonymous. If disabled, only attributed points are given — discussion happens out loud."
       }
     }
   },

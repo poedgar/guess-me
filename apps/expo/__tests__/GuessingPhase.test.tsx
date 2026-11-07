@@ -227,3 +227,45 @@ describe('GuessingPhase — 7.3 guess result modal has accessible close action',
     expect(modalViews.length).toBeGreaterThan(0);
   });
 });
+
+// ─── playerNumbers takes precedence over joinIndexById for author-pill numbers ──
+
+describe('GuessingPhase — playerNumbers prop numbers the author pills', () => {
+  const COMMENT = { id: 'c1', text: 'Great player', authorId: 'admin-1' };
+
+  it('uses playerNumbers instead of joinIndexById when both are supplied', () => {
+    const { getByText, queryByText } = render(
+      <GuessingPhase
+        game={makeGame()}
+        isAdmin={false}
+        user={{ uid: PLAYER_UID }}
+        participantsByJoin={participants}
+        joinIndexById={{ 'admin-1': 1, [PLAYER_UID]: 2, [TARGET_UID]: 3 }}
+        playerNumbers={{ 'admin-1': 9, [PLAYER_UID]: 8, [TARGET_UID]: 7 }}
+        getDisplayName={(name: string) => name.split(' ')[0]}
+        commentsForPlayer={[COMMENT]}
+        showFancyAlert={jest.fn()}
+        locale="en"
+      />
+    );
+    expect(getByText('9. Admin')).toBeTruthy();
+    expect(queryByText('1. Admin')).toBeNull();
+  });
+
+  it('falls back to joinIndexById when playerNumbers is not supplied', () => {
+    const { getByText } = render(
+      <GuessingPhase
+        game={makeGame()}
+        isAdmin={false}
+        user={{ uid: PLAYER_UID }}
+        participantsByJoin={participants}
+        joinIndexById={{ 'admin-1': 1, [PLAYER_UID]: 2, [TARGET_UID]: 3 }}
+        getDisplayName={(name: string) => name.split(' ')[0]}
+        commentsForPlayer={[COMMENT]}
+        showFancyAlert={jest.fn()}
+        locale="en"
+      />
+    );
+    expect(getByText('1. Admin')).toBeTruthy();
+  });
+});

@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
 import { gameStyles } from '@/components/game/gameStyles';
 import { ClashScoreboard } from './ClashScoreboard';
@@ -10,7 +11,11 @@ import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
+import { getClashLeader } from '@/utils/clashSchedule';
 
 interface Props {
   game: Game;
@@ -28,7 +33,7 @@ type CardPhase = 'idle' | 'subject_picking' | 'correct' | 'wrong' | 'author_pick
 export const ClashGuessingPhase: React.FC<Props> = ({
   game, user, isAdmin, locale, getDisplayName, showFancyAlert,
 }) => {
-  const { submitClashGuess, submitClashAuthorGuess, advanceClashGuessing } = useGame();
+  const { submitClashGuess, submitClashAuthorGuess, advanceClashGuessing, restartClashRound, skipClashRound } = useGame();
   const { playSound } = useSound();
 
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
@@ -39,13 +44,22 @@ export const ClashGuessingPhase: React.FC<Props> = ({
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
 
+  const playerPulse = usePulseBorderOnChange(
+    `${game.clashData?.currentRoundIndex ?? 0}:${game.clashData?.currentGuessingGroup ?? 'none'}`,
+    GameColors.danger,
+  );
+  const adminPulse = usePulseBorderOnChange(
+    `${game.clashData?.currentRoundIndex ?? 0}:${game.clashData?.currentGuessingGroup ?? 'none'}`,
+    GameColors.danger,
+  );
+
   if (!game.clashData) return null;
   const cd = game.clashData;
   const { currentRoundIndex, teamScores } = cd;
   const totalRounds = cd.schedule.length;
   const uid = user?.uid ?? '';
   const currentGroup = cd.currentGuessingGroup!;
-  const activeLeaderId = currentGroup === 'a' ? cd.groupA.leaderId : cd.groupB.leaderId;
+  const activeLeaderId = getClashLeader(currentGroup === 'a' ? cd.groupA : cd.groupB, currentRoundIndex);
   const isActiveLeader = uid === activeLeaderId;
 
   const activeLeaderParticipant = game.participants.find(p => p.userId === activeLeaderId);
@@ -195,6 +209,14 @@ export const ClashGuessingPhase: React.FC<Props> = ({
       <ClashScoreboard scoreA={teamScores.a} scoreB={teamScores.b} locale={locale} />
 
       <View style={gameStyles.gameFlowContainer}>
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${currentRoundIndex}:${currentGroup}:${isActiveLeader}`}
+          align="top"
+          animated
+          insets={SCROLL_INSETS}
+        >
+        <Animated.View style={playerPulse}>
         {!isActiveLeader ? (
           <View style={styles.waitingCard}>
             <ThemedText style={styles.waitingText}>
@@ -272,9 +294,18 @@ export const ClashGuessingPhase: React.FC<Props> = ({
             {isSubmitting && <ActivityIndicator style={{ marginTop: 8 }} color={GameColors.blue} />}
           </View>
         )}
+        </Animated.View>
+        </ScrollIntoView>
 
         {isAdmin && (
-          <View style={styles.adminSection}>
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${currentRoundIndex}:${currentGroup}:${currentGroupDone}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          <Animated.View style={[styles.adminSection, adminPulse]}>
             <TouchableOpacity
               style={[styles.wideButton, { backgroundColor: otherGroupDone && isLastRound ? GameColors.green : GameColors.blue, shadowColor: GameColors.shadow }, (isAdvancing || !currentGroupDone) && gameStyles.buttonDisabled]}
               onPress={handleAdvance}
@@ -287,8 +318,16 @@ export const ClashGuessingPhase: React.FC<Props> = ({
                 : <IconSymbol name={otherGroupDone && isLastRound ? 'flag.checkered' : 'forward.end.fill'} size={16} color={GameColors.white} />}
               <ThemedText style={styles.wideButtonText}>{advanceLabel}</ThemedText>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
+          </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartClashRound}
+          onSkip={skipClashRound}
+        />
       </View>
     </View>
   );

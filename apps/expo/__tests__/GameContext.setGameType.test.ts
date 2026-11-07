@@ -75,13 +75,13 @@ describe('setGameType', () => {
     );
   });
 
-  it('does nothing when there is no active game', async () => {
+  it('throws when there is no active game', async () => {
     const firestore = require('firebase/firestore');
     firestore.updateDoc.mockClear();
 
     const { result } = renderHook(() => useGame(), { wrapper });
     await act(async () => {
-      await result.current.setGameType('mirror');
+      await expect(result.current.setGameType('mirror')).rejects.toThrow('Only the admin can update this setting');
     });
 
     expect(firestore.updateDoc).not.toHaveBeenCalled();

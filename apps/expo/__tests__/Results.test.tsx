@@ -133,6 +133,72 @@ describe('Results screen — active game leaderboard', () => {
   });
 });
 
+describe('Results screen — frozen leaderboard mid-round', () => {
+  beforeEach(() => {
+    mockCurrentGame = {
+      id: 'game1',
+      status: 'active',
+      adminId: 'u1',
+      participants: [
+        { userId: 'u1', userName: 'Alice', userEmail: 'a@t.com', joinedAt: new Date(1000) },
+        { userId: 'u2', userName: 'Bob',   userEmail: 'b@t.com', joinedAt: new Date(2000) },
+      ],
+      // Live scores reflect this round's in-progress scoring...
+      scores: { u1: 100, u2: 100 },
+      guessResults: { u1: { correctGuesses: 9 } },
+      // ...but the round-start snapshot reflects the last completed round,
+      // and must be what's actually displayed.
+      roundStartScores: { u1: 10, u2: 5 },
+      roundStartGuessResults: { u1: { correctGuesses: 2 } },
+      rounds: [],
+    };
+  });
+
+  it('shows the round-start snapshot totals, not the live in-progress scores', () => {
+    const { getByText, queryByText } = renderScreen();
+    // Alice: 10 + 2 = 12 (frozen), NOT 100 + 9 = 109 (live). Anchored to the
+    // start so this can't false-positive against an unrelated "112"-style
+    // number elsewhere in the fixture.
+    expect(getByText(/^12/)).toBeTruthy();
+    expect(queryByText(/109/)).toBeNull();
+  });
+
+  it('shows the frozen guess points, not the live guess points', () => {
+    const { getByText, queryByText } = renderScreen();
+    expect(getByText(/\(2\)/)).toBeTruthy();
+    expect(queryByText(/\(9\)/)).toBeNull();
+  });
+});
+
+describe('Results screen — finished game shows live final totals', () => {
+  beforeEach(() => {
+    mockCurrentGame = {
+      id: 'game1',
+      status: 'finished',
+      adminId: 'u1',
+      participants: [
+        { userId: 'u1', userName: 'Alice', userEmail: 'a@t.com', joinedAt: new Date(1000) },
+      ],
+      // Live scores are the final, correct totals once the game is over...
+      scores: { u1: 50 },
+      guessResults: { u1: { correctGuesses: 4 } },
+      // ...even though the last round-start snapshot is now stale (it was
+      // never refreshed for "after the final round").
+      roundStartScores: { u1: 10 },
+      roundStartGuessResults: { u1: { correctGuesses: 1 } },
+      rounds: [],
+    };
+  });
+
+  it('shows the live final total, not the stale round-start snapshot', () => {
+    const { getByText, queryByText } = renderScreen();
+    // Alice: 50 + 4 = 54 (live final), NOT 10 + 1 = 11 (stale snapshot).
+    // Anchored to the start, consistent with the frozen-leaderboard test above.
+    expect(getByText(/^54/)).toBeTruthy();
+    expect(queryByText(/^11$/)).toBeNull();
+  });
+});
+
 describe('Results screen — round history', () => {
   const completedRound = {
     roundNumber: 1,

@@ -444,6 +444,468 @@ describe('givePointsToTarget — uses runTransaction to prevent concurrent point
   });
 });
 
+// ─── 6b. awardCommentPoints — uses runTransaction ─────────────────────────────
+//
+// Regression coverage for a production-class bug: awardCommentPoints used to
+// do a plain getDoc → compute → updateDoc (no transaction) to award points to
+// one comment at a time. A target awarding points to several comments in
+// quick succession could have a second call's getDoc land before the first
+// call's updateDoc committed, so the second call's full-object score/comment
+// write would silently discard the first award. Wrapping it in runTransaction
+// (fresh read at commit time, same pattern as submitComment/givePointsToTarget)
+// fixes this the same way.
+
+describe('awardCommentPoints — uses runTransaction to prevent concurrent point loss', () => {
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  const COMMENT_A = { id: 'c1', authorId: 'author-a', text: 'A', submittedAt: new Date() };
+  const COMMENT_B = { id: 'c2', authorId: 'author-b', text: 'B', submittedAt: new Date() };
+
+  const roundWithTwoComments = {
+    ...ACTIVE_ROUND,
+    targetUserId: 'admin-uid',
+    comments: [COMMENT_A, COMMENT_B],
+    commentsVisible: true,
+  };
+
+  const activeGameDoc = makeGameDoc({
+    status: 'active',
+    currentRound: roundWithTwoComments,
+    scores: {},
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, activeGameDoc);
+
+    mockTxn.get.mockResolvedValue(makeSnap(activeGameDoc));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  });
+
+  it('calls runTransaction when awarding comment points', async () => {
+    const firestore = require('firebase/firestore');
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.runTransaction.mockClear();
+
+    await act(async () => { await result.current.awardCommentPoints('c1', 3); });
+
+    expect(firestore.runTransaction).toHaveBeenCalled();
+  });
+
+  it('writes the awarded comment and per-author score via a dot-path key, not the whole scores object', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.awardCommentPoints('c1', 3); });
+
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        'currentRound.comments': expect.arrayContaining([
+          expect.objectContaining({ id: 'c1', points: 3 }),
+        ]),
+        'scores.author-a': 3,
+      }),
+    );
+  });
+
+  it('does not drop a concurrently-awarded comment when a second award reads fresh state', async () => {
+    // Simulates awarding comment A, then quickly awarding comment B: the
+    // second transaction's fresh read reflects comment A's already-applied
+    // points/score, so that award must survive in the second write's array.
+    const firestore = require('firebase/firestore');
+    const gameAfterFirstAward = makeGameDoc({
+      status: 'active',
+      currentRound: {
+        ...roundWithTwoComments,
+        comments: [{ ...COMMENT_A, points: 3 }, COMMENT_B],
+      },
+      scores: { 'author-a': 3 },
+    });
+    mockTxn.get.mockResolvedValue(makeSnap(gameAfterFirstAward));
+
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.awardCommentPoints('c2', 2); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg['currentRound.comments']).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'c1', points: 3 }),
+        expect.objectContaining({ id: 'c2', points: 2 }),
+      ]),
+    );
+    expect(arg['scores.author-b']).toBe(2);
+    // Untouched by this call — author-a's already-committed score isn't re-sent/clobbered
+    expect(arg['scores.author-a']).toBeUndefined();
+  });
+});
+
+// ─── 6c. restartMirrorRound / skipMirrorRound ─────────────────────────────────
+
+describe('restartMirrorRound — resets the writing-step round in place', () => {
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  const activeGameDoc = makeGameDoc({
+    status: 'active',
+    currentRound: {
+      ...ACTIVE_ROUND,
+      comments: [{ id: 'c1', authorId: 'admin-uid', text: 'hi', submittedAt: new Date(), points: 3 }],
+      commentsVisible: true,
+      pointsGiven: true,
+      targetPoints: 2,
+      targetPointsGivenBy: ['admin-uid'],
+      targetPointsByPlayer: { 'admin-uid': 2 },
+    },
+    scores: { 'admin-uid': 3, 'player-uid': 2 },
+    roundStartScores: {},
+    roundStartGuessResults: {},
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, activeGameDoc);
+    mockTxn.get.mockResolvedValue(makeSnap(activeGameDoc));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  });
+
+  it('calls runTransaction and resets currentRound to an empty round with the same target/roundNumber', async () => {
+    const firestore = require('firebase/firestore');
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.runTransaction.mockClear();
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.restartMirrorRound(); });
+
+    expect(firestore.runTransaction).toHaveBeenCalled();
+    expect(mockTxn.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        status: 'active',
+        currentRound: expect.objectContaining({
+          roundNumber: 1,
+          targetUserId: 'player-uid',
+          comments: [],
+          commentsVisible: false,
+          pointsGiven: false,
+          targetPoints: 0,
+        }),
+      }),
+    );
+  });
+
+  it('restores scores/guessResults from the roundStartScores/roundStartGuessResults snapshot', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.restartMirrorRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg.scores).toEqual({});
+    expect(arg.guessResults).toEqual({});
+  });
+
+  // Regression coverage: restartMirrorRound used to write
+  // scores: gameData.roundStartScores ?? {} / guessResults: gameData.roundStartGuessResults ?? {}
+  // unconditionally, which meant an old game doc predating those fields (no
+  // roundStartScores/roundStartGuessResults keys at all — not even {}) would
+  // have its ENTIRE accumulated leaderboard wiped to {} on restart. The fix
+  // only includes scores/guessResults in the update payload when the
+  // snapshot fields are actually present.
+  it('leaves scores/guessResults untouched on a doc with no roundStartScores/roundStartGuessResults fields at all', async () => {
+    const mockTxn = { get: jest.fn(), update: jest.fn() };
+    const legacyGameDoc: Record<string, unknown> = makeGameDoc({
+      status: 'active',
+      currentRound: {
+        ...ACTIVE_ROUND,
+        comments: [{ id: 'c1', authorId: 'admin-uid', text: 'hi', submittedAt: new Date(), points: 3 }],
+        commentsVisible: true,
+        pointsGiven: true,
+        targetPoints: 2,
+      },
+      scores: { 'admin-uid': 9, 'player-uid': 7 },
+      // roundStartScores / roundStartGuessResults intentionally omitted (not set to {})
+    });
+    delete legacyGameDoc.roundStartScores;
+    delete legacyGameDoc.roundStartGuessResults;
+
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, legacyGameDoc);
+    mockTxn.get.mockResolvedValue(makeSnap(legacyGameDoc));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.restartMirrorRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1] as Record<string, unknown>;
+    expect(Object.prototype.hasOwnProperty.call(arg, 'scores')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(arg, 'guessResults')).toBe(false);
+  });
+
+  it('rejects a non-admin caller', async () => {
+    // Game where the current user (admin-uid in the mock) is NOT the admin
+    const mockTxn = { get: jest.fn(), update: jest.fn() };
+    const gameWithOtherAdmin = makeGameDoc({
+      adminId: 'other-admin',
+      status: 'active',
+      currentRound: {
+        ...ACTIVE_ROUND,
+        comments: [{ id: 'c1', authorId: 'admin-uid', text: 'hi', submittedAt: new Date(), points: 3 }],
+        commentsVisible: true,
+        pointsGiven: true,
+        targetPoints: 2,
+      },
+      scores: { 'admin-uid': 3, 'player-uid': 2 },
+      roundStartScores: {},
+      roundStartGuessResults: {},
+      participants: [ADMIN, PLAYER, { userId: 'other-admin', userName: 'OtherAdmin', userEmail: 'o@t.com', joinedAt: new Date() }],
+    });
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, gameWithOtherAdmin);
+    mockTxn.get.mockResolvedValue(makeSnap(gameWithOtherAdmin));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+
+    await expect(
+      act(async () => { await result.current.restartMirrorRound(); })
+    ).rejects.toThrow('Only the admin can restart the round');
+  });
+});
+
+describe('restartMirrorRound — mid-guessing (currentRound already null)', () => {
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  const guessedComment = { id: 'c1', authorId: 'player-uid', text: 'hi', submittedAt: new Date() };
+  const guessedRound = {
+    roundNumber: 1,
+    targetUserId: 'admin-uid',
+    targetUserName: 'Admin',
+    comments: [guessedComment],
+    commentsVisible: true,
+    pointsGiven: true,
+    startedAt: new Date(),
+    guesses: [],
+  };
+  const otherRound = { ...guessedRound, roundNumber: 2, targetUserId: 'someone-else' };
+
+  const guessingGameDoc = makeGameDoc({
+    status: 'guessing_phase',
+    currentRound: null,
+    rounds: [guessedRound, otherRound],
+    guessingData: {
+      commentsByTarget: { 'admin-uid': [guessedComment] },
+      possibleAuthors: [],
+      playersWhoSubmittedGuesses: [],
+      allPlayersSubmitted: false,
+      singleRoundTargetId: 'admin-uid',
+    },
+    roundStartScores: { 'admin-uid': 0 },
+    roundStartGuessResults: {},
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, guessingGameDoc);
+    mockTxn.get.mockResolvedValue(makeSnap(guessingGameDoc));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  });
+
+  it('finds the round via guessingData.singleRoundTargetId, rebuilds currentRound, and removes it from rounds[]', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.restartMirrorRound(); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg.currentRound).toEqual(
+      expect.objectContaining({ roundNumber: 1, targetUserId: 'admin-uid', comments: [] }),
+    );
+    expect(arg.rounds).toEqual([otherRound]);
+    expect(arg.status).toBe('active');
+    expect(arg.guessingData).toBeNull();
+  });
+
+  it('throws "No active round to restart" when neither currentRound nor a matching guessingData round exists', async () => {
+    const noRoundDoc = makeGameDoc({
+      status: 'active',
+      currentRound: null,
+      rounds: [],
+      guessingData: { commentsByTarget: {}, possibleAuthors: [] },
+    });
+    mockTxn.get.mockResolvedValue(makeSnap(noRoundDoc));
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, noRoundDoc);
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+
+    await expect(
+      act(async () => { await result.current.restartMirrorRound(); })
+    ).rejects.toThrow('No active round to restart');
+  });
+});
+
+describe('skipMirrorRound — thin wrapper around startNextRound', () => {
+  it('is exposed by useGame and delegates to the same underlying advance logic as startNextRound', async () => {
+    const firestore = require('firebase/firestore');
+    // ACTIVE_ROUND has commentsVisible:false/pointsGiven:false, so it's still
+    // "in progress" and startNextRound's completed-round archiving branch
+    // doesn't fire — previousRounds stays [], so with only ADMIN+PLAYER as
+    // participants the only available non-admin target is player-uid again,
+    // producing a *new* round object at roundNumber 1 (not incremented,
+    // since nothing was archived into `rounds` yet). What this test checks
+    // is delegation — that skipMirrorRound triggers the exact same write
+    // shape startNextRound itself produces — not the specific round number.
+    const game = makeGameDoc({ status: 'active', currentRound: ACTIVE_ROUND, rounds: [] });
+    setupEnterGameMocks(firestore, game);
+    firestore.getDoc.mockResolvedValue(makeSnap(game));
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.updateDoc.mockClear();
+
+    await act(async () => { await result.current.skipMirrorRound(); });
+
+    expect(firestore.updateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        currentRound: expect.objectContaining({ roundNumber: 1, targetUserId: 'player-uid' }),
+      }),
+    );
+  });
+
+  // Regression coverage: skipMirrorRound used to delegate straight to
+  // startNextRound(), which only archives the abandoned currentRound (and
+  // thus excludes its target from re-selection) when commentsVisible &&
+  // pointsGiven are both true. A round skipped mid-writing fails that check,
+  // so its target stayed eligible and was re-picked immediately in
+  // chronological mode. The fix records the abandoned target in
+  // adminSkippedTargets — which startNextRound's availableParticipants
+  // filter already honors — before delegating.
+  it('writes adminSkippedTargets for the abandoned round target before delegating to startNextRound, when the round is still in progress', async () => {
+    const firestore = require('firebase/firestore');
+    // ACTIVE_ROUND has commentsVisible:false/pointsGiven:false — i.e. it was
+    // abandoned mid-writing, not completed.
+    const game = makeGameDoc({ status: 'active', currentRound: ACTIVE_ROUND, rounds: [] });
+    setupEnterGameMocks(firestore, game);
+    firestore.getDoc.mockResolvedValue(makeSnap(game));
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.updateDoc.mockClear();
+
+    await act(async () => { await result.current.skipMirrorRound(); });
+
+    const calls = firestore.updateDoc.mock.calls;
+    const skippedTargetsCallIndex = calls.findIndex((c: unknown[]) => {
+      const arg = c[1] as Record<string, unknown>;
+      return arg && Object.prototype.hasOwnProperty.call(arg, 'adminSkippedTargets');
+    });
+    const nextRoundCallIndex = calls.findIndex((c: unknown[]) => {
+      const arg = c[1] as Record<string, unknown>;
+      return arg && Object.prototype.hasOwnProperty.call(arg, 'currentRound');
+    });
+
+    expect(skippedTargetsCallIndex).toBeGreaterThanOrEqual(0);
+    expect(calls[skippedTargetsCallIndex][1]).toEqual(
+      expect.objectContaining({ adminSkippedTargets: 'player-uid' }), // arrayUnion mocked as identity
+    );
+    expect(nextRoundCallIndex).toBeGreaterThan(skippedTargetsCallIndex);
+  });
+
+  it('does NOT write adminSkippedTargets when the round being skipped past is already completed (commentsVisible/pointsGiven both true)', async () => {
+    const firestore = require('firebase/firestore');
+    const completedRound = { ...ACTIVE_ROUND, commentsVisible: true, pointsGiven: true };
+    const game = makeGameDoc({ status: 'active', currentRound: completedRound, rounds: [] });
+    setupEnterGameMocks(firestore, game);
+    firestore.getDoc.mockResolvedValue(makeSnap(game));
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    firestore.updateDoc.mockClear();
+
+    await act(async () => { await result.current.skipMirrorRound(); });
+
+    const calls = firestore.updateDoc.mock.calls;
+    const hasSkippedTargetsCall = calls.some((c: unknown[]) => {
+      const arg = c[1] as Record<string, unknown>;
+      return arg && Object.prototype.hasOwnProperty.call(arg, 'adminSkippedTargets');
+    });
+    expect(hasSkippedTargetsCall).toBe(false);
+  });
+});
+
+describe('awardPointsToPlayers — tags each award with the round it was given in', () => {
+  const mockTxn = { get: jest.fn(), update: jest.fn() };
+
+  const guessedComment = { id: 'c1', authorId: 'player-uid', text: 'hi', submittedAt: new Date() };
+  const round1 = {
+    roundNumber: 1, targetUserId: 'admin-uid', targetUserName: 'Admin',
+    comments: [guessedComment], commentsVisible: true, pointsGiven: true, startedAt: new Date(), guesses: [],
+  };
+
+  const gameDoc = makeGameDoc({
+    status: 'guessing_phase',
+    currentRound: null,
+    rounds: [round1],
+    postGuessingPointPhase: true,
+    playersWhoAwardedPostGuessPoints: [],
+    guessingData: {
+      commentsByTarget: {}, possibleAuthors: [], playersWhoSubmittedGuesses: [], allPlayersSubmitted: false,
+      singleRoundTargetId: 'admin-uid',
+    },
+    adminAwards: {},
+  });
+
+  beforeEach(() => {
+    const firestore = require('firebase/firestore');
+    setupEnterGameMocks(firestore, gameDoc);
+    mockTxn.get.mockResolvedValue(makeSnap(gameDoc));
+    mockTxn.update.mockImplementation(() => {});
+    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
+      await cb(mockTxn);
+    });
+  });
+
+  it('tags the stored award entry with roundNumber looked up via guessingData.singleRoundTargetId', async () => {
+    const { result } = renderHook(() => useGame(), { wrapper });
+    await act(async () => { await result.current.enterGame('SECRET'); });
+    mockTxn.update.mockClear();
+
+    await act(async () => { await result.current.awardPointsToPlayers([{ recipientId: 'player-uid', points: 2 }]); });
+
+    const arg = mockTxn.update.mock.calls[0][1];
+    expect(arg.adminAwards['admin-uid'][0]).toEqual(
+      expect.objectContaining({ recipientId: 'player-uid', points: 2, roundNumber: 1 }),
+    );
+  });
+});
+
 // ─── 7. resetTargetControls clears playersWhoCompletedPostCommentPhase ─────────
 
 describe('resetTargetControls — clears playersWhoCompletedPostCommentPhase', () => {

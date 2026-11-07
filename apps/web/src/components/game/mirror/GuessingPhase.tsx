@@ -6,7 +6,14 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
-import PostGuessingPointsPanel from './PostGuessingPointsPanel';
+import { AdminRoundTools } from '../AdminRoundTools';
+import { PostGuessingPointsPanel } from './PostGuessingPointsPanel';
+import { TargetControlPanel } from './TargetControlPanel';
+import { getPlayerNumber } from '../../../utils/playerNumbers';
+import { getDisplayName } from '../../../utils/displayName';
+import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
+import { PULSE_COLORS } from '../../../constants/pulseColors';
+
 
 interface GuessingPhaseProps {
   game: Game;
@@ -14,7 +21,7 @@ interface GuessingPhaseProps {
 
 export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
   const { user } = useAuth();
-  const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound } = useGame();
+  const { loading, submitGuess, markPlayerGuessesSubmitted, finalizeGuessingPhase, startNextRound, restartMirrorRound, skipMirrorRound } = useGame();
   const { playSound } = useSound();
   const { showAlert, AlertModal } = useAlert();
   const { t } = useLanguage();
@@ -23,32 +30,42 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [hasSubmittedLocal, setHasSubmittedLocal] = useState(false);
 
-  interface GuessResult {
-    commentText: string;
-    correct: boolean;
-    actualAuthorName: string;
-    guessedAuthorName: string;
-    commentPoints: number;
-    guessPoints: number;
-  }
-  const [guessResultModal, setGuessResultModal] = useState<GuessResult[] | null>(null);
+  // Hooks must run unconditionally on every render (Rules of Hooks), so these
+  // are declared before the `!game.guessingData` early return below, with
+  // null-safe trigger-key expressions. Not currently reachable given today's
+  // Firestore write ordering, but kept safe against future ordering changes.
+  const guessingData = game.guessingData;
+  const singleTargetId = guessingData?.singleRoundTargetId;
+  const hasSubmitted =
+    hasSubmittedLocal ||
+    (guessingData?.playersWhoSubmittedGuesses?.includes(user?.uid ?? '') ?? false);
+  const commentsForPlayerCount =
+    (guessingData?.commentsByTarget?.[user?.uid ?? ''] ?? []).length;
+  const targetSubmitted = singleTargetId
+    ? (guessingData?.playersWhoSubmittedGuesses?.includes(singleTargetId) ?? false)
+    : false;
+
+  // `commentsForPlayerCount > 0` is folded into the key so the 3-way branch
+  // (submitted / has comments to guess / waiting for admin to start) is
+  // fully represented, not just the has-submitted boundary.
+  const playerScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${singleTargetId ?? 'legacy'}:${hasSubmitted}:${commentsForPlayerCount > 0}`,
+    'start',
+    PULSE_COLORS.purple,
+  );
+  const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
+    `${singleTargetId ?? 'legacy'}:${guessingData?.allPlayersSubmitted ?? false}:${targetSubmitted}`,
+    'center',
+    PULSE_COLORS.purple,
+  );
 
   if (!game.guessingData) return null;
 
-  const guessingData = game.guessingData;
+  const guessingDataResolved = game.guessingData;
   const isAdmin = user?.uid === game.adminId;
-  const singleTargetId = guessingData.singleRoundTargetId;
-  const possibleAuthors = guessingData.possibleAuthors ?? [];
+  const possibleAuthors = guessingDataResolved.possibleAuthors ?? [];
 
-  const commentsForPlayer: Comment[] = guessingData.commentsByTarget?.[user?.uid ?? ''] ?? [];
-
-  const hasSubmitted =
-    hasSubmittedLocal ||
-    guessingData.playersWhoSubmittedGuesses?.includes(user?.uid ?? '');
-
-  const targetSubmitted = singleTargetId
-    ? guessingData.playersWhoSubmittedGuesses?.includes(singleTargetId)
-    : false;
+  const commentsForPlayer: Comment[] = guessingDataResolved.commentsByTarget?.[user?.uid ?? ''] ?? [];
 
   const allCommentsSelected =
     commentsForPlayer.length === 0 ||
@@ -90,23 +107,6 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
       setHasSubmittedLocal(true);
       await playSound('correctGuess');
 
-      // Build result modal data from local selections
-      const results: GuessResult[] = commentsForPlayer.map(comment => {
-        const guessedAuthorId = selections[comment.id];
-        const correct = guessedAuthorId === comment.authorId;
-        const actualAuthor = game.participants.find(p => p.userId === comment.authorId);
-        const guessedAuthor = game.participants.find(p => p.userId === guessedAuthorId);
-        return {
-          commentText: comment.text,
-          correct,
-          actualAuthorName: actualAuthor?.userName ?? '?',
-          guessedAuthorName: guessedAuthor?.userName ?? '?',
-          commentPoints: comment.points ?? 0,
-          guessPoints: correct ? 1 : 0,
-        };
-      });
-      if (results.length > 0) setGuessResultModal(results);
-
       if (failures.length > 0) {
         showAlert(t('common.error'), `Failed to submit guesses for ${failures.length} comment(s).`);
       }
@@ -127,8 +127,15 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
       await playSound('roundComplete');
       try {
         await startNextRound();
-      } catch {
-        // game finished — no more rounds
+      } catch (error) {
+        // startNextRound() resolves normally (no throw) when the game
+        // legitimately ends — a throw here is always a real failure
+        // (e.g. network/Firestore error), so surface it rather than
+        // swallowing it. ActivePhase shows a retry control for this state.
+        showAlert(
+          t('common.error'),
+          (error instanceof Error && error.message) || t('game.alerts.startNextRoundFailed'),
+        );
       }
     } catch (error) {
       showAlert(
@@ -172,155 +179,123 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
   return (
     <>
       {AlertModal}
-
-      {/* Guess Result Modal */}
-      {guessResultModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl max-h-[80vh] flex flex-col">
-            <h2 className="text-lg font-semibold text-center mb-4 text-gray-900 dark:text-white">
-              {t('game.ui.guessResultsTitle')}
-            </h2>
-            <div className="overflow-y-auto flex-1 space-y-3 mb-4">
-              {guessResultModal.map((result, idx) => (
-                <div
-                  key={idx}
-                  className={`border rounded-xl p-4 ${
-                    result.correct
-                      ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
-                      : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-                  }`}
-                >
-                  <p className={`text-sm font-bold mb-2 ${result.correct ? 'text-green-600' : 'text-red-500'}`}>
-                    {result.correct ? t('game.ui.correct') : t('game.ui.incorrect')}
-                  </p>
-                  <p className="text-sm italic text-gray-700 dark:text-gray-300 mb-3">
-                    "{result.commentText}"
-                  </p>
-                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <span>{t('game.ui.actualAuthor')}: <span className={`font-semibold ${result.correct ? 'text-green-600' : 'text-red-500'}`}>{result.actualAuthorName}</span></span>
-                    <span>{t('game.ui.yourGuess')}: <span className="font-semibold text-gray-700 dark:text-gray-300">{result.guessedAuthorName}</span></span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => setGuessResultModal(null)}
-              className="w-full bg-game-blue text-white py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
-            >
-              {t('common.ok')}
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-purple">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-purple" data-cy="guessing-phase-info">
           <h2 className="text-xl font-bold mb-1 text-game-purple text-center">
             {t('game.ui.guessAuthorsTitle')}
           </h2>
           <p className="text-center text-gray-500 dark:text-gray-400 mb-4">
             {singleTargetId
               ? t('game.ui.guessingCommentsAbout', {
-                  name: game.participants.find(p => p.userId === singleTargetId)?.userName ?? '',
+                  name: getDisplayName(
+                    game.participants.find(p => p.userId === singleTargetId)?.userName ?? '',
+                    game.showSurnames ?? false,
+                  ),
                 })
               : t('game.ui.guessAuthorsSubtitle')}
           </p>
 
           {/* Player guessing UI */}
-          {hasSubmitted ? (
-            <div className="bg-game-purple/10 border border-game-purple rounded-lg p-4 text-center">
-              {playerResult ? (
-                <div>
-                  <p className="text-game-purple font-semibold text-lg mb-1">
-                    {t('game.ui.guessResultsHeader')}
-                  </p>
-                  <p className="text-gray-700 dark:text-gray-300">
-                    {t('game.ui.guessCorrectCount', {
-                      correct: playerResult.correctGuesses ?? 0,
-                      total: commentsForPlayer.length,
-                    })}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('game.ui.guessPointsEarned', { points: playerResult.correctGuesses ?? 0 })}
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-2xl mb-2">✅</p>
-                  <p className="text-game-purple font-semibold">{t('game.ui.guessResultsTitle')}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {t('game.ui.waitingForAdminToComplete')}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : commentsForPlayer.length > 0 ? (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('game.ui.guessingInstructions')}
-              </p>
-              {commentsForPlayer.map(comment => (
-                <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <p className="text-gray-900 dark:text-white mb-3 italic">"{comment.text}"</p>
-                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                    {t('game.ui.guessPrompt')}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {possibleAuthors.map(author => (
-                      <button
-                        key={author.userId}
-                        type="button"
-                        onClick={() => handleSelect(comment.id, author.userId)}
-                        className={`px-3 py-1.5 rounded-full border-2 font-semibold text-sm transition-all ${
-                          selections[comment.id] === author.userId
-                            ? 'bg-game-blue border-game-blue text-white'
-                            : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-900 dark:text-white hover:border-game-blue'
-                        }`}
-                      >
-                        {author.userName}
-                      </button>
-                    ))}
+          <div ref={playerScrollRef}>
+            {hasSubmitted ? (
+              <div className="bg-game-purple/10 border border-game-purple rounded-lg p-4 text-center">
+                {playerResult && game.showGuessResults ? (
+                  <div>
+                    <p className="text-game-purple font-semibold text-lg mb-1">
+                      {t('game.ui.guessResultsHeader')}
+                    </p>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      {t('game.ui.guessCorrectCount', {
+                        correct: playerResult.correctGuesses ?? 0,
+                        total: commentsForPlayer.length,
+                      })}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('game.ui.guessPointsEarned', { points: playerResult.correctGuesses ?? 0 })}
+                    </p>
                   </div>
-                </div>
-              ))}
-              {!allCommentsSelected && (
-                <p className="text-center text-sm text-gray-400">
-                  {t('game.alerts.selectAuthorForEachCommentToEnableSubmit')}
+                ) : (
+                  <div>
+                    <p className="text-2xl mb-2">✅</p>
+                    <p className="text-game-purple font-semibold">{t('game.ui.guessResultsTitle')}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {t('game.ui.waitingForAdminToComplete')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : commentsForPlayer.length > 0 ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('game.ui.guessingInstructions')}
                 </p>
-              )}
-              <button
-                type="button"
-                onClick={handleSubmitGuesses}
-                disabled={isSubmitting || loading || !allCommentsSelected}
-                className="w-full bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-              >
-                {isSubmitting ? t('common.loading') : t('game.ui.submitGuesses')}
-              </button>
-            </div>
-          ) : (
-            <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-              {t('game.ui.waitingForAdminToStartGuessing')}
-            </p>
-          )}
+                {commentsForPlayer.map(comment => (
+                  <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <p className="text-gray-900 dark:text-white mb-3 italic">"{comment.text}"</p>
+                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                      {t('game.ui.guessPrompt')}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {possibleAuthors.map(author => (
+                        <button
+                          key={author.userId}
+                          type="button"
+                          onClick={() => handleSelect(comment.id, author.userId)}
+                          data-cy="guess-author-button"
+                          data-cy-author-id={author.userId}
+                          className={`px-3 py-1.5 rounded-full border-2 font-semibold text-sm transition-all ${
+                            selections[comment.id] === author.userId
+                              ? 'bg-game-blue border-game-blue text-white'
+                              : 'bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500 text-gray-900 dark:text-white hover:border-game-blue'
+                          }`}
+                        >
+                          {getPlayerNumber(game, author.userId)}. {getDisplayName(author.userName, game.showSurnames ?? false)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {!allCommentsSelected && (
+                  <p className="text-center text-sm text-gray-400">
+                    {t('game.alerts.selectAuthorForEachCommentToEnableSubmit')}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSubmitGuesses}
+                  disabled={isSubmitting || loading || !allCommentsSelected}
+                  data-cy="submit-guesses-button"
+                  className="w-full bg-game-purple text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                >
+                  {isSubmitting ? t('common.loading') : t('game.ui.submitGuesses')}
+                </button>
+              </div>
+            ) : (
+              <p className="text-center text-gray-500 dark:text-gray-400 py-4">
+                {t('game.ui.waitingForAdminToStartGuessing')}
+              </p>
+            )}
+          </div>
 
           {/* Admin controls */}
           {isAdmin && (
-            <div className="mt-6 flex justify-center">
+            <div className="mt-6 flex justify-center" ref={adminScrollRef}>
               {singleTargetId && targetSubmitted ? (
                 <button
                   type="button"
                   onClick={handleFinalizeAndNextRound}
                   disabled={isFinalizing || loading}
+                  data-cy="finalize-button"
                   className="bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isFinalizing ? t('common.loading') : t('game.ui.nextRound')}
                 </button>
-              ) : guessingData.allPlayersSubmitted ? (
+              ) : guessingDataResolved.allPlayersSubmitted ? (
                 <button
                   type="button"
                   onClick={handleFinalizeOnly}
                   disabled={isFinalizing || loading}
+                  data-cy="finalize-button"
                   className="bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isFinalizing ? t('common.loading') : t('game.ui.finalize')}
@@ -330,23 +305,29 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                   type="button"
                   onClick={handleForceFinalize}
                   disabled={isFinalizing || loading}
+                  data-cy="finalize-button"
                   className="bg-game-neutral text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                   {isFinalizing ? t('common.loading') : t('game.ui.finalize')}
                 </button>
               )}
+              <AdminRoundTools isAdmin={isAdmin} onRestart={restartMirrorRound} onSkip={skipMirrorRound} />
             </div>
           )}
+
+          {isAdmin && <TargetControlPanel game={game} />}
         </div>
 
-        <PostGuessingPointsPanel game={game} />
-
         <Leaderboard
+          game={game}
           participants={game.participants}
-          scores={game.scores}
-          guessResults={game.guessResults}
+          scores={game.roundStartScores ?? game.scores}
+          guessResults={game.roundStartGuessResults ?? game.guessResults}
           maxHeight="max-h-80"
+          showSurnames={game.showSurnames}
         />
+
+        {game.postGuessingPointPhase && <PostGuessingPointsPanel game={game} />}
       </div>
     </>
   );

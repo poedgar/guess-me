@@ -27,8 +27,6 @@ export const ClashSetupPanel: React.FC<Props> = ({
 
   const [groupAIds, setGroupAIds] = useState<string[]>(game.clashData?.groupA?.memberIds ?? []);
   const [groupBIds, setGroupBIds] = useState<string[]>(game.clashData?.groupB?.memberIds ?? []);
-  const [leaderAId, setLeaderAId] = useState<string | null>(game.clashData?.groupA?.leaderId ?? null);
-  const [leaderBId, setLeaderBId] = useState<string | null>(game.clashData?.groupB?.leaderId ?? null);
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
 
@@ -41,17 +39,12 @@ export const ClashSetupPanel: React.FC<Props> = ({
   const allIds = eligibleParticipants.map(p => p.userId);
   const unassignedIds = allIds.filter(id => !groupAIds.includes(id) && !groupBIds.includes(id));
 
-  const persistGroups = useCallback(async (
-    newA: string[], newB: string[], newLeaderA: string | null, newLeaderB: string | null
-  ) => {
+  const persistGroups = useCallback(async (newA: string[], newB: string[]) => {
     if (!isAdmin) return;
-    if (newA.length > 0 && newB.length > 0 && newA.length === newB.length && newLeaderA && newLeaderB) {
+    if (newA.length > 0 && newB.length > 0 && newA.length === newB.length) {
       try {
         setIsSaving(true);
-        await saveClashGroups(
-          { leaderId: newLeaderA, memberIds: newA },
-          { leaderId: newLeaderB, memberIds: newB },
-        );
+        await saveClashGroups({ memberIds: newA }, { memberIds: newB });
       } catch (_) { /* non-blocking */ } finally {
         setIsSaving(false);
       }
@@ -65,30 +58,15 @@ export const ClashSetupPanel: React.FC<Props> = ({
     const newB = group === 'b'
       ? [...groupBIds.filter(id => id !== playerId), playerId]
       : groupBIds.filter(id => id !== playerId);
-    const newLeaderA = leaderAId === playerId ? null : leaderAId;
-    const newLeaderB = leaderBId === playerId ? null : leaderBId;
     setGroupAIds(newA);
     setGroupBIds(newB);
-    setLeaderAId(newLeaderA);
-    setLeaderBId(newLeaderB);
-    await persistGroups(newA, newB, newLeaderA, newLeaderB);
+    await persistGroups(newA, newB);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  }, [groupAIds, groupBIds, leaderAId, leaderBId, persistGroups]);
-
-  const toggleLeader = useCallback(async (playerId: string, group: 'a' | 'b') => {
-    const newLeaderA = group === 'a' ? (leaderAId === playerId ? null : playerId) : leaderAId;
-    const newLeaderB = group === 'b' ? (leaderBId === playerId ? null : playerId) : leaderBId;
-    setLeaderAId(newLeaderA);
-    setLeaderBId(newLeaderB);
-    await persistGroups(groupAIds, groupBIds, newLeaderA, newLeaderB);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  }, [leaderAId, leaderBId, groupAIds, groupBIds, persistGroups]);
+  }, [groupAIds, groupBIds, persistGroups]);
 
   const canStart = isAdmin
     && groupAIds.length > 0
-    && groupAIds.length === groupBIds.length
-    && leaderAId !== null
-    && leaderBId !== null;
+    && groupAIds.length === groupBIds.length;
 
   const handleStart = async () => {
     try {
@@ -133,27 +111,10 @@ export const ClashSetupPanel: React.FC<Props> = ({
     </View>
   );
 
-  const renderGroupCard = (participant: Participant, group: 'a' | 'b') => {
+  const renderGroupCard = (participant: Participant) => {
     const pid = participant.userId;
-    const isLeader = (group === 'a' && leaderAId === pid) || (group === 'b' && leaderBId === pid);
     return (
-      <View key={pid} style={[styles.card, isLeader && styles.cardLeader]}>
-        {isAdmin ? (
-          <TouchableOpacity
-            style={styles.crownBtn}
-            onPress={() => toggleLeader(pid, group)}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
-          >
-            <IconSymbol
-              name="crown.fill"
-              size={14}
-              color={isLeader ? GameColors.gold : 'rgba(128,128,128,0.3)'}
-            />
-          </TouchableOpacity>
-        ) : (
-          isLeader && <IconSymbol name="crown.fill" size={14} color={GameColors.gold} />
-        )}
+      <View key={pid} style={styles.card}>
         <ThemedText style={styles.cardName} numberOfLines={1}>
           {getDisplayName(participant.userName)}
         </ThemedText>
@@ -188,7 +149,7 @@ export const ClashSetupPanel: React.FC<Props> = ({
           <ThemedText style={styles.columnLabel}>{t('game.ui.clash.groupA', { locale })}</ThemedText>
           {groupAIds.map(id => {
             const p = eligibleParticipants.find(pt => pt.userId === id)!;
-            return renderGroupCard(p, 'a');
+            return renderGroupCard(p);
           })}
           {groupAIds.length === 0 && (
             <ThemedText style={styles.emptyHint}>{t('game.ui.clash.emptyGroup', { locale })}</ThemedText>
@@ -199,7 +160,7 @@ export const ClashSetupPanel: React.FC<Props> = ({
           <ThemedText style={styles.columnLabel}>{t('game.ui.clash.groupB', { locale })}</ThemedText>
           {groupBIds.map(id => {
             const p = eligibleParticipants.find(pt => pt.userId === id)!;
-            return renderGroupCard(p, 'b');
+            return renderGroupCard(p);
           })}
           {groupBIds.length === 0 && (
             <ThemedText style={styles.emptyHint}>{t('game.ui.clash.emptyGroup', { locale })}</ThemedText>
@@ -241,14 +202,12 @@ const styles = StyleSheet.create({
   columnLabel: { fontSize: 13, fontWeight: '700', fontFamily: Fonts.sans, marginBottom: 8, textAlign: 'center' },
   emptyHint: { textAlign: 'center', opacity: 0.35, fontSize: 11, fontFamily: Fonts.sans, marginTop: 4 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, backgroundColor: GameColors.cardBg, borderWidth: 1, borderColor: GameColors.cardBorder, marginBottom: 6 },
-  cardLeader: { borderColor: GameColors.gold, borderWidth: 2 },
   cardName: { flex: 1, fontSize: 14, fontWeight: '600', fontFamily: Fonts.sans },
   cardActions: { flexDirection: 'row', gap: 4 },
   assignBtn: { borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center', justifyContent: 'center' },
   assignBtnA: { backgroundColor: 'rgba(0,122,255,0.15)' },
   assignBtnB: { backgroundColor: 'rgba(175,82,222,0.15)' },
   assignBtnText: { fontSize: 12, fontWeight: '700', fontFamily: Fonts.sans },
-  crownBtn: { padding: 2 },
   removeBtn: { padding: 2 },
   removeBtnText: { fontSize: 12, opacity: 0.5, fontFamily: Fonts.sans },
   warning: { color: GameColors.danger, fontSize: 12, textAlign: 'center', marginBottom: 8, fontFamily: Fonts.sans },

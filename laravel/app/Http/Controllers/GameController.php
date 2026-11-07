@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Resources\GameResource;
+use App\Models\Game;
+use App\Services\GameLifecycleService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Inertia\Response;
+
+class GameController extends Controller
+{
+    public function __construct(private GameLifecycleService $lifecycle)
+    {
+    }
+
+    public function show(Game $game): Response
+    {
+        $this->authorize('view', $game);
+
+        $game->load(['participants.user', 'scores', 'guessResults', 'rounds.comments', 'rounds.target', 'rounds.guesses']);
+
+        return inertia('Game/Show', [
+            'game' => new GameResource($game),
+        ]);
+    }
+
+    public function start(Game $game): RedirectResponse
+    {
+        $this->authorize('manage', $game);
+
+        try {
+            $this->lifecycle->startGame($game);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['participants' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'password' => ['required', 'string'],
+            'admin_writes_comments' => ['sometimes', 'boolean'],
+        ]);
+
+        if ($validated['password'] !== config('game.admin_password')) {
+            throw ValidationException::withMessages(['password' => __('Incorrect admin password.')]);
+        }
+
+        $game = $this->lifecycle->createGame($request->user(), $validated['admin_writes_comments'] ?? false);
+
+        return redirect("/games/{$game->id}");
+    }
+
+    public function leave(Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+
+        $this->lifecycle->leaveGame($game, $request->user());
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect('/dashboard');
+    }
+
+    public function join(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['code' => ['required', 'string']]);
+
+        try {
+            $game = $this->lifecycle->joinGame($request->user(), $validated['code']);
+        } catch (\App\Exceptions\GameNotFoundException) {
+            throw ValidationException::withMessages(['code' => __('No game found with that code.')]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+}

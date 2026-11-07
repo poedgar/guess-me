@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
 import { gameStyles } from '@/components/game/gameStyles';
 import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
@@ -10,7 +11,10 @@ import { useSound } from '@/contexts/SoundContext';
 import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { SCROLL_INSETS } from '@/constants/scroll';
+import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
 interface Props {
   game: Game;
@@ -26,7 +30,7 @@ interface Props {
 export const BasketWritingPhase: React.FC<Props> = ({
   game, user, isAdmin, locale, isDark, getDisplayName, showFancyAlert,
 }) => {
-  const { submitBasketComment, revealBasketComments } = useGame();
+  const { submitBasketComment, revealBasketComments, restartBasketRound, skipBasketRound } = useGame();
   const { playSound } = useSound();
   const inputTheme = themedInput(isDark);
 
@@ -47,6 +51,9 @@ export const BasketWritingPhase: React.FC<Props> = ({
   const alreadySubmitted = submitted || currentRoundComments.some(c => c.writerId === user?.uid);
   const submittedCount = currentRoundComments.length;
   const totalCount = currentRound?.assignments.length ?? 0;
+
+  const playerPulse = usePulseBorderOnChange(`${currentRoundIndex}:${alreadySubmitted}`, GameColors.blue);
+  const adminPulse = usePulseBorderOnChange(`${currentRoundIndex}:${submittedCount >= totalCount}`, GameColors.blue);
 
   const handleSubmit = async () => {
     if (!commentText.trim()) return;
@@ -97,6 +104,14 @@ export const BasketWritingPhase: React.FC<Props> = ({
       </View>
 
       <View style={gameStyles.gameFlowContainer}>
+        <ScrollIntoView
+          enabled
+          scrollIntoViewKey={`${currentRoundIndex}:${alreadySubmitted}`}
+          align="center"
+          animated
+          insets={SCROLL_INSETS}
+        >
+        <Animated.View style={playerPulse}>
         {alreadySubmitted ? (
           <View style={styles.waitingCard}>
             <ThemedText style={styles.waitingText}>
@@ -141,9 +156,18 @@ export const BasketWritingPhase: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
         )}
+        </Animated.View>
+        </ScrollIntoView>
 
         {isAdmin && (
-          <View style={styles.adminSection}>
+          <ScrollIntoView
+            enabled
+            scrollIntoViewKey={`${currentRoundIndex}:${submittedCount >= totalCount}`}
+            align="center"
+            animated
+            insets={SCROLL_INSETS}
+          >
+          <Animated.View style={[styles.adminSection, adminPulse]}>
             <ThemedText style={styles.adminCount}>{submittedCount}/{totalCount}</ThemedText>
             <TouchableOpacity
               style={[
@@ -161,8 +185,16 @@ export const BasketWritingPhase: React.FC<Props> = ({
                 : <IconSymbol name="eye.fill" size={16} color={GameColors.white} />}
               <ThemedText style={styles.wideButtonText}>{t('game.ui.basket.revealComments', { locale })}</ThemedText>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
+          </ScrollIntoView>
         )}
+        <AdminRoundTools
+          isAdmin={isAdmin}
+          locale={locale}
+          showFancyAlert={showFancyAlert}
+          onRestart={restartBasketRound}
+          onSkip={skipBasketRound}
+        />
       </View>
     </View>
   );

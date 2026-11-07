@@ -219,3 +219,32 @@ Run `npm run test:coverage` and open `coverage/lcov-report/index.html` for the f
 - `GameScreen.test.tsx` covers basic rendering. Phase-specific UI (guessing keyboard, point awarding) is not yet fully tested.
 - Context integration tests (testing the Firestore listener lifecycle) are pending.
 - Sound generation tests are not present — `SoundContext` uses Web Audio API which is not available in jsdom.
+
+---
+
+## Cypress E2E Tests (apps/web)
+
+The Jest suite above covers unit/component tests for the Expo app. Separately, `apps/web/cypress/e2e/` holds end-to-end specs for the web app, covering mirror/basket/clash game modes, settings, lifecycle, locale switching, animations, and admin-left handling.
+
+Unlike the Jest tests, these run against **real production Firebase** — there is no local or mocked backend. Run them from `apps/web`:
+
+```bash
+npm run cypress:open   # interactive runner
+npm run cypress:run    # headless run
+```
+
+They also run in CI via `.github/workflows/cypress-e2e.yml`, triggered on push to `apps/web/**` or `packages/shared/**`, plus a 6-hourly schedule.
+
+### Known flaky specs (2026-08-10)
+
+After the Firestore security rules rollout (`firestore.rules`, see `docs/superpowers/specs/2026-08-08-firestore-security-rules-design.md`), the added latency of real rules evaluation (replacing the previous always-permissive test-mode rules) thinned the timing margin throughout the longest, most account-switch-heavy mirror-mode specs — the ones that determine round roles (target vs. commenter) at runtime by switching accounts and reading the DOM, rather than hardcoding, since target selection isn't perfectly predictable even with a stubbed `Math.random`.
+
+**Root cause found and fixed** (via a local Cypress run with video recording enabled — CI's default run has `Video: false` and no trace capture, which made this undiagnosable from CI logs alone): the role-detection "peek" step did a one-shot, non-retrying DOM read (`$body.find(...)`) to determine who got which role. Earlier hardening (waiting for `[data-cy=participant-row]` to disappear, confirming the client had left `WaitingPhase`) closed one race but not the underlying one — the DOM could still be mid-render for a brief instant after that point (e.g. a flash before all `currentRound` fields settle), and the one-shot read could catch that transient moment and misclassify the role, cascading into every subsequent step of the test. Fixed by replacing the one-shot read with a retrying `cy.get('body').should(...)` that waits for one of the two real terminal states (`[data-cy=comment-input]` for the commenter, or a new `[data-cy=target-waiting-view]` added to `ActivePhase.tsx` for the target) before trusting a synchronous read of which one it is. The same principle was applied to the round-1-to-round-2 `finalize-button` transition (confirm on the admin's own page that round 2 has actually started before another account switches in to read it). Applied to `mirror-round.cy.ts`, `mirror-multi-round.cy.ts`, and `admin-writes-comments.cy.ts`. Confirmed via several clean local runs (with video) that this specific failure mode (`comment-input`/`round-info` timeouts from a misidentified role) no longer occurs.
+
+**Follow-up fixes for the remaining scattered failures**: after the role-detection fix above, CI still surfaced three more distinct failure points in these same three specs — none repeating the diagnosed mechanism, each its own independent timing gap:
+
+- `guess-author-button` timeout in `GuessingPhase.tsx` — same underlying class of issue as `ActivePhase.tsx`'s `round-info`, just a different component with its own `if (!game.guessingData) return null` early-return gate. Added the same kind of universal signal (`[data-cy=guessing-phase-info]`, rendered unconditionally once `guessingData` has loaded) and guarded every account-switch into the guessing phase across all three specs.
+- `cy.click()` on `nav-results` blocked by a covering element, in `mirror-round.cy.ts` — fired immediately after `finalize-button` with no settle time for the phase transition. Fixed by waiting for whichever real terminal state actually results (`round-info`, since this test's 3 participants mean the game legitimately continues to round 2 rather than finishing — or `game-finished`, for the general case) before navigating away. (An earlier version of this fix incorrectly assumed the game always reaches `'finished'` after round 1 — confirmed wrong via a local screenshot showing a fully-rendered, stable Round 2 view — and was corrected.)
+- `game_not_found` on the very first join in `mirror-round.cy.ts` — this file was missing the settle wait between game creation and the first account switch that every other transition in these files, and the other two specs, already had.
+
+All three specs (`mirror-round.cy.ts`, `mirror-multi-round.cy.ts`, `admin-writes-comments.cy.ts`) subsequently passed cleanly across multiple local runs (2-3x each, no retries needed) and one full CI run (all 10 specs green, 16m38s, zero failures). Diagnosis throughout relied on local Cypress runs with video/frame-extraction (`ffmpeg`) rather than blind CI iteration — CI's default run has `Video: false` and no trace capture, which made the actual mechanisms undiagnosable from CI logs alone.
