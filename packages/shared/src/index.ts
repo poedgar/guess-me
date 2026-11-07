@@ -10,3 +10,4 @@ export { generateIdeaSchedule } from './utils/ideaSchedule';
 export { toSafeDate } from './utils/dates';
 export { calculateSimilarPairs, type SimilarPair } from './utils/playerSimilarity';
 export { mapFirebaseAuthErrorToKey } from './utils/authErrors';
+export { AVATAR_COUNT, pickAvatarId, getAvatarId } from './utils/avatars';

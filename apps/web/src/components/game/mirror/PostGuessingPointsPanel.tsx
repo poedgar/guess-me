@@ -6,6 +6,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { PlayerAvatar } from '../../ui/PlayerAvatar';
+import { getAvatarId } from '@mirror/shared';
 import { getDisplayName } from '../../../utils/displayName';
 import { getPlayerNumber } from '../../../utils/playerNumbers';
 
@@ -101,7 +102,7 @@ export const PostGuessingPointsPanel: React.FC<PostGuessingPointsPanelProps> = (
                     data-cy-user-id={participant.userId}
                     className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700"
                   >
-                    <PlayerAvatar name={getDisplayName(participant.userName, game.showSurnames ?? false)} photoURL={participant.photoURL} size="sm" />
+                    <PlayerAvatar name={getDisplayName(participant.userName, game.showSurnames ?? false)} avatarId={getAvatarId(participant)} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 dark:text-white truncate text-sm">
                         {getPlayerNumber(game, participant.userId)}. {getDisplayName(participant.userName, game.showSurnames ?? false)}

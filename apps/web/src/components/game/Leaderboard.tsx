@@ -1,5 +1,5 @@
 import React from 'react';
-import { Game, Participant } from '@mirror/shared';
+import { Game, Participant, getAvatarId } from '@mirror/shared';
 import { PlayerAvatar } from '../ui/PlayerAvatar';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -71,7 +71,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
                 )}
               </div>
 
-              <PlayerAvatar name={getDisplayName(p.userName, showSurnames)} photoURL={p.photoURL} size="sm" />
+              <PlayerAvatar name={getDisplayName(p.userName, showSurnames)} avatarId={getAvatarId(p)} size="sm" />
 
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 dark:text-white truncate text-sm">

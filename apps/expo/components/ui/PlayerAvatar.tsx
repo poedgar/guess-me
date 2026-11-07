@@ -1,37 +1,23 @@
-import { Fonts, GameColors } from '@/constants/theme';
-import React, { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { AVATAR_IMAGES } from '@/constants/avatars';
+import { GameColors } from '@/constants/theme';
+import React from 'react';
+import { Image, StyleSheet } from 'react-native';
 
 interface Props {
+  /** Avatar number from `getAvatarId(participant)`. */
+  avatarId: number;
   name: string;
-  photoURL?: string | null;
   size?: number;
 }
 
-export const PlayerAvatar: React.FC<Props> = ({ name, photoURL, size = 32 }) => {
-  const [imgFailed, setImgFailed] = useState(false);
-  const initial = name.trim()[0]?.toUpperCase() ?? '?';
-  const style = { width: size, height: size, borderRadius: size / 2 };
-
-  if (photoURL && !imgFailed) {
-    return (
-      <Image
-        source={{ uri: photoURL }}
-        style={[styles.avatar, style]}
-        onError={() => setImgFailed(true)}
-      />
-    );
-  }
-
-  return (
-    <View style={[styles.placeholder, style, { backgroundColor: GameColors.admin }]}>
-      <Text style={[styles.initial, { fontSize: size * 0.42 }]}>{initial}</Text>
-    </View>
-  );
-};
+export const PlayerAvatar: React.FC<Props> = ({ avatarId, name, size = 32 }) => (
+  <Image
+    source={AVATAR_IMAGES[(avatarId - 1 + AVATAR_IMAGES.length) % AVATAR_IMAGES.length]}
+    accessibilityLabel={name}
+    style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
+  />
+);
 
 const styles = StyleSheet.create({
   avatar: { backgroundColor: GameColors.cardBg },
-  placeholder: { alignItems: 'center', justifyContent: 'center' },
-  initial: { color: GameColors.white, fontWeight: '700', fontFamily: Fonts.sans },
 });
