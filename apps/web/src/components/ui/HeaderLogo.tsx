@@ -19,14 +19,11 @@ export const HeaderLogo: React.FC<HeaderLogoProps> = ({ variant = 'hero' }) => {
 
   return (
     <div className="flex justify-center mb-8" data-testid="header-logo">
-      <picture className="w-full">
-        <source media="(min-width: 768px)" srcSet="/hero-desktop.jpg" />
-        <img
-          src="/hero-mobile.jpg"
-          alt="In The Mirror"
-          className="w-full max-h-64 object-cover rounded-2xl shadow-md"
-        />
-      </picture>
+      <img
+        src="/hero.jpg"
+        alt="In The Mirror"
+        className="w-64 h-64 max-w-full object-contain"
+      />
     </div>
   );
 };

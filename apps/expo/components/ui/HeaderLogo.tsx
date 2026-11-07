@@ -1,18 +1,13 @@
 import { Image } from "expo-image";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 
-const HERO_DESKTOP = require("../../assets/images/hero-desktop.png");
-const HERO_MOBILE = require("../../assets/images/hero-mobile.png");
+const HERO = require("../../assets/images/hero.png");
 const LOGO = require("../../assets/images/logo.png");
 
-// Source image aspect ratios (width / height)
-const DESKTOP_RATIO = 1024 / 553;
-const MOBILE_RATIO = 556 / 544;
-const HERO_MAX_HEIGHT = 180;
-const WIDE_BREAKPOINT = 768;
+const HERO_MAX_SIZE = 200;
 
 interface HeaderLogoProps {
-  /** `hero` = full illustration for landing screens, `icon` = compact app icon. */
+  /** `hero` = large logo for landing screens, `icon` = compact app icon. */
   variant?: "hero" | "icon";
 }
 
@@ -27,17 +22,11 @@ export function HeaderLogo({ variant = "hero" }: HeaderLogoProps) {
     );
   }
 
-  const isWide = width >= WIDE_BREAKPOINT;
-  const ratio = isWide ? DESKTOP_RATIO : MOBILE_RATIO;
-  const heroWidth = Math.min(width - 40, HERO_MAX_HEIGHT * ratio);
+  const size = Math.min(width - 40, HERO_MAX_SIZE);
 
   return (
     <View style={styles.container} testID="header-logo">
-      <Image
-        source={isWide ? HERO_DESKTOP : HERO_MOBILE}
-        style={[styles.hero, { width: heroWidth, height: heroWidth / ratio }]}
-        contentFit="cover"
-      />
+      <Image source={HERO} style={{ width: size, height: size }} contentFit="contain" />
     </View>
   );
 }
@@ -47,9 +36,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "transparent",
-  },
-  hero: {
-    borderRadius: 16,
   },
   icon: {
     width: 56,
