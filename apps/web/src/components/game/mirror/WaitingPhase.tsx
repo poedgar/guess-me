@@ -1,10 +1,12 @@
 import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
 import { Game } from '@mirror/shared';
+import { QRCodeSVG } from 'qrcode.react';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
+import { TargetControlPanel } from '../../ui/TargetControlPanel';
 
 
 interface WaitingPhaseProps {
@@ -79,9 +81,9 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
       {AlertModal}
       <div className="space-y-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-orange">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <div className="flex items-start justify-between mb-4 gap-4">
+            <div className="flex-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                 {t('game.ui.gameIdLabel')}
               </p>
               <button
@@ -97,10 +99,19 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
               >
                 {game.id} 🔗
               </button>
+              <span className="mt-2 inline-block bg-game-orange/20 text-game-orange text-xs font-bold px-3 py-1 rounded-full">
+                {t('game.ui.statusWaiting')}
+              </span>
             </div>
-            <span className="bg-game-orange/20 text-game-orange text-xs font-bold px-3 py-1 rounded-full">
-              {t('game.ui.statusWaiting')}
-            </span>
+            {isAdmin && (
+              <div className="bg-white dark:bg-gray-700 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600 flex-shrink-0">
+                <QRCodeSVG
+                  value={`${window.location.origin}/game/${game.id}`}
+                  size={80}
+                  level="M"
+                />
+              </div>
+            )}
           </div>
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -188,6 +199,11 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                 </label>
               ))}
             </div>
+          )}
+
+          {/* Target Control Panel — Mirror and Basket only */}
+          {isAdmin && (game.gameType ?? 'mirror') !== 'clash' && (
+            <TargetControlPanel />
           )}
 
           {isAdmin && (game.gameType ?? 'mirror') !== 'clash' ? (

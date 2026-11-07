@@ -6,10 +6,12 @@ eas build:configure --platform android
 
 eas build --platform android --profile production
 eas build --platform android --profile preview
+eas build --platform ios --profile preview
 
 or
 
 npx eas build --platform android --profile preview
+npx eas build --platform ios --profile preview
 
 
 # Firebase Google Auth 👋
@@ -92,3 +94,17 @@ ______
 Базове в технічному плані:
 -Вислови, до яких «прив»язані» 1 (гра А) або 2 (Б і В) номери
 -Клавіатура, на якій «законтачуємо» №ри (вибраний нами та прихований), при вгадуванні № підсвічується
+
+
+ Web has no equivalent
+UI/behavior gaps (smaller):
+
+Clash scoreboard position — Mobile shows scoreboard in admin section in writing phase; web shows it above admin buttons
+Force Show Comments — Mobile admin button shows confirmation when not enough comments; web button just stays disabled
+Game header — Mobile shows a round/target badge in the header during active play; web header doesn't show current round context
+Intentionally different (platform-specific, fine as-is):
+
+Haptic feedback → not applicable on web
+ActivityIndicator → using text "Loading…" in buttons is fine
+Props drilling → hooks approach is correct for web
+Which of these do you want to implement?
