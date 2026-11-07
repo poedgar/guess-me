@@ -13,7 +13,7 @@ import { useEffect, useRef } from 'react';
 export function useScrollIntoViewOnChange<T extends HTMLElement>(
   triggerKey: string | number,
   align: ScrollLogicalPosition = 'center',
-  pulseColor: string = 'rgba(0, 122, 255, 0.55)',
+  pulseColor: string = 'rgba(60, 89, 70, 0.55)',
 ) {
   const ref = useRef<T>(null);
   const lastKey = useRef<string | number | null>(null);

@@ -5,137 +5,138 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Earthy palette taken from the "У дзеркалі" logo: cream, olive, forest green, browns.
+const tintColorLight = '#6E762C';
+const tintColorDark = '#C9C27A';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#2E2416',
+    background: '#FBF5E6',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: '#7C6A50',
+    tabIconDefault: '#9A8A6C',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#EFE6D2',
+    background: '#1C1A14',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#A89C80',
+    tabIconDefault: '#8C8270',
     tabIconSelected: tintColorDark,
   },
 };
 
-/** Semantic game colors — iOS HIG system palette. Use these instead of hardcoded hex values. */
+/** Semantic game colors — earthy palette from the logo. Use these instead of hardcoded hex values. */
 export const GameColors = {
-  /** Primary action / success / points awarded — iOS green */
-  green: '#34C759',
-  /** Admin controls / show comments — iOS orange */
-  admin: '#FF9500',
-  /** Guessing phase / start guessing button — iOS purple */
-  purple: '#AF52DE',
-  /** Comment submit / Google auth — iOS blue */
-  blue: '#007AFF',
-  /** Destructive actions / leave / error — iOS red */
-  danger: '#FF3B30',
-  /** Waiting status badge — iOS orange (same as admin) */
-  waiting: '#FF9500',
-  /** Correct guess / positive feedback — iOS green */
-  correct: '#34C759',
-  /** Incorrect guess / negative feedback — iOS red */
-  incorrect: '#FF3B30',
+  /** Primary action / success / points awarded — olive */
+  green: '#6E762C',
+  /** Admin controls / show comments — burnt orange */
+  admin: '#C0702A',
+  /** Guessing phase / start guessing button — warm brown */
+  purple: '#7C5725',
+  /** Comment submit / main buttons — forest green */
+  blue: '#3C5946',
+  /** Destructive actions / leave / error — brick */
+  danger: '#A63D2A',
+  /** Waiting status badge — burnt orange (same as admin) */
+  waiting: '#C0702A',
+  /** Correct guess / positive feedback — olive */
+  correct: '#6E762C',
+  /** Incorrect guess / negative feedback — brick */
+  incorrect: '#A63D2A',
   /** Correct guess result background */
-  correctBg: '#E6F9EC',
+  correctBg: '#EEF0D8',
   /** Incorrect guess result background */
-  incorrectBg: '#FFEBE9',
-  /** Neutral / grey / skipped — iOS gray */
-  neutral: '#8E8E93',
-  /** Dark-mode input background — iOS grouped secondary */
-  inputDark: '#2C2C2E',
-  /** Light-mode input background — iOS grouped secondary */
-  inputLight: '#F2F2F7',
-  /** Dark-mode input border — iOS separator dark */
-  inputBorderDark: '#3A3A3C',
-  /** Light-mode input border — iOS separator light */
-  inputBorderLight: '#C6C6C8',
-  /** Placeholder text in dark mode — iOS gray */
-  placeholderDark: '#8E8E93',
-  /** Placeholder text in light mode — iOS gray */
-  placeholderLight: '#8E8E93',
-  /** Pure white — icon/text color on colored backgrounds */
+  incorrectBg: '#F6E1D9',
+  /** Neutral / grey / skipped — warm grey */
+  neutral: '#8C8270',
+  /** Dark-mode input background */
+  inputDark: '#2A271E',
+  /** Light-mode input background */
+  inputLight: '#F3ECDB',
+  /** Dark-mode input border */
+  inputBorderDark: '#3D392C',
+  /** Light-mode input border */
+  inputBorderLight: '#D9CBA8',
+  /** Placeholder text in dark mode */
+  placeholderDark: '#8C8270',
+  /** Placeholder text in light mode */
+  placeholderLight: '#9A8C70',
+  /** White — icon/text color on colored backgrounds */
   white: '#FFFFFF',
-  /** Shadow color */
-  shadow: '#000000',
-  /** Gold / trophy / achievement */
-  gold: '#FFD700',
+  /** Shadow color (also used for dark modal title text) */
+  shadow: '#2E2416',
+  /** Gold / trophy / achievement — mustard */
+  gold: '#C9A227',
   /** Primary dark text */
-  textDark: '#333333',
+  textDark: '#3B2E1E',
   /** Secondary / muted text */
-  textMedium: '#666666',
+  textMedium: '#6B5B45',
   /** Tertiary text */
-  textLight: '#555555',
+  textLight: '#5E4E3A',
   /** Modal / overlay background */
-  overlayBg: 'rgba(0,0,0,0.5)',
+  overlayBg: 'rgba(46,36,22,0.5)',
   /** Darker overlay (e.g. QR scanner) */
-  overlayBgDark: 'rgba(0,0,0,0.8)',
+  overlayBgDark: 'rgba(46,36,22,0.8)',
   /** Subtle card background */
-  cardBg: 'rgba(0,0,0,0.05)',
+  cardBg: 'rgba(94,61,23,0.06)',
   /** Subtle card border */
-  cardBorder: 'rgba(0,0,0,0.1)',
-  /** iOS toggle track */
-  toggleTrack: '#767577',
-  /** iOS toggle thumb */
-  toggleThumb: '#F4F3F4',
+  cardBorder: 'rgba(94,61,23,0.14)',
+  /** Toggle track */
+  toggleTrack: '#9A8C70',
+  /** Toggle thumb */
+  toggleThumb: '#FBF5E6',
   /** Light page background */
-  lightPageBg: '#F8F9FA',
-  /** Blue — dark mode variant */
-  blueDark: '#0A84FF',
+  lightPageBg: '#FBF5E6',
+  /** Forest green — dark mode variant */
+  blueDark: '#7FA08A',
   /** Negative points / loss indicator */
-  negative: '#DC2626',
-  /** Green tint background */
-  greenTint: 'rgba(52, 199, 89, 0.1)',
+  negative: '#A63D2A',
+  /** Olive tint background */
+  greenTint: 'rgba(110,118,44,0.12)',
   /** Gold tint background (1st place) */
-  goldTint: 'rgba(255, 215, 0, 0.2)',
+  goldTint: 'rgba(201,162,39,0.2)',
   /** Gold tint border (1st place) */
-  goldTintBorder: 'rgba(255, 215, 0, 0.5)',
-  /** Blue tint background (current user) */
-  blueTint: 'rgba(0, 122, 255, 0.15)',
-  /** Blue tint border (current user) */
-  blueTintBorder: 'rgba(0, 122, 255, 0.3)',
-  /** Guessing phase — deep orange */
-  deepOrange: '#FF7800',
+  goldTintBorder: 'rgba(201,162,39,0.5)',
+  /** Forest tint background (current user) */
+  blueTint: 'rgba(60,89,70,0.15)',
+  /** Forest tint border (current user) */
+  blueTintBorder: 'rgba(60,89,70,0.3)',
+  /** Guessing phase — deep burnt orange */
+  deepOrange: '#B05A22',
   /** Phase tint backgrounds and borders */
-  waitingTint: 'rgba(255,149,0,0.06)',
-  waitingTintBorder: 'rgba(255,149,0,0.15)',
-  activeTint: 'rgba(52,199,89,0.06)',
-  activeTintBorder: 'rgba(52,199,89,0.15)',
-  guessingTint: 'rgba(255,120,0,0.06)',
-  guessingTintBorder: 'rgba(255,120,0,0.15)',
-  resultsTint: 'rgba(255,215,0,0.08)',
-  resultsTintBorder: 'rgba(255,215,0,0.25)',
-  basketWritingTint: 'rgba(0,122,255,0.06)',
-  basketWritingTintBorder: 'rgba(0,122,255,0.15)',
-  basketGuessingTint: 'rgba(175,82,222,0.06)',
-  basketGuessingTintBorder: 'rgba(175,82,222,0.15)',
-  clashWritingTint: 'rgba(255,120,0,0.06)',
-  clashWritingTintBorder: 'rgba(255,120,0,0.15)',
-  clashGuessingTint: 'rgba(255,80,0,0.06)',
-  clashGuessingTintBorder: 'rgba(255,80,0,0.15)',
+  waitingTint: 'rgba(192,112,42,0.07)',
+  waitingTintBorder: 'rgba(192,112,42,0.18)',
+  activeTint: 'rgba(110,118,44,0.07)',
+  activeTintBorder: 'rgba(110,118,44,0.18)',
+  guessingTint: 'rgba(176,90,34,0.07)',
+  guessingTintBorder: 'rgba(176,90,34,0.18)',
+  resultsTint: 'rgba(201,162,39,0.1)',
+  resultsTintBorder: 'rgba(201,162,39,0.28)',
+  basketWritingTint: 'rgba(60,89,70,0.07)',
+  basketWritingTintBorder: 'rgba(60,89,70,0.18)',
+  basketGuessingTint: 'rgba(124,87,37,0.07)',
+  basketGuessingTintBorder: 'rgba(124,87,37,0.18)',
+  clashWritingTint: 'rgba(176,90,34,0.07)',
+  clashWritingTintBorder: 'rgba(176,90,34,0.18)',
+  clashGuessingTint: 'rgba(166,61,42,0.07)',
+  clashGuessingTintBorder: 'rgba(166,61,42,0.18)',
 };
 
 /** Status badge background colors, keyed by game status string. */
 export const StatusColors: Record<string, string> = {
-  waiting: '#FF9500',
-  active: '#34C759',
-  guessing_phase: '#AF52DE',
-  finished: '#8E8E93',
-  basket_writing: '#007AFF',
-  basket_guessing: '#AF52DE',
-  clash_writing: '#FF7800',
-  clash_guessing: '#FF5000',
-  idea_writing: '#007AFF',
-  idea_rating: '#AF52DE',
+  waiting: '#C0702A',
+  active: '#6E762C',
+  guessing_phase: '#7C5725',
+  finished: '#8C8270',
+  basket_writing: '#3C5946',
+  basket_guessing: '#7C5725',
+  clash_writing: '#B05A22',
+  clash_guessing: '#A63D2A',
+  idea_writing: '#3C5946',
+  idea_rating: '#7C5725',
 };
 
 /** Shared modal styles for FancyAlert and FaceMessage */
@@ -154,7 +155,7 @@ export const ModalStyles = {
   },
   container: {
     width: '85%' as const,
-    backgroundColor: GameColors.white,
+    backgroundColor: '#FFFCF4',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center' as const,

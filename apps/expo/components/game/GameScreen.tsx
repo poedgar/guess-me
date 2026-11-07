@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActivityIndicator, Animated, Clipboard, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { wrapScrollView } from 'react-native-scroll-into-view';
+import { wrapScrollView } from '@/components/ui/scrollIntoView';
 import { ActivePhase } from '@/components/game/mirror/ActivePhase';
 import { BasketScreen } from '@/components/game/basket/BasketScreen';
 import { ClashScreen } from '@/components/game/clash/ClashScreen';

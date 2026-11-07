@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface HeaderLogoProps {
   /** `hero` = full illustration for landing screens, `icon` = compact app icon. */
@@ -6,11 +7,12 @@ interface HeaderLogoProps {
 }
 
 export const HeaderLogo: React.FC<HeaderLogoProps> = ({ variant = 'hero' }) => {
+  const { t } = useLanguage();
   if (variant === 'icon') {
     return (
       <img
         src="/logo.png"
-        alt="In The Mirror"
+        alt={t('app.title')}
         className="w-full h-full object-contain rounded-xl"
         data-testid="header-logo"
       />
@@ -20,8 +22,8 @@ export const HeaderLogo: React.FC<HeaderLogoProps> = ({ variant = 'hero' }) => {
   return (
     <div className="flex justify-center mb-8" data-testid="header-logo">
       <img
-        src="/hero.jpg"
-        alt="In The Mirror"
+        src="/hero.png"
+        alt={t('app.title')}
         className="w-64 h-64 max-w-full object-contain"
       />
     </div>

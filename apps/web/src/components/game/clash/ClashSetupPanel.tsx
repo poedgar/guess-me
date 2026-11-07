@@ -149,7 +149,7 @@ export const ClashSetupPanel: React.FC<Props> = ({ game }) => {
             >
               {isStarting ? t('common.loading') : t('game.ui.clash.startGame')}
             </button>
-            {isSaving && <p className="text-xs text-gray-400">saving…</p>}
+            {isSaving && <p className="text-xs text-gray-400">{t('common.saving')}</p>}
           </div>
         )}
       </div>

@@ -22,21 +22,21 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('navigation.home', { locale }),
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color='orange' />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="results"
         options={{
           title: t('navigation.results', { locale }),
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color='orange' />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="rules"
         options={{
           title: t('navigation.rules', { locale }),
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color='orange' />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
         }}
       />
     </Tabs>

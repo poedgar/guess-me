@@ -35,7 +35,7 @@ export const AuthScreen: React.FC = () => {
       setError(null);
       await signIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed');
+      setError(err instanceof Error ? err.message : t('auth.signInErrorMessage'));
       setIsLoading(false);
     }
   };
@@ -105,7 +105,7 @@ export const AuthScreen: React.FC = () => {
         <HeaderLogo />
 
         <h1 className="text-4xl font-bold text-center mb-4 text-gray-900 dark:text-white">
-          In The Mirror
+          {t('app.title')}
         </h1>
 
         <p className="text-center text-gray-600 dark:text-gray-400 mb-8">

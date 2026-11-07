@@ -5,6 +5,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
 import { useGame } from './contexts/GameContext';
+import { useLanguage } from './contexts/LanguageContext';
 import { HomePage } from './pages/HomePage';
 import { GameJoinPage } from './pages/GameJoinPage';
 import { ResultsPage } from './pages/ResultsPage';
@@ -14,6 +15,7 @@ import './App.css';
 
 function NavBar() {
   const { currentGame } = useGame();
+  const { t } = useLanguage();
   const hasResults = currentGame && currentGame.status !== 'waiting';
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -25,11 +27,11 @@ function NavBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-around">
-      <NavLink to="/" className={linkClass}>Home</NavLink>
+      <NavLink to="/" className={linkClass}>{t('navigation.home')}</NavLink>
       {hasResults && (
-        <NavLink to="/results" className={linkClass} data-cy="nav-results">Results</NavLink>
+        <NavLink to="/results" className={linkClass} data-cy="nav-results">{t('navigation.results')}</NavLink>
       )}
-      <NavLink to="/rules" className={linkClass}>Rules</NavLink>
+      <NavLink to="/rules" className={linkClass}>{t('navigation.rules')}</NavLink>
     </nav>
   );
 }
@@ -41,7 +43,7 @@ export default function App() {
         <AuthProvider>
           <GameProvider>
             <BrowserRouter>
-              <div className="min-h-screen bg-white dark:bg-gray-900 font-philosopher pb-24">
+              <div className="min-h-screen bg-cream dark:bg-gray-900 font-philosopher pb-24">
                 <main className="max-w-2xl mx-auto px-4 py-8">
                   <Routes>
                     <Route path="/" element={<HomePage />} />

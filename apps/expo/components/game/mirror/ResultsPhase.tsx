@@ -8,7 +8,7 @@ import React from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { Leaderboard } from '../Leaderboard';
 import { IdeaLeaderboard } from '../ideas/IdeaLeaderboard';
-import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { ScrollIntoView } from '@/components/ui/scrollIntoView';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 

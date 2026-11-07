@@ -1,6 +1,9 @@
 import { ThemedText } from '@/components/themed-text';
 import { GameColors, ModalStyles } from '@/constants/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useSound } from '@/contexts/SoundContext';
+import { t } from '@/i18n';
+import { localizeErrorMessage } from '@/utils/errorMessages';
 import React from 'react';
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -21,6 +24,11 @@ interface Props {
 
 export function FancyAlert({ visible, title, message, buttons, onClose, customContent }: Props) {
   const { playSound } = useSound();
+  const { locale } = useLanguage();
+  // Errors thrown by GameContext are English; show them in the current language.
+  const shownMessage = message
+    ? localizeErrorMessage(message, (key, options) => t(key, { ...options, locale }))
+    : message;
 
   return (
     <Modal transparent={true} animationType="fade" visible={visible} onRequestClose={onClose}>
@@ -32,9 +40,9 @@ export function FancyAlert({ visible, title, message, buttons, onClose, customCo
               {title}
             </ThemedText>
           ) : null}
-          {message ? (
+          {shownMessage ? (
             <ThemedText style={styles.message} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
-              {message}
+              {shownMessage}
             </ThemedText>
           ) : null}
           <View style={styles.buttons}>

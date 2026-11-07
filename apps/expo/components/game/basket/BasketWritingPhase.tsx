@@ -12,7 +12,7 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { ScrollIntoView } from '@/components/ui/scrollIntoView';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     }),
   },
   charCounter: { fontSize: 12, opacity: 0.5, textAlign: 'right', marginBottom: 8, fontFamily: Fonts.sans },
-  charCounterWarn: { opacity: 1, color: '#e53935' },
+  charCounterWarn: { opacity: 1, color: '#A63D2A' },
   wideButton: {
     flexDirection: 'row',
     borderRadius: 999,

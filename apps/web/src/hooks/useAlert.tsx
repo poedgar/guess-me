@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { FancyAlert, FancyAlertButton } from '../components/ui/FancyAlert';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AlertState {
   title: string;
@@ -9,6 +10,7 @@ interface AlertState {
 
 export function useAlert() {
   const [alert, setAlert] = useState<AlertState | null>(null);
+  const { t } = useLanguage();
 
   const showAlert = useCallback((
     title: string,
@@ -18,9 +20,9 @@ export function useAlert() {
     setAlert({
       title,
       message,
-      buttons: buttons ?? [{ text: 'OK', onPress: () => {}, style: 'primary' }],
+      buttons: buttons ?? [{ text: t('common.ok'), onPress: () => {}, style: 'primary' }],
     });
-  }, []);
+  }, [t]);
 
   const closeAlert = useCallback(() => setAlert(null), []);
 

@@ -6,6 +6,15 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Philosopher', system-ui, sans-serif;
+  background-color: #F7EFDC;
+  color: #2E2416;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #1C1A14;
+    color: #EFE6D2;
+  }
 }
 
 /* One-time "look here" pulse for the auto-scrolled active section. Color is
@@ -14,7 +23,7 @@ body {
    reduced motion — the class is simply never added in that case. */
 @keyframes active-section-pulse-glow {
   0% {
-    box-shadow: 0 0 0 0 var(--pulse-color, rgba(0, 122, 255, 0.55));
+    box-shadow: 0 0 0 0 var(--pulse-color, rgba(60, 89, 70, 0.55));
   }
   70% {
     box-shadow: 0 0 0 14px transparent;

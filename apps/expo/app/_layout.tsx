@@ -3,6 +3,31 @@ import {
   useFonts,
 } from '@expo-google-fonts/philosopher';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { Colors } from '@/constants/theme';
+
+// Navigation chrome (screen background, tab bar, headers) in the logo's earthy palette.
+const EarthyLightTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: Colors.light.tint,
+    background: Colors.light.background,
+    card: '#F6EEDB',
+    text: Colors.light.text,
+    border: '#E2D5B5',
+  },
+};
+const EarthyDarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: Colors.dark.tint,
+    background: Colors.dark.background,
+    card: '#24211A',
+    text: Colors.dark.text,
+    border: '#3D392C',
+  },
+};
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -72,7 +97,7 @@ export default function RootLayout() {
         <LanguageProvider>
           <AuthProvider>
             <GameProvider>
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <ThemeProvider value={colorScheme === 'dark' ? EarthyDarkTheme : EarthyLightTheme}>
                 <Stack>
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

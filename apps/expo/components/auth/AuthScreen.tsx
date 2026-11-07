@@ -5,7 +5,6 @@ import { ThemedView } from "@/components/themed-view";
 import { FancyAlert, FancyAlertButton } from "@/components/ui/FancyAlert";
 import { HeaderLogo } from "@/components/ui/HeaderLogo";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { LoginAnimation } from "@/components/ui/LoginAnimation";
 import { Colors, Fonts, GameColors, themedInput } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -20,6 +19,7 @@ import {
   ActivityIndicator,
   Image,
   Platform,
+  ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
@@ -194,8 +194,8 @@ export const AuthScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
-        <View style={[styles.logoBlock, { top: insets.top + 12 }]}>
+      <ThemedView style={styles.signInScreen}>
+        <View style={[styles.headerBlock, { paddingTop: insets.top + 12 }]}>
           <HeaderLogo />
           <View style={styles.controls}>
             <LanguageSelector />
@@ -209,6 +209,10 @@ export const AuthScreen: React.FC = () => {
           buttons={fancyButtons}
           onClose={closeFancyAlert}
         />
+        <ScrollView
+          style={styles.signInScroll}
+          contentContainerStyle={styles.signInScrollContent}
+        >
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             testID="loading-indicator"
@@ -219,14 +223,15 @@ export const AuthScreen: React.FC = () => {
             {t("common.loading", { locale })}
           </ThemedText>
         </View>
+        </ScrollView>
       </ThemedView>
     );
   }
 
   if (isSignedIn && user) {
     return (
-      <ThemedView style={styles.container}>
-        <View style={[styles.logoBlock, { top: insets.top + 12 }]}>
+      <ThemedView style={styles.signInScreen}>
+        <View style={[styles.headerBlock, { paddingTop: insets.top + 12 }]}>
           <HeaderLogo />
           <View style={styles.controls}>
             <LanguageSelector />
@@ -240,6 +245,10 @@ export const AuthScreen: React.FC = () => {
           buttons={fancyButtons}
           onClose={closeFancyAlert}
         />
+        <ScrollView
+          style={styles.signInScroll}
+          contentContainerStyle={styles.signInScrollContent}
+        >
         <View style={styles.profileContainer}>
           {/* Profile Picture */}
           <View
@@ -293,17 +302,15 @@ export const AuthScreen: React.FC = () => {
             </ThemedText>
           </TouchableOpacity>
         </View>
+        </ScrollView>
       </ThemedView>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={[styles.logoBlock, { top: insets.top + 12 }]}>
-        <HeaderLogo />
-        <View style={styles.controls}>
-          <LanguageSelector />
-        </View>
+    <ThemedView style={styles.signInScreen}>
+      <View style={[styles.signInTopBar, { paddingTop: insets.top + 12 }]}>
+        <LanguageSelector />
       </View>
       <FancyAlert
         visible={fancyVisible}
@@ -312,10 +319,15 @@ export const AuthScreen: React.FC = () => {
         buttons={fancyButtons}
         onClose={closeFancyAlert}
       />
+      <ScrollView
+        style={styles.signInScroll}
+        contentContainerStyle={styles.signInScrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.signInContainer}>
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
-          <LoginAnimation />
+          <HeaderLogo />
           <ThemedText type="title" style={styles.welcomeTitle}>
             {t("auth.welcome", { locale })}!
           </ThemedText>
@@ -490,6 +502,7 @@ export const AuthScreen: React.FC = () => {
         </View>
         )}
       </View>
+      </ScrollView>
     </ThemedView>
   );
 };
@@ -501,12 +514,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
-  logoBlock: {
-    position: "absolute",
-    width: "100%",
-    alignItems: "center",
-    zIndex: 50,
-  },
   controls: {
     flexDirection: "row",
     alignItems: "center",
@@ -517,17 +524,41 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: "center",
     justifyContent: "center",
+    marginVertical: "auto",
   },
   loadingText: {
     marginTop: 16,
   },
-  signInContainer: {
+  signInScreen: {
     flex: 1,
+  },
+  headerBlock: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  signInTopBar: {
+    flexDirection: "row",
     justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  signInScroll: {
+    flex: 1,
+    width: "100%",
+  },
+  // Children centre themselves with marginVertical "auto": centred when the
+  // content fits, and (unlike justifyContent: "center") never pushed above
+  // the top of the scroll area when it doesn't.
+  signInScrollContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    padding: 20,
+  },
+  signInContainer: {
     width: "100%",
     maxWidth: 400,
     alignItems: "center",
-    marginTop: 80,
+    marginVertical: "auto",
   },
   welcomeSection: {
     alignItems: "center",
@@ -663,6 +694,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
     alignItems: "center",
+    marginVertical: "auto",
   },
   avatarContainer: {
     marginBottom: 24,

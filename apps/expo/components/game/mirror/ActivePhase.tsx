@@ -22,7 +22,7 @@ import {
 import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
 import { AdminRoundTools } from '@/components/game/AdminRoundTools';
-import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { ScrollIntoView } from '@/components/ui/scrollIntoView';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
@@ -764,5 +764,5 @@ submitCommentButton: { flexDirection: 'row', borderRadius: 999, alignItems: 'cen
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },
   commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 4, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
   charCounter: { fontSize: 12, opacity: 0.5, textAlign: 'right', marginBottom: 12, fontFamily: Fonts.sans },
-  charCounterWarning: { opacity: 1, color: '#e53935' },
+  charCounterWarning: { opacity: 1, color: '#A63D2A' },
 });

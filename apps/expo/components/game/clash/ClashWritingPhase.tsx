@@ -12,7 +12,7 @@ import { t } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { ScrollIntoView } from '@/components/ui/scrollIntoView';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   subjectName: { fontSize: 22, fontWeight: '700', fontFamily: Fonts.sans },
   input: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 4, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
   charCounter: { fontSize: 12, opacity: 0.5, textAlign: 'right', marginBottom: 8, fontFamily: Fonts.sans },
-  charCounterWarn: { opacity: 1, color: '#e53935' },
+  charCounterWarn: { opacity: 1, color: '#A63D2A' },
   waitingCard: { padding: 24, borderRadius: 8, backgroundColor: GameColors.cardBg, alignItems: 'center' },
   waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, fontFamily: Fonts.sans },
   adminSection: { marginTop: 24, alignItems: 'center', gap: 6 },

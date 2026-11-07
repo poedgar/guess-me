@@ -108,7 +108,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
       await playSound('correctGuess');
 
       if (failures.length > 0) {
-        showAlert(t('common.error'), `Failed to submit guesses for ${failures.length} comment(s).`);
+        showAlert(t('common.error'), `${t('game.alerts.failedToSubmitGuessesForComments')}: ${failures.length}`);
       }
     } catch (error) {
       showAlert(

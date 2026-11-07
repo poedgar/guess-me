@@ -184,7 +184,7 @@ export const ClashSetupPanel: React.FC<Props> = ({
             <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />
             <ThemedText style={styles.startButtonText}>{t('game.ui.clash.startGame', { locale })}</ThemedText>
           </TouchableOpacity>
-          {isSaving && <ThemedText style={styles.savingHint}>saving…</ThemedText>}
+          {isSaving && <ThemedText style={styles.savingHint}>{t('common.saving', { locale })}</ThemedText>}
         </View>
       )}
     </View>

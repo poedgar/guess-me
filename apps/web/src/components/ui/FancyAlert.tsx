@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { localizeErrorMessage } from '@mirror/shared';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export interface FancyAlertButton {
   text: string;
@@ -20,6 +22,7 @@ export const FancyAlert: React.FC<FancyAlertProps> = ({
   buttons,
   onDismiss,
 }) => {
+  const { t } = useLanguage();
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onDismiss?.();
@@ -42,7 +45,8 @@ export const FancyAlert: React.FC<FancyAlertProps> = ({
           {title}
         </h2>
         <p className="text-center text-gray-600 dark:text-gray-300 mb-6">
-          {message}
+          {/* Errors thrown by GameContext are English; show them in the current language. */}
+          {localizeErrorMessage(message, t)}
         </p>
         <div className="flex gap-3 flex-col">
           {buttons.map((button, idx) => (

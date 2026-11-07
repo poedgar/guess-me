@@ -119,7 +119,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                   );
                 }}
                 className="font-mono font-bold text-lg text-gray-900 dark:text-white hover:text-game-blue transition-colors text-left"
-                title="Copy game link"
+                title={t('game.ui.copyGameLink')}
               >
                 {game.id} 🔗
               </button>

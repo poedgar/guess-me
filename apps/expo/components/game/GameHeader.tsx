@@ -2,7 +2,6 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { SoundToggle } from "@/components/SoundToggle";
 import { ThemedText } from "@/components/themed-text";
 import { FancyAlertButton } from "@/components/ui/FancyAlert";
-import { HeaderLogo } from "@/components/ui/HeaderLogo";
 import { GameColors } from "@/constants/theme";
 import { Game } from "@/contexts/GameContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -32,7 +31,6 @@ export const GameHeader: React.FC<Props> = ({
 
   return (
     <View style={styles.gameHeader}>
-      <HeaderLogo variant="icon" />
       <View style={styles.gameHeaderRight}>
         <LanguageSelector />
         <SoundToggle />

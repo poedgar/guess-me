@@ -21,7 +21,7 @@ import {
 import { ShowFancyAlertFn } from '../GameHeader';
 import PostGuessingPointsPanel from './PostGuessingPointsPanel';
 import { AdminRoundTools } from '@/components/game/AdminRoundTools';
-import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { ScrollIntoView } from '@/components/ui/scrollIntoView';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 
@@ -113,8 +113,8 @@ export const GuessingPhase: React.FC<Props> = ({
     const correct = isGuessCorrect(commentId, guessedAuthorId);
     const actualAuthor = game.participants.find(p => p.userId === comment.authorId);
     const guessedAuthor = game.participants.find(p => p.userId === guessedAuthorId);
-    const actualAuthorName = getDisplayName(actualAuthor?.userName || 'Unknown');
-    const guessedAuthorName = getDisplayName(guessedAuthor?.userName || 'Unknown');
+    const actualAuthorName = getDisplayName(actualAuthor?.userName || t('common.unknown', { locale }));
+    const guessedAuthorName = getDisplayName(guessedAuthor?.userName || t('common.unknown', { locale }));
     const guessPoints = correct ? 1 : 0;
     const commentPoints = comment.points || 0;
     const message = correct

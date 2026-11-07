@@ -143,7 +143,7 @@ export default function TabTwoScreen() {
                       {currentGame?.adminAwards && Object.keys(currentGame.adminAwards).length > 0 && (() => {
                         const allAdminAwards = Object.entries(currentGame.adminAwards)
                           .flatMap(([awarderId, awards]) => 
-                            awards.map(award => ({ ...award, awarderName: participantsByJoin.find(p => p.userId === awarderId)?.userName || 'Unknown' }))
+                            awards.map(award => ({ ...award, awarderName: participantsByJoin.find(p => p.userId === awarderId)?.userName || t('common.unknown', { locale }) }))
                           );
                         
                         const roundAwards = allAdminAwards.filter(award => {

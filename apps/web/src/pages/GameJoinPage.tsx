@@ -51,7 +51,7 @@ export function GameJoinPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-64 gap-4">
         <LiquidLoader size={60} />
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Joining game…</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">{t('game.joiningGame')}</p>
       </div>
     );
   }

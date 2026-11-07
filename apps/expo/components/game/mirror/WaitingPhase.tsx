@@ -24,7 +24,7 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import { Leaderboard } from '../Leaderboard';
 import { ShowFancyAlertFn } from '../GameHeader';
-import { ScrollIntoView } from 'react-native-scroll-into-view';
+import { ScrollIntoView } from '@/components/ui/scrollIntoView';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
 

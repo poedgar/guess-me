@@ -3,10 +3,10 @@
 // peak opacity. Each call site of useScrollIntoViewOnChange picks whichever
 // entry matches that section's own existing accent color.
 export const PULSE_COLORS = {
-  green: 'rgba(52, 199, 89, 0.55)',   // game-green #34C759
-  blue: 'rgba(0, 122, 255, 0.55)',    // game-blue #007AFF
-  purple: 'rgba(175, 82, 222, 0.55)', // game-purple #AF52DE
-  orange: 'rgba(255, 149, 0, 0.55)',  // game-orange #FF9500
-  gold: 'rgba(255, 215, 0, 0.55)',    // game-gold #FFD700
-  danger: 'rgba(255, 59, 48, 0.55)',  // game-danger #FF3B30
+  green: 'rgba(110, 118, 44, 0.55)',  // game-green #6E762C
+  blue: 'rgba(60, 89, 70, 0.55)',    // game-blue #3C5946
+  purple: 'rgba(124, 87, 37, 0.55)',   // game-purple #7C5725
+  orange: 'rgba(192, 112, 42, 0.55)',  // game-orange #C0702A
+  gold: 'rgba(201, 162, 39, 0.55)',  // game-gold #C9A227
+  danger: 'rgba(166, 61, 42, 0.55)',   // game-danger #A63D2A
 } as const;
