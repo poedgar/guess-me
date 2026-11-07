@@ -39,7 +39,7 @@ export default function TabTwoScreen() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
-      <HeaderLogo />
+      <HeaderLogo variant="icon" />
 
       {/* Show no game message when no game exists */}
       {(!currentGame || currentGame.status == 'waiting') && (

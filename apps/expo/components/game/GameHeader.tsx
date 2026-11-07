@@ -32,7 +32,7 @@ export const GameHeader: React.FC<Props> = ({
 
   return (
     <View style={styles.gameHeader}>
-      <HeaderLogo />
+      <HeaderLogo variant="icon" />
       <View style={styles.gameHeaderRight}>
         <LanguageSelector />
         <SoundToggle />

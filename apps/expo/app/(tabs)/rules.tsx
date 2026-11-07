@@ -20,7 +20,7 @@ export default function RulesScreen() {
       {/* Game Overview */}
       <View style={[styles.section, { backgroundColor: isDark ? GameColors.inputDark : GameColors.lightPageBg }]}>
         <View style={styles.sectionHeader}>
-      <HeaderLogo />
+      <HeaderLogo variant="icon" />
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             {t('rules.overview.title', { locale })}
           </ThemedText>
