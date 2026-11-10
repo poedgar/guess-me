@@ -5,7 +5,6 @@ import { sortParticipantsByJoin, buildJoinIndexById } from "@/utils/participants
 import { BasketAssignment, BasketRound, generateBasketSchedule } from '@/utils/basketSchedule';
 import { ClashAssignment, ClashRound, generateClashSchedule, generateClashLeaderRotation, getClashLeader } from '@/utils/clashSchedule';
 import { generateIdeaSchedule } from '@/utils/ideaSchedule';
-import { pickAvatarId } from "@/utils/avatars";
 import {
   arrayUnion,
   doc,
@@ -128,7 +127,6 @@ export interface Participant {
   userEmail: string;
   photoURL?: string;
   /** Cartoon avatar number (1..AVATAR_COUNT). Missing on games created before avatars. */
-  avatarId?: number;
   joinedAt: Date | Timestamp;
   totalPoints?: number;
 }
@@ -437,7 +435,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             userName: user.displayName || "Unknown",
             userEmail: user.email || "",
             photoURL: user.photoURL ?? null,
-            avatarId: pickAvatarId([]),
             joinedAt: now,
           },
         ],
@@ -524,9 +521,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         userName: user.displayName || "Unknown",
         userEmail: user.email || "",
         photoURL: user.photoURL ?? null,
-        avatarId: pickAvatarId(
-          ((gameData.participants ?? []) as Participant[]).map((p) => p.avatarId),
-        ),
         joinedAt: new Date(),
       };
 

@@ -1,7 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
-import { getAvatarId } from "@/utils/avatars";
 import { SuccessAnimation } from "@/components/ui/SuccessAnimation";
 import { TargetControlPanel } from "@/components/ui/TargetControlPanel";
 import { Fonts, GameColors } from "@/constants/theme";
@@ -235,7 +234,7 @@ const PostGuessingPointsPanel: React.FC<Props> = ({
                       key={participant.userId}
                       style={styles.playerSelectionItem}
                     >
-                      <PlayerAvatar name={participant.userName} avatarId={getAvatarId(participant)} size={32} />
+                      <PlayerAvatar name={participant.userName} photoURL={participant.photoURL} size={32} />
                       <View style={styles.playerSelectionInfo}>
                         <ThemedText style={styles.playerSelectionName}>
                           {joinIndexById[participant.userId]

@@ -50,3 +50,8 @@ apps/web/cypress.env.json
 apps/web/cypress/videos/
 apps/web/cypress/screenshots/
 apps/web/cypress/downloads/
+
+# Local Android/iOS build outputs
+*.aab
+*.apk
+*.ipa

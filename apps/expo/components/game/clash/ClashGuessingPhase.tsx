@@ -1,4 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
+import { WithAnonymousAvatar } from '@/components/ui/AnonymousAvatar';
+import { assignAnonymousAvatars } from '@/utils/avatars';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
@@ -67,6 +69,11 @@ export const ClashGuessingPhase: React.FC<Props> = ({
 
   // Comments written BY the opposite group (which the active leader guesses about)
   const commentsToGuess: ClashComment[] = currentGroup === 'a' ? cd.currentRoundCommentsB : cd.currentRoundCommentsA;
+  // Random cartoon avatar per anonymous comment (never tied to the writer).
+  const commentAvatars = assignAnonymousAvatars(
+    commentsToGuess.map(c => c.writerId),
+    `${game.id}:clash:${currentRoundIndex}:${currentGroup}`,
+  );
   // Own group members (subjects to pick from)
   const ownGroupIds = currentGroup === 'a' ? cd.groupA.memberIds : cd.groupB.memberIds;
   // Opposite group members (authors to pick from)
@@ -235,7 +242,9 @@ export const ClashGuessingPhase: React.FC<Props> = ({
                     disabled={phase !== 'idle' || isSubmitting}
                     activeOpacity={0.8}
                   >
-                    <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                    <WithAnonymousAvatar avatarId={commentAvatars[comment.writerId]} style={{ alignItems: 'center' }}>
+                      <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                    </WithAnonymousAvatar>
                   </TouchableOpacity>
 
                   {phase === 'subject_picking' && (

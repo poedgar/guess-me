@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Game } from '@mirror/shared';
+import { Game, assignAnonymousAvatars } from '@mirror/shared';
+import { AnonymousAvatar } from '../../ui/AnonymousAvatar';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
@@ -72,6 +73,11 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
   if (!game.basketData) return null;
 
   const { schedule, currentRoundComments } = game.basketData;
+  // Random cartoon avatar per anonymous comment (never tied to the writer).
+  const commentAvatars = assignAnonymousAvatars(
+    currentRoundComments.map((c: any) => c.writerId as string),
+    `${game.id}:basket:${currentRoundIndex}`,
+  );
   const totalRounds = schedule.length;
   const isAdmin = user?.uid === game.adminId;
   const isLastRound = currentRoundIndex + 1 >= schedule.length;
@@ -204,13 +210,14 @@ export const BasketGuessingPhase: React.FC<Props> = ({ game }) => {
                   data-cy-writer-id={comment.writerId}
                   onClick={() => handleCommentSelect(comment.writerId)}
                   disabled={selectedWriterId !== null || isSubmittingGuess || loading}
-                  className={`w-full text-left bg-white dark:bg-gray-800 border-2 rounded-lg px-4 py-3 text-gray-900 dark:text-white hover:border-game-blue disabled:opacity-50 transition-colors ${
+                  className={`w-full flex items-center gap-3 text-left bg-white dark:bg-gray-800 border-2 rounded-lg px-4 py-3 text-gray-900 dark:text-white hover:border-game-blue disabled:opacity-50 transition-colors ${
                     selectedWriterId === comment.writerId
                       ? 'border-game-blue'
                       : 'border-gray-200 dark:border-gray-700'
                   }`}
                 >
-                  {comment.text}
+                  <AnonymousAvatar avatarId={commentAvatars[comment.writerId]} />
+                  <span className="flex-1 min-w-0 break-words">{comment.text}</span>
                 </button>
               ))}
             </div>

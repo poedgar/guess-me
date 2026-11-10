@@ -1,4 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
+import { WithAnonymousAvatar } from '@/components/ui/AnonymousAvatar';
+import { assignAnonymousAvatars } from '@/utils/avatars';
 import { FaceMessage } from '@/components/ui/FaceMessage';
 import { SuccessAnimation } from '@/components/ui/SuccessAnimation';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -72,6 +74,12 @@ export const ActivePhase: React.FC<Props> = ({
 
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
+
+  // Random cartoon avatar per anonymous comment (never tied to the author).
+  const commentAvatars = assignAnonymousAvatars(
+    (game.currentRound?.comments ?? []).map((c: Comment) => c.id),
+    `${game.id}:mirror:${game.currentRound?.targetUserId}`,
+  );
 
   const inputTheme = themedInput(isDark);
   const [commentText, setCommentText] = useState('');
@@ -492,7 +500,9 @@ export const ActivePhase: React.FC<Props> = ({
                 </ThemedText>
                 {game.currentRound.comments?.map((comment: Comment) => (
                   <View key={comment.id} style={styles.commentCard}>
-                    <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                    <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
+                      <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                    </WithAnonymousAvatar>
                     {comment.points === undefined && (
                       <TouchableOpacity
                         style={styles.pointsButton}
@@ -638,7 +648,9 @@ export const ActivePhase: React.FC<Props> = ({
                     </ThemedText>
                     {game.currentRound!.comments?.map((comment: Comment) => (
                       <View key={comment.id} style={styles.commentCard}>
-                        <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                        <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
+                      <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                    </WithAnonymousAvatar>
                         {comment.points !== undefined && (
                           <ThemedText style={styles.pointsGivenText}>
                             {t('game.ui.points', { locale })} {comment.points}

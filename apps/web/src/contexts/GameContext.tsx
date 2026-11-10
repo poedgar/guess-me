@@ -1,4 +1,4 @@
-import { auth, db, generateGameId, sortParticipantsByJoin, buildJoinIndexById, generateBasketSchedule, generateClashSchedule, generateClashLeaderRotation, getClashLeader, generateIdeaSchedule, pickAvatarId } from '@mirror/shared';
+import { auth, db, generateGameId, sortParticipantsByJoin, buildJoinIndexById, generateBasketSchedule, generateClashSchedule, generateClashLeaderRotation, getClashLeader, generateIdeaSchedule } from '@mirror/shared';
 import type { BasketAssignment, BasketRound, ClashAssignment, ClashRound } from '@mirror/shared';
 import { useAuth } from './AuthContext';
 import {
@@ -101,7 +101,6 @@ export interface Participant {
   userEmail: string;
   photoURL?: string;
   /** Cartoon avatar number (1..AVATAR_COUNT). Missing on games created before avatars. */
-  avatarId?: number;
   joinedAt: Date | Timestamp;
   totalPoints?: number;
 }
@@ -455,7 +454,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
             userName: user.displayName || "Unknown",
             userEmail: user.email || "",
             photoURL: user.photoURL ?? null,
-            avatarId: pickAvatarId([]),
             joinedAt: now,
           },
         ],
@@ -542,9 +540,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         userName: user.displayName || "Unknown",
         userEmail: user.email || "",
         photoURL: user.photoURL ?? null,
-        avatarId: pickAvatarId(
-          ((gameData.participants ?? []) as Participant[]).map((p) => p.avatarId),
-        ),
         joinedAt: new Date(),
       };
 

@@ -1,6 +1,5 @@
 import { ThemedText } from "@/components/themed-text";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
-import { getAvatarId } from "@/utils/avatars";
 import { Fonts, GameColors } from "@/constants/theme";
 import { Game } from "@/contexts/GameContext";
 import { t } from "@/i18n";
@@ -76,7 +75,7 @@ export const Leaderboard: React.FC<Props> = ({
               </View>
               <PlayerAvatar
                 name={participant.userName}
-                avatarId={getAvatarId(participant)}
+                photoURL={participant.photoURL}
                 size={28}
               />
               <View style={styles.info}>

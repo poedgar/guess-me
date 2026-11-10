@@ -1,4 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
+import { WithAnonymousAvatar } from '@/components/ui/AnonymousAvatar';
+import { assignAnonymousAvatars } from '@/utils/avatars';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ShowFancyAlertFn } from '@/components/game/GameHeader';
@@ -40,6 +42,8 @@ export const IdeaRatingPhase: React.FC<Props> = ({
   const isLastRound = currentRoundIndex + 1 >= schedule.length;
   const currentAuthorId = schedule[currentRoundIndex];
   const currentIdeas = ideas.filter((i: Idea) => i.authorId === currentAuthorId);
+  // Over all ideas, so an idea has the same avatar here and on the leaderboard.
+  const ideaAvatars = assignAnonymousAvatars(ideas.map((i: Idea) => i.id), 'ideas');
 
   const raterId = user?.uid ?? '';
   const myRatingsThisRound = new Set(
@@ -118,7 +122,9 @@ export const IdeaRatingPhase: React.FC<Props> = ({
           : [];
         return (
           <View key={idea.id} style={styles.ideaCard}>
-            <ThemedText style={styles.ideaText}>{idea.text}</ThemedText>
+            <WithAnonymousAvatar avatarId={ideaAvatars[idea.id]}>
+              <ThemedText style={styles.ideaText}>{idea.text}</ThemedText>
+            </WithAnonymousAvatar>
 
             {alreadyRated ? (
               <ThemedText style={styles.waitingText}>

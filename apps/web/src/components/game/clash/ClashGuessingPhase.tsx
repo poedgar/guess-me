@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Game } from '@mirror/shared';
+import { Game, assignAnonymousAvatars } from '@mirror/shared';
+import { AnonymousAvatar } from '../../ui/AnonymousAvatar';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
@@ -44,6 +45,11 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
   const isActiveLeader = uid === activeLeaderId;
 
   const commentsToGuess: any[] = currentGroup === 'a' ? (cd?.currentRoundCommentsB ?? []) : (cd?.currentRoundCommentsA ?? []);
+  // Random cartoon avatar per anonymous comment (never tied to the writer).
+  const commentAvatars = assignAnonymousAvatars(
+    commentsToGuess.map((c: any) => c.writerId as string),
+    `${game.id}:clash:${currentRoundIndex}:${currentGroup}`,
+  );
   const existingGuesses: any[] = currentGroup === 'a' ? (cd?.currentRoundGuessesA ?? []) : (cd?.currentRoundGuessesB ?? []);
 
   const currentGroupDone = commentsToGuess.length > 0 && commentsToGuess.every((c: any) => {
@@ -217,7 +223,10 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
                               : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-game-blue'
                       } disabled:cursor-default`}
                     >
-                      <p className="text-gray-900 dark:text-white">{comment.text}</p>
+                      <div className="flex items-center gap-3">
+                        <AnonymousAvatar avatarId={commentAvatars[comment.writerId]} />
+                        <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white">{comment.text}</p>
+                      </div>
                     </button>
 
                     {phase === 'subject_picking' && (

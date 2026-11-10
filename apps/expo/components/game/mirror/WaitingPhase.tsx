@@ -1,7 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
-import { getAvatarId } from '@/utils/avatars';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { ClashSetupPanel } from '@/components/game/clash/ClashSetupPanel';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
@@ -414,7 +413,7 @@ export const WaitingPhase: React.FC<Props> = ({
                 participant.userId === game.adminId && styles.adminParticipant,
               ]}
             >
-              <PlayerAvatar name={participant.userName} avatarId={getAvatarId(participant)} size={36} />
+              <PlayerAvatar name={participant.userName} photoURL={participant.photoURL} size={36} />
               <View style={styles.participantInfo}>
                 <ThemedText style={styles.participantName}>
                   {`${idx + 1}. `}{getDisplayName(participant.userName)}

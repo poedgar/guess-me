@@ -1,6 +1,7 @@
 import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
-import { Game } from '@mirror/shared';
+import { Game, assignAnonymousAvatars } from '@mirror/shared';
+import { AnonymousAvatar } from '../../ui/AnonymousAvatar';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
@@ -48,6 +49,11 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   const isAdmin = user?.uid === game.adminId;
   const isTarget = user?.uid === targetUserId;
   const commentsVisible = currentRound?.commentsVisible ?? false;
+  // Random cartoon avatar per anonymous comment (never tied to the author).
+  const commentAvatars = assignAnonymousAvatars(
+    (currentRound?.comments ?? []).map(c => c.id),
+    `${game.id}:mirror:${targetUserId}`,
+  );
   const targetFinishedPoints = currentRound?.pointsGiven ?? false;
 
   // Hooks must run unconditionally on every render (Rules of Hooks), so these
@@ -338,7 +344,10 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                   <div className="space-y-3">
                     {currentRound.comments?.map(comment => (
                       <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <p className="text-gray-900 dark:text-white mb-3">{comment.text}</p>
+                        <div className="flex items-start gap-3 mb-3">
+                          <AnonymousAvatar avatarId={commentAvatars[comment.id]} />
+                          <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white">{comment.text}</p>
+                        </div>
                         {comment.points === undefined && !pointsGiven[comment.id] ? (
                           <button
                             type="button"
@@ -427,7 +436,10 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                   <div className="space-y-3">
                     {currentRound.comments?.map(comment => (
                       <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                        <p className="text-gray-900 dark:text-white mb-2">{comment.text}</p>
+                        <div className="flex items-start gap-3 mb-2">
+                          <AnonymousAvatar avatarId={commentAvatars[comment.id]} />
+                          <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white">{comment.text}</p>
+                        </div>
                         {comment.points !== undefined && (
                           <p className="text-game-green text-sm font-semibold">
                             {t('game.ui.points')} {comment.points}

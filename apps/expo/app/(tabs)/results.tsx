@@ -1,6 +1,8 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { WithAnonymousAvatar } from '@/components/ui/AnonymousAvatar';
+import { assignAnonymousAvatars } from '@/utils/avatars';
 import { HeaderLogo } from '@/components/ui/HeaderLogo';
 import { IdeaLeaderboard } from '@/components/game/ideas/IdeaLeaderboard';
 import { GameColors } from '@/constants/theme';
@@ -95,7 +97,13 @@ export default function TabTwoScreen() {
                 <ThemedText type="subtitle" style={styles.roundHistoryTitle}>
                   📜 {t('results.roundHistoryTitle', { locale })} ({completedRounds.length})
                 </ThemedText>
-                {completedRounds.map((round: Round) => (
+                {completedRounds.map((round: Round) => {
+                  // Same seed as the game screens, so a comment keeps its avatar.
+                  const commentAvatars = assignAnonymousAvatars(
+                    (round.comments ?? []).map((c: Comment) => c.id),
+                    `${currentGame.id}:mirror:${round.targetUserId}`,
+                  );
+                  return (
                   <View key={round.roundNumber} style={styles.roundHistoryItem}>
                     <View style={styles.roundHistoryHeader}>
                       <ThemedText style={styles.roundHistoryRoundNumber}>
@@ -120,9 +128,11 @@ export default function TabTwoScreen() {
                       {round.comments && round.comments.length > 0 ? (
                         round.comments.map((comment: Comment) => (
                           <View key={comment.id} style={styles.roundHistoryComment}>
-                            <ThemedText style={styles.roundHistoryCommentText}>
-                              "{comment.text}"
-                            </ThemedText>
+                            <WithAnonymousAvatar avatarId={commentAvatars[comment.id]} size={28} style={{ flex: 1 }}>
+                              <ThemedText style={styles.roundHistoryCommentText}>
+                                "{comment.text}"
+                              </ThemedText>
+                            </WithAnonymousAvatar>
                             {comment.points !== undefined && (
                               <View style={styles.roundHistoryCommentPoints}>
                                 <ThemedText style={[
@@ -174,7 +184,8 @@ export default function TabTwoScreen() {
                       })()}
                     </View>
                   </View>
-                ))}
+                  );
+                })}
               </View>
             ) : null;
           })()}

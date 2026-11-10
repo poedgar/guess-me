@@ -1,6 +1,7 @@
 import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
-import { Game } from '@mirror/shared';
+import { Game, assignAnonymousAvatars } from '@mirror/shared';
+import { AnonymousAvatar } from '../../ui/AnonymousAvatar';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
@@ -28,6 +29,8 @@ export const IdeaRatingPhase: React.FC<Props> = ({ game }) => {
   const isLastRound = currentRoundIndex + 1 >= schedule.length;
   const currentAuthorId = schedule[currentRoundIndex];
   const currentIdeas = ideas.filter(i => i.authorId === currentAuthorId);
+  // Over all ideas, so an idea has the same avatar here and on the leaderboard.
+  const ideaAvatars = assignAnonymousAvatars(ideas.map(i => i.id), 'ideas');
 
   const raterId = user?.uid ?? '';
   const myRatingsThisRound = new Set(
@@ -107,7 +110,10 @@ export const IdeaRatingPhase: React.FC<Props> = ({ game }) => {
                 data-cy-idea-id={idea.id}
                 className="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3"
               >
-                <p className="text-gray-900 dark:text-white">{idea.text}</p>
+                <div className="flex items-start gap-3">
+                  <AnonymousAvatar avatarId={ideaAvatars[idea.id]} />
+                  <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white">{idea.text}</p>
+                </div>
                 {alreadyRated ? (
                   <p className="text-sm text-game-green font-semibold">{t('game.ui.ideas.waitingForRatings', {
                     count: currentRoundRatings.filter(r => r.ideaId === idea.id).length,

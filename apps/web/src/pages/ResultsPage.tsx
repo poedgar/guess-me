@@ -4,7 +4,8 @@ import { useGame } from '../contexts/GameContext';
 import { useAuth } from '../contexts/AuthContext';
 import { IdeaLeaderboard } from '../components/game/ideas/IdeaLeaderboard';
 
-import { sortParticipantsByJoin } from '@mirror/shared';
+import { sortParticipantsByJoin, assignAnonymousAvatars } from '@mirror/shared';
+import { AnonymousAvatar } from '../components/ui/AnonymousAvatar';
 
 export function ResultsPage() {
   const { currentGame } = useGame();
@@ -49,6 +50,13 @@ export function ResultsPage() {
   const completedRounds = [...(currentGame.rounds || [])]
     .sort((a, b) => a.roundNumber - b.roundNumber)
     .filter(r => r.commentsVisible && r.pointsGiven);
+  // Same seed as the game screens, so a comment keeps its avatar.
+  const commentAvatarsByRound = Object.fromEntries(
+    completedRounds.map(r => [
+      r.roundNumber,
+      assignAnonymousAvatars((r.comments ?? []).map(c => c.id), `${currentGame.id}:mirror:${r.targetUserId}`),
+    ]),
+  );
 
   return (
     <div className="space-y-6">
@@ -132,7 +140,8 @@ export function ResultsPage() {
                     <div className="space-y-2">
                       {round.comments.map(comment => (
                         <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 rounded p-3 flex justify-between items-start gap-3">
-                          <p className="text-sm text-gray-700 dark:text-gray-300 italic flex-1">
+                          <AnonymousAvatar avatarId={commentAvatarsByRound[round.roundNumber][comment.id]} size="sm" />
+                          <p className="text-sm text-gray-700 dark:text-gray-300 italic flex-1 min-w-0 break-words">
                             "{comment.text}"
                           </p>
                           {comment.points !== undefined && (

@@ -2,6 +2,8 @@ import { AdminRoundTools } from "@/components/game/AdminRoundTools";
 import { ShowFancyAlertFn } from "@/components/game/GameHeader";
 import { gameStyles } from "@/components/game/gameStyles";
 import { ThemedText } from "@/components/themed-text";
+import { WithAnonymousAvatar } from '@/components/ui/AnonymousAvatar';
+import { assignAnonymousAvatars } from '@/utils/avatars';
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Fonts, GameColors, StatusColors } from "@/constants/theme";
 import type { Game } from "@/contexts/GameContext";
@@ -86,6 +88,11 @@ export const BasketGuessingPhase: React.FC<Props> = ({
   const totalRounds = schedule.length;
   const guesserId = user?.uid ?? "";
   const isLastRound = currentRoundIndex + 1 >= schedule.length;
+  // Random cartoon avatar per anonymous comment (never tied to the writer).
+  const commentAvatars = assignAnonymousAvatars(
+    currentRoundComments.map((c) => c.writerId),
+    `${game.id}:basket:${currentRoundIndex}`,
+  );
 
   const existingGuess = currentRoundGuesses.find(
     (g) => g.guesserId === guesserId,
@@ -337,9 +344,11 @@ export const BasketGuessingPhase: React.FC<Props> = ({
                 disabled={selectedWriterId !== null || isSubmittingGuess}
                 activeOpacity={0.8}
               >
-                <ThemedText style={styles.commentText}>
-                  {comment.text}
-                </ThemedText>
+                <WithAnonymousAvatar avatarId={commentAvatars[comment.writerId]} style={{ alignItems: "center" }}>
+                  <ThemedText style={styles.commentText}>
+                    {comment.text}
+                  </ThemedText>
+                </WithAnonymousAvatar>
               </TouchableOpacity>
             ))}
             {isSubmittingGuess && (

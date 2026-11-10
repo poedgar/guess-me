@@ -1,4 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
+import { AnonymousAvatar } from '@/components/ui/AnonymousAvatar';
+import { assignAnonymousAvatars } from '@/utils/avatars';
 import { Fonts, GameColors } from '@/constants/theme';
 import type { Idea } from '@/contexts/GameContext';
 import { t } from '@/i18n';
@@ -19,6 +21,7 @@ export const IdeaLeaderboard: React.FC<Props> = ({
   scrollHeight = 300,
 }) => {
   const ranked = [...ideas].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  const ideaAvatars = assignAnonymousAvatars(ideas.map((i) => i.id), 'ideas');
 
   return (
     <View style={styles.container}>
@@ -54,6 +57,7 @@ export const IdeaLeaderboard: React.FC<Props> = ({
                     </ThemedText>
                   )}
                 </View>
+                <AnonymousAvatar avatarId={ideaAvatars[idea.id]} size={28} />
                 <ThemedText style={styles.ideaText}>{idea.text}</ThemedText>
                 <View
                   style={styles.points}

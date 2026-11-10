@@ -1,5 +1,6 @@
 import React from 'react';
-import { Idea } from '@mirror/shared';
+import { Idea, assignAnonymousAvatars } from '@mirror/shared';
+import { AnonymousAvatar } from '../../ui/AnonymousAvatar';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
 interface IdeaLeaderboardProps {
@@ -16,6 +17,7 @@ export const IdeaLeaderboard: React.FC<IdeaLeaderboardProps> = ({
   const { t } = useLanguage();
 
   const ranked = [...ideas].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  const ideaAvatars = assignAnonymousAvatars(ideas.map(i => i.id), 'ideas');
   const medals = ['🥇', '🥈', '🥉'];
 
   return (
@@ -50,6 +52,8 @@ export const IdeaLeaderboard: React.FC<IdeaLeaderboardProps> = ({
                   </span>
                 )}
               </div>
+
+              <AnonymousAvatar avatarId={ideaAvatars[idea.id]} size="sm" />
 
               <p className="flex-1 min-w-0 text-sm text-gray-900 dark:text-white">
                 {idea.text}

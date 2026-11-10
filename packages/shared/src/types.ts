@@ -85,8 +85,6 @@ export interface Participant {
   userName: string;
   userEmail: string;
   photoURL?: string;
-  /** Cartoon avatar number (1..AVATAR_COUNT). Missing on games created before avatars. */
-  avatarId?: number;
   joinedAt: Date | Timestamp;
   totalPoints?: number;
 }

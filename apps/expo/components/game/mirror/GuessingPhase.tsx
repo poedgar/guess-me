@@ -1,4 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
+import { WithAnonymousAvatar } from '@/components/ui/AnonymousAvatar';
+import { assignAnonymousAvatars } from '@/utils/avatars';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { Fonts, GameColors, StatusColors } from '@/constants/theme';
@@ -82,6 +84,11 @@ export const GuessingPhase: React.FC<Props> = ({
     setGuessResultModal(null);
   }, []);
 
+  // Same seed as the active phase, so a comment keeps its avatar.
+  const commentAvatars = assignAnonymousAvatars(
+    commentsForPlayer.map(c => c.id),
+    `${game.id}:mirror:${user?.uid ?? ''}`,
+  );
   const allCommentsHaveGuesses = commentsForPlayer.length === 0 || commentsForPlayer.every(c => !!selectedGuesses[c.id]);
 
   const singleTargetId = game.guessingData?.singleRoundTargetId;
@@ -368,7 +375,9 @@ export const GuessingPhase: React.FC<Props> = ({
                 const guessResult = getGuessResultDisplay(comment.id);
                 return (
                   <View key={comment.id} style={styles.guessCard}>
-                    <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
+                    <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
+                      <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
+                    </WithAnonymousAvatar>
                     <ThemedText style={styles.guessPrompt}>
                       {t('game.ui.guessPrompt', { locale })}
                     </ThemedText>

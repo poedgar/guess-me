@@ -1,6 +1,7 @@
 import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
-import { Game, Comment } from '@mirror/shared';
+import { Game, Comment, assignAnonymousAvatars } from '@mirror/shared';
+import { AnonymousAvatar } from '../../ui/AnonymousAvatar';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
@@ -66,6 +67,11 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
   const possibleAuthors = guessingDataResolved.possibleAuthors ?? [];
 
   const commentsForPlayer: Comment[] = guessingDataResolved.commentsByTarget?.[user?.uid ?? ''] ?? [];
+  // Same seed as the active phase, so a comment keeps its avatar.
+  const commentAvatars = assignAnonymousAvatars(
+    commentsForPlayer.map(c => c.id),
+    `${game.id}:mirror:${user?.uid ?? ''}`,
+  );
 
   const allCommentsSelected =
     commentsForPlayer.length === 0 ||
@@ -231,7 +237,10 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                 </p>
                 {commentsForPlayer.map(comment => (
                   <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <p className="text-gray-900 dark:text-white mb-3 italic">"{comment.text}"</p>
+                    <div className="flex items-start gap-3 mb-3">
+                      <AnonymousAvatar avatarId={commentAvatars[comment.id]} />
+                      <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white italic">"{comment.text}"</p>
+                    </div>
                     <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
                       {t('game.ui.guessPrompt')}
                     </p>

@@ -1,4 +1,4 @@
-// Generated list of cartoon player avatars; index 0 = avatar 1.
+// Cartoon avatars for anonymous content; index 0 = avatar 1.
 export const AVATAR_IMAGES = [
   require('../assets/avatars/avatar-01.png'),
   require('../assets/avatars/avatar-02.png'),

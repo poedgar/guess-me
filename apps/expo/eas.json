@@ -34,6 +34,12 @@
         "autoIncrement": true
       },
       "channel": "production"
+    },
+    "production-aab": {
+      "extends": "production",
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {

@@ -1,12 +1,11 @@
 import { useLanguage } from '../../../contexts/LanguageContext';
 import React, { useState } from 'react';
-import { Game, getAvatarId } from '@mirror/shared';
+import { Game } from '@mirror/shared';
 import { QRCodeSVG } from 'qrcode.react';
 import { useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAlert } from '../../../hooks/useAlert';
 import { Leaderboard } from '../Leaderboard';
-import { PlayerAvatar } from '../../ui/PlayerAvatar';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { getDisplayName } from '../../../utils/displayName';
 import { TargetControlPanel } from './TargetControlPanel';
@@ -154,7 +153,6 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                 }`}
               >
                 <span className="text-sm text-gray-500 dark:text-gray-400 w-5">{idx + 1}.</span>
-                <PlayerAvatar avatarId={getAvatarId(p)} name={p.userName} size="sm" />
                 <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
                   {getDisplayName(p.userName, game.showSurnames ?? false)}
                   {p.userId === game.adminId && ' 👑'}
