@@ -65,13 +65,15 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
         </div>
       </div>
 
-      <button type="button"
-        onClick={onLeave}
-        data-cy="leave-game-button"
-        className="w-full bg-game-danger text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
-      >
-        {t('game.leaveGame') || 'Leave Game'}
-      </button>
+      <div className="flex justify-end">
+        <button type="button"
+          onClick={onLeave}
+          data-cy="leave-game-button"
+          className="text-xs text-game-danger/70 px-2 py-1 rounded hover:text-game-danger hover:bg-game-danger/10 transition-colors"
+        >
+          {t('game.leaveGame') || 'Leave Game'}
+        </button>
+      </div>
     </div>
   );
 };

@@ -105,6 +105,12 @@ export interface Round {
   commentsVisible: boolean;
   pointsGiven: boolean;
   startedAt: Date | Timestamp;
+  // Index into `comments` of the comment currently under sequential review.
+  // Set to 0 when commentsVisible flips true; meaningless once pointsGiven.
+  activeCommentIndex?: number;
+  // Derived aggregates of every comment's targetReactionPoints votes this
+  // round (see Comment.targetReactionPoints) — kept for playerSimilarity.ts
+  // and ResultsPage round-history display.
   targetPoints?: number;
   targetPointsGivenBy?: string[];
   targetPointsByPlayer?: { [userId: string]: number };
@@ -119,6 +125,9 @@ export interface Comment {
   text: string;
   submittedAt: Date | Timestamp;
   points?: number;
+  // Per-voter 0/1 rating of the target's reaction to THIS comment, from
+  // every participant except the target (comment's own author included).
+  targetReactionPoints?: { [voterId: string]: number };
 }
 
 export interface GuessingData {

@@ -121,6 +121,12 @@ export interface Round {
   commentsVisible: boolean;
   pointsGiven: boolean;
   startedAt: Date | Timestamp;
+  // Index into `comments` of the comment currently under sequential review.
+  // Set to 0 when commentsVisible flips true; meaningless once pointsGiven.
+  activeCommentIndex?: number;
+  // Derived aggregates of every comment's targetReactionPoints votes this
+  // round (see Comment.targetReactionPoints) — kept for playerSimilarity.ts
+  // and ResultsPage round-history display.
   targetPoints?: number;
   targetPointsGivenBy?: string[];
   targetPointsByPlayer?: { [userId: string]: number };
@@ -137,6 +143,9 @@ export interface Comment {
   text: string;
   submittedAt: Date | Timestamp;
   points?: number;
+  // Per-voter 0/1 rating of the target's reaction to THIS comment, from
+  // every participant except the target (comment's own author included).
+  targetReactionPoints?: { [voterId: string]: number };
 }
 
 export interface GuessingData {
@@ -259,10 +268,10 @@ interface GameContextType {
   startGame: () => Promise<void>;
   submitComment: (commentText: string) => Promise<void>;
   showComments: () => Promise<void>;
-  awardCommentPoints: (commentId: string, points: number) => Promise<void>;
-  finishAwardingPoints: () => Promise<void>;
+  awardCommentPoints: (commentId: string, points: 0 | 1) => Promise<void>;
+  activateNextComment: () => Promise<void>;
+  rateTargetReaction: (commentId: string, points: 0 | 1) => Promise<void>;
   startNextRound: () => Promise<void>;
-  givePointsToTarget: (targetUserId: string, points?: number) => Promise<void>;
   startGuessingPhase: () => Promise<void>;
   finalizeGuessingPhase: () => Promise<void>;
   restartMirrorRound: () => Promise<void>;
@@ -316,7 +325,6 @@ interface GameContextType {
   awardPointsToPlayers: (
     awards: { recipientId: string; points: number }[],
   ) => Promise<void>;
-  skipPostCommentPhase: () => Promise<void>;
   /**
    * Fetches every document in the `games` collection, unscoped to the
    * signed-in user — the only place in this app that reads across all
@@ -797,6 +805,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  // Everyone required to act on each comment: every participant except the
+  // round's target, and except the admin unless adminWritesComments — the
+  // same rule already used to decide who must submit a comment.
+  const getRequiredReactionVoterIds = (gameData: Game, round: Round): string[] =>
+    gameData.participants
+      .filter((p) => p.userId !== round.targetUserId)
+      .filter((p) => (gameData.adminWritesComments ?? false) || p.userId !== gameData.adminId)
+      .map((p) => p.userId);
+
   const showComments = async (): Promise<void> => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
       throw new Error("Only the admin can show comments");
@@ -809,9 +826,29 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       const gameRef = doc(db, "games", currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      if (!gameDoc.exists()) {
+        throw new Error("Game not found");
+      }
+      const gameData = gameDoc.data() as Game;
+      const round = gameData.currentRound;
+      if (!round) {
+        throw new Error("No active round");
+      }
+
+      // Shuffle comment order so the sequential review doesn't expose
+      // submission order — which could otherwise leak authorship (e.g. a
+      // player known to type fast being guessable as the first comment).
+      const shuffledComments = [...round.comments];
+      for (let i = shuffledComments.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledComments[i], shuffledComments[j]] = [shuffledComments[j], shuffledComments[i]];
+      }
 
       await updateDoc(gameRef, {
+        "currentRound.comments": shuffledComments,
         "currentRound.commentsVisible": true,
+        "currentRound.activeCommentIndex": 0,
       });
     } catch (error: unknown) {
       console.error("Error showing comments:", error);
@@ -823,7 +860,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
 
   const awardCommentPoints = async (
     commentId: string,
-    points: number,
+    points: 0 | 1,
   ): Promise<void> => {
     if (!auth.currentUser) throw new Error("You must be signed in");
     if (!currentGame || !currentGame.currentRound) {
@@ -833,9 +870,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     if (auth.currentUser.uid !== currentGame.currentRound.targetUserId) {
       throw new Error("Only the target person can give points");
     }
-
-    // Allow awarding points to multiple commenters within the same round.
-    // We'll mark the round's `pointsGiven` flag only when all comments have been awarded.
 
     try {
       setLoading(true);
@@ -854,25 +888,24 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           throw new Error("No active round");
         }
 
-        // Find the comment and update it with points
-        const updatedComments = currentRound.comments.map((comment) => {
-          if (comment.id === commentId) {
-            return { ...comment, points };
-          }
-          return comment;
-        });
+        const activeIndex = currentRound.activeCommentIndex ?? 0;
+        const activeComment = currentRound.comments[activeIndex];
+        if (!activeComment || activeComment.id !== commentId) {
+          throw new Error("You can only decide on the currently active comment");
+        }
+        if (activeComment.points !== undefined) {
+          throw new Error("You already decided on this comment");
+        }
 
-        const comment = updatedComments.find((c) => c.id === commentId);
-        if (!comment) return;
+        const updatedComments = currentRound.comments.map((comment, i) =>
+          i === activeIndex ? { ...comment, points } : comment,
+        );
 
-        const authorCurrentScore = gameData.scores?.[comment.authorId] || 0;
+        const authorCurrentScore = gameData.scores?.[activeComment.authorId] || 0;
 
-        // Update comments and the awarded author's score, but don't
-        // automatically set pointsGiven — the target explicitly marks when
-        // they're done giving points.
         transaction.update(gameRef, {
           "currentRound.comments": updatedComments,
-          [`scores.${comment.authorId}`]: authorCurrentScore + points,
+          [`scores.${activeComment.authorId}`]: authorCurrentScore + points,
         });
       });
     } catch (error: unknown) {
@@ -883,79 +916,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const finishAwardingPoints = async (): Promise<void> => {
-    if (!currentGame || !user || !currentGame.currentRound) {
-      throw new Error("No active round");
+  const activateNextComment = async (): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can activate the next comment");
     }
-
-    if (user.uid !== currentGame.currentRound.targetUserId) {
-      throw new Error("Only the target can finish giving points");
+    if (!currentGame.currentRound?.commentsVisible) {
+      throw new Error("Review has not started");
     }
-
-    try {
-      setLoading(true);
-      const gameRef = doc(db, "games", currentGame.id);
-      const gameDoc = await getDoc(gameRef);
-
-      if (!gameDoc.exists()) {
-        throw new Error("Game not found");
-      }
-
-      const gameData = gameDoc.data() as Game;
-      const currentRound = gameData.currentRound;
-
-      if (!currentRound) {
-        throw new Error("No active round");
-      }
-
-      if (currentRound.targetUserId !== user.uid) {
-        throw new Error("Only the target can finish giving points");
-      }
-
-      // Mark that the target has finished giving points
-      await updateDoc(gameRef, {
-        "currentRound.pointsGiven": true,
-      });
-    } catch (error: unknown) {
-      console.error("Error finishing giving points:", error);
-      throw error;
-    } finally {
-      setLoading(false);
+    if (currentGame.currentRound.pointsGiven) {
+      throw new Error("This round's review is already finished");
     }
-  };
-
-  const givePointsToTarget = async (targetUserId: string, points = 1) => {
-    if (!currentGame?.currentRound) throw new Error("No active round");
-    const userId = user?.uid;
-    if (!userId) throw new Error("Must be signed in to give points");
-    // Prevent duplicate giving
-    if (currentGame.currentRound.targetPointsGivenBy?.includes(userId)) {
-      throw new Error("You already gave points to this target this round");
-    }
-
-    // Keep previous state to rollback on failure
-    const prevGame = currentGame;
-
-    // Optimistic update locally
-    const updatedRound = {
-      ...currentGame.currentRound,
-      targetPoints: (currentGame.currentRound.targetPoints ?? 0) + points,
-      targetPointsGivenBy: [
-        ...(currentGame.currentRound.targetPointsGivenBy ?? []),
-        userId,
-      ],
-    };
-
-    const updatedScores = {
-      ...(currentGame.scores ?? {}),
-      [targetUserId]: (currentGame.scores?.[targetUserId] ?? 0) + points,
-    };
-
-    setCurrentGame({
-      ...currentGame,
-      currentRound: updatedRound,
-      scores: updatedScores,
-    });
 
     try {
       setLoading(true);
@@ -969,29 +939,131 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const round = gameData.currentRound;
         if (!round) throw new Error("No active round on server");
 
-        // Re-check inside transaction — another client may have already recorded this user
-        if (round.targetPointsGivenBy?.includes(userId)) {
-          throw new Error("You already gave points to this target this round");
+        const activeIndex = round.activeCommentIndex ?? 0;
+        const activeComment = round.comments[activeIndex];
+        if (!activeComment) throw new Error("No active comment");
+
+        if (activeComment.points === undefined) {
+          throw new Error("Target has not decided on this comment yet");
         }
 
-        const newScores = {
-          ...(gameData.scores ?? {}),
-          [targetUserId]: (gameData.scores?.[targetUserId] ?? 0) + points,
-        };
+        const requiredVoterIds = getRequiredReactionVoterIds(gameData, round);
+        const voted = activeComment.targetReactionPoints ?? {};
+        const missing = requiredVoterIds.filter((id) => voted[id] === undefined);
+        if (missing.length > 0) {
+          throw new Error(
+            `Waiting for ${missing.length} player(s) to rate the target's reaction`,
+          );
+        }
+
+        if (activeIndex >= round.comments.length - 1) {
+          transaction.update(gameRef, { "currentRound.pointsGiven": true });
+        } else {
+          transaction.update(gameRef, {
+            "currentRound.activeCommentIndex": activeIndex + 1,
+          });
+        }
+      });
+    } catch (error: unknown) {
+      console.error("Error activating next comment:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const rateTargetReaction = async (commentId: string, points: 0 | 1): Promise<void> => {
+    if (!currentGame?.currentRound) throw new Error("No active round");
+    const userId = user?.uid;
+    if (!userId) throw new Error("Must be signed in to rate");
+    const round = currentGame.currentRound;
+
+    if (userId === round.targetUserId) {
+      throw new Error("The target cannot rate their own reaction");
+    }
+    if (userId === currentGame.adminId && !(currentGame.adminWritesComments ?? false)) {
+      throw new Error("Admin is not participating this game");
+    }
+
+    const activeIndex = round.activeCommentIndex ?? 0;
+    const activeComment = round.comments[activeIndex];
+    if (!activeComment || activeComment.id !== commentId) {
+      throw new Error("You can only rate the currently active comment");
+    }
+    if (activeComment.targetReactionPoints?.[userId] !== undefined) {
+      throw new Error("You already rated this comment");
+    }
+
+    // Keep previous state to rollback on failure
+    const prevGame = currentGame;
+
+    const updatedComments = round.comments.map((c, i) =>
+      i === activeIndex
+        ? { ...c, targetReactionPoints: { ...(c.targetReactionPoints ?? {}), [userId]: points } }
+        : c,
+    );
+    const updatedRound: Round = {
+      ...round,
+      comments: updatedComments,
+      targetPoints: (round.targetPoints ?? 0) + points,
+      targetPointsGivenBy: Array.from(new Set([...(round.targetPointsGivenBy ?? []), userId])),
+      targetPointsByPlayer: {
+        ...(round.targetPointsByPlayer ?? {}),
+        [userId]: (round.targetPointsByPlayer?.[userId] ?? 0) + points,
+      },
+    };
+
+    setCurrentGame({
+      ...currentGame,
+      currentRound: updatedRound,
+      scores: {
+        ...(currentGame.scores ?? {}),
+        [round.targetUserId]: (currentGame.scores?.[round.targetUserId] ?? 0) + points,
+      },
+    });
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, "games", currentGame.id);
+
+      await runTransaction(db, async (transaction: Transaction) => {
+        const gameDoc = await transaction.get(gameRef);
+        if (!gameDoc.exists()) throw new Error("Game not found");
+
+        const gameData = gameDoc.data() as Game;
+        const serverRound = gameData.currentRound;
+        if (!serverRound) throw new Error("No active round on server");
+
+        const serverIndex = serverRound.activeCommentIndex ?? 0;
+        const serverComment = serverRound.comments[serverIndex];
+        if (!serverComment || serverComment.id !== commentId) {
+          throw new Error("This comment is no longer active");
+        }
+        if (serverComment.targetReactionPoints?.[userId] !== undefined) {
+          throw new Error("You already rated this comment");
+        }
+
+        const serverUpdatedComments = serverRound.comments.map((c, i) =>
+          i === serverIndex
+            ? { ...c, targetReactionPoints: { ...(c.targetReactionPoints ?? {}), [userId]: points } }
+            : c,
+        );
 
         transaction.update(gameRef, {
-          "currentRound.targetPoints": (round.targetPoints ?? 0) + points,
+          "currentRound.comments": serverUpdatedComments,
+          "currentRound.targetPoints": (serverRound.targetPoints ?? 0) + points,
           "currentRound.targetPointsGivenBy": arrayUnion(userId),
-          [`currentRound.targetPointsByPlayer.${userId}`]: points,
-          scores: newScores,
-          playersWhoCompletedPostCommentPhase: arrayUnion(userId),
+          [`currentRound.targetPointsByPlayer.${userId}`]:
+            (serverRound.targetPointsByPlayer?.[userId] ?? 0) + points,
+          [`scores.${serverRound.targetUserId}`]:
+            (gameData.scores?.[serverRound.targetUserId] ?? 0) + points,
         });
       });
       // onSnapshot will replace local optimistic state with authoritative server state
     } catch (err) {
       // Rollback optimistic update on error
       setCurrentGame(prevGame);
-      console.error("Error giving points to target:", err);
+      console.error("Error rating target reaction:", err);
       throw err;
     } finally {
       setLoading(false);
@@ -1314,30 +1386,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const startGuessingPhase = async (): Promise<void> => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
       throw new Error("Only the admin can start the guessing phase");
-    }
-
-    // Check if all non-target players have completed the post-comment phase
-    let nonTargetPlayers = currentGame.participants.filter(
-      (p) => p.userId !== currentGame.currentRound?.targetUserId,
-    );
-
-    // If admin doesn't write comments, exclude admin from the check
-    if (!(currentGame.adminWritesComments ?? false)) {
-      nonTargetPlayers = nonTargetPlayers.filter(
-        (p) => p.userId !== currentGame.adminId,
-      );
-    }
-
-    const completedPlayers =
-      currentGame.playersWhoCompletedPostCommentPhase || [];
-    const incompletePlayers = nonTargetPlayers.filter(
-      (p) => !completedPlayers.includes(p.userId),
-    );
-
-    if (incompletePlayers.length > 0) {
-      throw new Error(
-        `Cannot start guessing phase. Waiting for ${incompletePlayers.length} player(s) to complete the post-comment phase.`,
-      );
     }
 
     // Two modes:
@@ -2170,37 +2218,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const skipPostCommentPhase = async (): Promise<void> => {
-    if (!currentGame || !user) throw new Error("No active game or user");
-    if (!currentGame.currentRound?.pointsGiven)
-      throw new Error("Target has not finished giving points yet");
-
-    const userId = user.uid;
-
-    // Check if user has already completed this phase
-    if (currentGame.playersWhoCompletedPostCommentPhase?.includes(userId)) {
-      throw new Error("You have already completed this phase");
-    }
-
-    // Exclude target from this phase
-    if (userId === currentGame.currentRound.targetUserId) {
-      throw new Error("Target cannot skip this phase");
-    }
-
-    try {
-      setLoading(true);
-      const gameRef = doc(db, "games", currentGame.id);
-
-      await updateDoc(gameRef, {
-        playersWhoCompletedPostCommentPhase: arrayUnion(userId),
-      });
-    } catch (err) {
-      console.error("Error skipping post-comment phase:", err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const setNextRoundTarget = async (targetUserId: string) => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
@@ -2876,13 +2893,13 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       submitComment,
       showComments,
       awardCommentPoints,
-      finishAwardingPoints,
+      activateNextComment,
+      rateTargetReaction,
       startNextRound,
       startGuessingPhase,
       finalizeGuessingPhase,
       restartMirrorRound,
       skipMirrorRound,
-      givePointsToTarget,
       submitGuess,
       markPlayerGuessesSubmitted,
       updateAdminWritesComments,
@@ -2917,7 +2934,6 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       updateIdeaIncognitoMode,
       startPostGuessingPointPhase,
       awardPointsToPlayers,
-      skipPostCommentPhase,
       setNextRoundTarget,
       skipNextRoundTarget,
       resetTargetControls,

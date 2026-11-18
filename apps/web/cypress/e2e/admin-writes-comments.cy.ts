@@ -103,33 +103,34 @@ describe('adminWritesComments toggled on', () => {
         cy.get('[data-cy=show-comments-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Target awards the comment a point, then finishes — this is the
+        // ── Target decides on the (only, so active) comment — this is the
         // test's other core claim: whichever account is the target
         // (possibly test1, the admin) completes a normal target's flow ────
         cy.signInAsTestUser(round1TargetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
-        cy.get('[data-cy=award-comment-points-button]').click();
-        cy.get('[data-cy=finish-awarding-points-button]').click();
-        cy.get('[data-cy=finish-awarding-points-button]').should('not.exist');
+        cy.get('[data-cy=award-comment-points-button][data-cy-points=1]').click();
+        cy.get('[data-cy=award-comment-points-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Commenter gives a reciprocal point ────────────────────────────
+        // ── Commenter rates the target's reaction ─────────────────────────
         cy.signInAsTestUser(round1CommenterRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
-        cy.get('[data-cy=give-points-to-target-button][data-cy-points=1]').click();
-        cy.get('[data-cy=alert-button][data-cy-style=primary]').click();
-        cy.get('[data-cy=give-points-to-target-button]').should('not.exist');
+        cy.get('[data-cy=rate-target-reaction-button][data-cy-points=1]').click();
+        cy.get('[data-cy=rate-target-reaction-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Admin starts guessing, target guesses correctly ───────────────
+        // ── Admin advances past the last comment, then starts guessing ────
         cy.signInAsTestUser('test1');
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
+        cy.get('[data-cy=activate-next-comment-button]').click();
+        cy.get('[data-cy=activate-next-comment-button]').should('not.exist');
+        cy.wait(SETTLE_MS);
         cy.get('[data-cy=start-guessing-button]').click();
         cy.get('[data-cy=start-guessing-button]').should('not.exist');
         cy.wait(SETTLE_MS);
@@ -139,9 +140,10 @@ describe('adminWritesComments toggled on', () => {
         cy.get('[data-cy=game-input-submit]').click();
         // Same principle as round-info in ActivePhase.tsx: confirm this
         // fresh client actually has GuessingPhase's data loaded before
-        // trusting guess-author-button's count.
+        // trusting guess-author-button's count. Only 1 button shows — the
+        // guesser (the target) is excluded from their own author options.
         cy.get('[data-cy=guessing-phase-info]').should('exist');
-        cy.get('[data-cy=guess-author-button]').should('have.length', 2);
+        cy.get('[data-cy=guess-author-button]').should('have.length', 1);
         cy.contains('[data-cy=guess-author-button]', `${commenterPlayerNumber}.`).click();
         cy.get('[data-cy=submit-guesses-button]').click();
         cy.get('[data-cy=submit-guesses-button]').should('not.exist');

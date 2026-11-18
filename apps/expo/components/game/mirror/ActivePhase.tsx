@@ -61,10 +61,9 @@ export const ActivePhase: React.FC<Props> = ({
     submitComment,
     showComments,
     awardCommentPoints,
-    finishAwardingPoints,
-    givePointsToTarget,
+    activateNextComment,
+    rateTargetReaction,
     startGuessingPhase,
-    skipPostCommentPhase,
     startNextRound,
     restartMirrorRound,
     skipMirrorRound,
@@ -84,8 +83,9 @@ export const ActivePhase: React.FC<Props> = ({
   const inputTheme = themedInput(isDark);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [givingPoints, setGivingPoints] = useState<Record<string, boolean>>({});
-  const [givingPointsToTarget, setGivingPointsToTarget] = useState(false);
+  const [isDeciding, setIsDeciding] = useState(false);
+  const [isRating, setIsRating] = useState(false);
+  const [isActivatingNext, setIsActivatingNext] = useState(false);
   const [faceMessage, setFaceMessage] = useState<{ visible: boolean; message: string; face?: string }>({
     visible: false,
     message: '',
@@ -103,11 +103,6 @@ export const ActivePhase: React.FC<Props> = ({
       return true;
     }).length;
   }, [game.currentRound, game.adminId, game.adminWritesComments, game.participants]);
-
-  const getMaxPoints = () => {
-    // Maximum points is participants count minus 1 (excluding the target themselves)
-    return Math.max(1, game.participants.length - 1);
-  };
 
   const handleSubmitComment = async () => {
     if (!commentText.trim()) {
@@ -161,117 +156,58 @@ export const ActivePhase: React.FC<Props> = ({
     void doShowComments();
   };
 
-  const handleGivePoints = async (commentId: string, points: number) => {
-    if (!awardCommentPoints) {
-      showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
-      return;
-    }
+  const handleDecideCommentPoints = async (commentId: string, points: 0 | 1) => {
     try {
-      setGivingPoints(prev => ({ ...prev, [commentId]: true }));
+      setIsDeciding(true);
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await awardCommentPoints(commentId, points);
-      await playSound('points');
+      await playSound(points === 1 ? 'points' : 'click');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showFaceMessage(
-        t('game.alerts.pointsAwarded', { locale }), 
+        t('game.alerts.pointsAwarded', { locale }),
         <View style={{ padding: 16 }}><SuccessAnimation /></View>
-      ); 
+      );
     } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.pointsAwardFailed', { locale }));
     } finally {
-      setGivingPoints(prev => ({ ...prev, [commentId]: false }));
+      setIsDeciding(false);
     }
   };
 
-  const handleFinishGivingPoints = async () => {
-    if (!finishAwardingPoints) {
-      showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
-      return;
-    }
+  const handleRateTargetReaction = async (commentId: string, points: 0 | 1) => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await finishAwardingPoints();
+      setIsRating(true);
+      await playSound('click');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await rateTargetReaction(commentId, points);
+      await playSound(points === 1 ? 'points' : 'click');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showFaceMessage(
-        t('game.alerts.finishPointsSuccess', { locale }), 
-        <View style={{ padding: 16 }}><SuccessAnimation /></View>
-      ); 
-    } catch (error: unknown) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.finishPointsFailed', { locale }));
-    }
-  };
-
-  const handleGivePointsToTargetWithConfirm = (points: number) => {
-    const message = points === 0
-      ? t('game.alerts.confirmSkipPoints', { locale })
-      : t('game.alerts.confirmGivePoints', { locale, count: points });
-
-    showFancyAlert(
-      t('game.alerts.confirmTitle', { locale }),
-      message,
-      [
-        { text: t('common.cancel', { locale }), style: 'cancel' },
-        {
-          text: t('common.yes', { locale }),
-          onPress: async () => {
-            await handleGivePointsToTarget(points);
-          }
-        },
-      ]
-    );
-  };
-
-  const handleGivePointsToTarget = async (points: number) => {
-    if (!game.currentRound) return;
-    if (!givePointsToTarget) {
-      showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
-      return;
-    }
-    try {
-      setGivingPointsToTarget(true);
-      await playSound('click');
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await givePointsToTarget(game.currentRound.targetUserId, points);
-
-      showFaceMessage(
-        points > 0
-          ? t('game.alerts.pointsGivenToTarget', { locale, count: points, name: getDisplayName(game.currentRound.targetUserName) })
-          : t('game.alerts.phaseSkipped', { locale }),
-        <View style={{ padding: 16 }}><SuccessAnimation /></View>
-      );    
     } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.targetPointsAwardFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.reactionRatingFailed', { locale }));
     } finally {
-      setGivingPointsToTarget(false);
+      setIsRating(false);
     }
   };
 
-  const handleSkipPostCommentPhase = async () => {
-    if (!skipPostCommentPhase) {
-      showFancyAlert(t('common.error', { locale }), t('game.alerts.notImplemented', { locale }));
-      return;
-    }
+  const handleActivateNextComment = async () => {
     try {
+      setIsActivatingNext(true);
       await playSound('click');
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await skipPostCommentPhase();
-      
-      // Show face message instead of fancy alert
-      setFaceMessage({
-        visible: true,
-        message: t('game.alerts.commentPhaseSkipped', { locale }),
-        face: '🤷‍♂️',
-      });
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await activateNextComment();
+      await playSound('success');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.skipPhaseFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.activateNextCommentFailed', { locale }));
+    } finally {
+      setIsActivatingNext(false);
     }
   };
 
@@ -305,16 +241,20 @@ export const ActivePhase: React.FC<Props> = ({
     void doStartGuessingPhase();
   };
 
+  const activeIndex = game.currentRound?.activeCommentIndex ?? 0;
+  const activeComment = game.currentRound?.comments?.[activeIndex];
+  const reviewFinished = game.currentRound?.pointsGiven ?? false;
+
   const adminPulse = usePulseBorderOnChange(
-    `${game.currentRound?.roundNumber ?? 'none'}:admin:${game.currentRound?.commentsVisible ?? false}`,
+    `${game.currentRound?.roundNumber ?? 'none'}:admin:${game.currentRound?.commentsVisible ?? false}:${activeIndex}`,
     GameColors.green,
   );
   const targetPulse = usePulseBorderOnChange(
-    `${game.currentRound?.roundNumber ?? 'none'}:target:${game.currentRound?.commentsVisible ?? false}:${game.currentRound?.pointsGiven ?? false}`,
+    `${game.currentRound?.roundNumber ?? 'none'}:target:${game.currentRound?.commentsVisible ?? false}:${activeIndex}:${reviewFinished}`,
     GameColors.green,
   );
   const otherPulse = usePulseBorderOnChange(
-    `${game.currentRound?.roundNumber ?? 'none'}:other:${game.currentRound?.commentsVisible ?? false}:${game.currentRound?.pointsGiven ?? false}`,
+    `${game.currentRound?.roundNumber ?? 'none'}:other:${game.currentRound?.commentsVisible ?? false}:${activeIndex}:${reviewFinished}`,
     GameColors.green,
   );
 
@@ -376,6 +316,16 @@ export const ActivePhase: React.FC<Props> = ({
   const submittedAuthorIds = new Set(game.currentRound.comments?.map((c: Comment) => c.authorId) ?? []);
   const submittedCount = expectedCommenters.filter(p => submittedAuthorIds.has(p.userId)).length;
 
+  const activeCommentVotes = activeComment?.targetReactionPoints ?? {};
+  const votersWhoRated = expectedCommenters.filter(p => activeCommentVotes[p.userId] !== undefined);
+  const allVotersRated = activeComment ? votersWhoRated.length === expectedCommenters.length : false;
+  const targetDecidedActive = activeComment?.points !== undefined;
+  const canActivateNext = targetDecidedActive && allVotersRated;
+
+  const visibleComments: Comment[] = reviewFinished
+    ? game.currentRound.comments ?? []
+    : (game.currentRound.comments ?? []).slice(0, activeIndex + 1);
+
   return (
     <View style={styles.phaseWrapper}>
       {/* Status badge */}
@@ -402,7 +352,7 @@ export const ActivePhase: React.FC<Props> = ({
         {isAdmin && (
           <ScrollIntoView
             enabled
-            scrollIntoViewKey={`${game.currentRound.roundNumber}:admin:${game.currentRound.commentsVisible}`}
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:admin:${game.currentRound.commentsVisible}:${activeIndex}`}
             align="center"
             animated
             insets={SCROLL_INSETS}
@@ -432,6 +382,30 @@ export const ActivePhase: React.FC<Props> = ({
                 })}
               </View>
             )}
+            {game.currentRound.commentsVisible && !reviewFinished && (
+              <View style={styles.checklistContainer}>
+                <ThemedText style={styles.checklistTitle}>
+                  {t('game.ui.commentProgressLabel', { locale, current: activeIndex + 1, total: game.currentRound.comments?.length ?? 0 })}
+                </ThemedText>
+                <ThemedText style={styles.checklistProgress}>
+                  {t('game.ui.reactionProgress', { locale, received: votersWhoRated.length, required: expectedCommenters.length })}
+                </ThemedText>
+                {expectedCommenters.map(p => {
+                  const hasRated = activeCommentVotes[p.userId] !== undefined;
+                  return (
+                    <View key={p.userId} style={styles.checklistRow}>
+                      <ThemedText style={styles.checklistNumber}>
+                        {numbers[p.userId] ? `${numbers[p.userId]}.` : ''}
+                      </ThemedText>
+                      <ThemedText style={styles.checklistName}>{getDisplayName(p.userName)}</ThemedText>
+                      <ThemedText style={hasRated ? styles.checklistStatusDone : styles.checklistStatusPending}>
+                        {hasRated ? `✅ ${t('game.ui.submitted', { locale })}` : `⏳ ${t('game.ui.pending', { locale })}`}
+                      </ThemedText>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
             <View style={styles.adminButtonsRow}>
               {!game.currentRound.commentsVisible && (
                 <TouchableOpacity
@@ -441,14 +415,33 @@ export const ActivePhase: React.FC<Props> = ({
                   ]}
                   onPress={handleShowComments}
                   activeOpacity={0.8}
-                  accessibilityLabel={t('game.ui.showComments', { locale })}
+                  accessibilityLabel={t('game.ui.startReview', { locale })}
                   accessibilityRole="button"
                 >
                   <IconSymbol name="eye.fill" size={16} color={GameColors.white} />
-                  <ThemedText style={styles.buttonText}>{t('game.ui.showComments', { locale })}</ThemedText>
+                  <ThemedText style={styles.buttonText}>{t('game.ui.startReview', { locale })}</ThemedText>
                 </TouchableOpacity>
               )}
-              {game.currentRound.commentsVisible && (
+              {game.currentRound.commentsVisible && !reviewFinished && (
+                <TouchableOpacity
+                  style={[
+                    styles.adminButton,
+                    { backgroundColor: GameColors.admin, shadowColor: GameColors.shadow },
+                    (isActivatingNext || loading || !canActivateNext) && gameStyles.buttonDisabled,
+                  ]}
+                  onPress={handleActivateNextComment}
+                  disabled={isActivatingNext || loading || !canActivateNext}
+                  activeOpacity={0.8}
+                  accessibilityLabel={t('game.ui.activateNextComment', { locale })}
+                  accessibilityRole="button"
+                >
+                  {isActivatingNext
+                    ? <ActivityIndicator size="small" color={GameColors.white} />
+                    : <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />}
+                  <ThemedText style={styles.buttonText}>{t('game.ui.activateNextComment', { locale })}</ThemedText>
+                </TouchableOpacity>
+              )}
+              {reviewFinished && (
                 <TouchableOpacity
                   style={[
                     styles.adminButton,
@@ -483,7 +476,7 @@ export const ActivePhase: React.FC<Props> = ({
         {user?.uid === game.currentRound.targetUserId && (
           <ScrollIntoView
             enabled
-            scrollIntoViewKey={`${game.currentRound.roundNumber}:target:${game.currentRound.commentsVisible}:${game.currentRound.pointsGiven}`}
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:target:${game.currentRound.commentsVisible}:${activeIndex}:${reviewFinished}`}
             align="top"
             animated
             insets={SCROLL_INSETS}
@@ -493,65 +486,58 @@ export const ActivePhase: React.FC<Props> = ({
               <ThemedText style={styles.waitingText}>
                 {t('game.ui.waitingForCommentsAboutYou', { locale })}
               </ThemedText>
-            ) : !game.currentRound.pointsGiven ? (
+            ) : !reviewFinished && activeComment ? (
               <View style={styles.commentsView}>
                 <ThemedText type="subtitle" style={styles.commentsTitle}>
                   {t('game.ui.commentsAboutYou', { locale })}
                 </ThemedText>
-                {game.currentRound.comments?.map((comment: Comment) => (
-                  <View key={comment.id} style={styles.commentCard}>
-                    <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
-                      <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
-                    </WithAnonymousAvatar>
-                    {comment.points === undefined && (
+                <ThemedText style={styles.checklistProgress}>
+                  {t('game.ui.commentProgressLabel', { locale, current: activeIndex + 1, total: game.currentRound.comments?.length ?? 0 })}
+                </ThemedText>
+                <View key={activeComment.id} style={styles.commentCard}>
+                  <WithAnonymousAvatar avatarId={commentAvatars[activeComment.id]}>
+                    <ThemedText style={styles.commentText}>{activeComment.text}</ThemedText>
+                  </WithAnonymousAvatar>
+                  {activeComment.points === undefined ? (
+                    <View style={styles.decisionButtonsRow}>
                       <TouchableOpacity
-                        style={styles.pointsButton}
-                        onPress={() => handleGivePoints(comment.id, 1)}
-                        disabled={!!givingPoints[comment.id]}
-                        accessibilityLabel={t('game.ui.awardPoint', { locale })}
+                        style={[styles.decisionButton, { backgroundColor: GameColors.green }]}
+                        onPress={() => handleDecideCommentPoints(activeComment.id, 1)}
+                        disabled={isDeciding}
+                        accessibilityLabel={t('game.ui.awardOnePoint', { locale })}
                         accessibilityRole="button"
                       >
-                        {givingPoints[comment.id] ? (
+                        {isDeciding ? (
                           <ActivityIndicator size="small" color={GameColors.white} />
                         ) : (
-                          <IconSymbol name="plus.circle.fill" size={16} color={GameColors.white} />
+                          <ThemedText style={styles.decisionButtonText}>{t('game.ui.awardOnePoint', { locale })}</ThemedText>
                         )}
                       </TouchableOpacity>
-                    )}
-                    {comment.points !== undefined && (
+                      <TouchableOpacity
+                        style={[styles.decisionButton, { backgroundColor: GameColors.neutral }]}
+                        onPress={() => handleDecideCommentPoints(activeComment.id, 0)}
+                        disabled={isDeciding}
+                        accessibilityLabel={t('game.ui.declineCommentPoint', { locale })}
+                        accessibilityRole="button"
+                      >
+                        {isDeciding ? (
+                          <ActivityIndicator size="small" color={GameColors.white} />
+                        ) : (
+                          <ThemedText style={styles.decisionButtonText}>{t('game.ui.declineCommentPoint', { locale })}</ThemedText>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View>
                       <ThemedText style={styles.pointsGivenText}>
-                        {t('game.ui.pointsAwarded', { locale })} {comment.points}
+                        {t('game.ui.pointsAwarded', { locale })} {activeComment.points}
                       </ThemedText>
-                    )}
-                  </View>
-                ))}
-                {!game.currentRound.pointsGiven && (
-                  <TouchableOpacity
-                    style={[
-                      styles.submitCommentButton,
-                      {
-                        backgroundColor: GameColors.purple,
-                        shadowColor: GameColors.shadow,
-                      },
-                      loading && gameStyles.buttonDisabled,
-                    ]}
-                    onPress={handleFinishGivingPoints}
-                    disabled={loading}
-                    activeOpacity={0.8}
-                    accessibilityLabel={t('game.ui.finishAwardingPoints', { locale })}
-                    accessibilityRole="button"
-                  >
-                    {loading
-                      ? <ActivityIndicator size="small" color={GameColors.white} />
-                      : <IconSymbol name="checkmark.circle.fill" size={16} color={GameColors.white} />}
-                    <ThemedText style={styles.buttonText}>{t('game.ui.finishAwardingPoints', { locale })}</ThemedText>
-                  </TouchableOpacity>
-                )}
-                {game.currentRound.pointsGiven && (
-                  <ThemedText style={styles.waitingText}>
-                    {t('game.ui.finishedAwardingPointsWaitAdmin', { locale })}
-                  </ThemedText>
-                )}
+                      <ThemedText style={styles.waitingSubtext}>
+                        {t('game.ui.reactionProgress', { locale, received: votersWhoRated.length, required: expectedCommenters.length })}
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
               </View>
             ) : (
               <ThemedText style={styles.waitingText}>
@@ -566,7 +552,7 @@ export const ActivePhase: React.FC<Props> = ({
         {user?.uid !== game.currentRound.targetUserId && (
           <ScrollIntoView
             enabled
-            scrollIntoViewKey={`${game.currentRound.roundNumber}:other:${game.currentRound.commentsVisible}:${game.currentRound.pointsGiven}`}
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:other:${game.currentRound.commentsVisible}:${activeIndex}:${reviewFinished}`}
             align="top"
             animated
             insets={SCROLL_INSETS}
@@ -646,55 +632,65 @@ export const ActivePhase: React.FC<Props> = ({
                     <ThemedText type="subtitle" style={styles.commentsTitle}>
                       {t('game.ui.allComments', { locale })}
                     </ThemedText>
-                    {game.currentRound!.comments?.map((comment: Comment) => (
-                      <View key={comment.id} style={styles.commentCard}>
-                        <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
-                      <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
-                    </WithAnonymousAvatar>
-                        {comment.points !== undefined && (
-                          <ThemedText style={styles.pointsGivenText}>
-                            {t('game.ui.points', { locale })} {comment.points}
-                          </ThemedText>
-                        )}
-                      </View>
-                    ))}
-                    {game.currentRound!.pointsGiven && (
-                      (() => {
-                        const alreadyGaveTargetPoints =
-                          game.currentRound!.targetPointsGivenBy?.includes(user?.uid ?? '') ?? false;
-                        const hasCompletedPhase = game.playersWhoCompletedPostCommentPhase?.includes(user?.uid || '') ?? false;
-                        return (
-                          <View style={{ marginTop: 16 }}>
-                            {game.currentRound!.pointsGiven && !hasCompletedPhase && !alreadyGaveTargetPoints && (
-                                <View style={styles.pointsButtonsContainer}>
-                                  {Array.from({ length: getMaxPoints() + 1 }, (_, i) => i).map((points) => (
-                                    <TouchableOpacity
-                                      key={points}
-                                      style={[
-                                        styles.pointsButton,
-                                        givingPointsToTarget && gameStyles.buttonDisabled,
-                                      ]}
-                                      onPress={() => handleGivePointsToTargetWithConfirm(points)}
-                                      disabled={givingPointsToTarget}
-                                      activeOpacity={0.8}
-                                      accessibilityLabel={t('game.ui.givePointsLabel', { locale, count: points })}
-                                      accessibilityRole="button"
-                                    >
-                                      {givingPointsToTarget ? (
-                                        <ActivityIndicator size="small" color={GameColors.textDark} />
-                                      ) : (
-                                        <ThemedText style={styles.pointsButtonText}>
-                                          {points}
-                                        </ThemedText>
-                                      )}
-                                    </TouchableOpacity>
-                                  ))}
-                                </View>
-                            )}
-                          </View>
-                        );
-                      })()
-                    )}
+                    {visibleComments.map((comment: Comment, i: number) => {
+                      const isActive = !reviewFinished && i === activeIndex;
+                      const myRating = comment.targetReactionPoints?.[user?.uid ?? ''];
+                      return (
+                        <View key={comment.id} style={styles.commentCard}>
+                          <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
+                            <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                          </WithAnonymousAvatar>
+                          {comment.points !== undefined && (
+                            <ThemedText style={styles.pointsGivenText}>
+                              {t('game.ui.points', { locale })} {comment.points}
+                            </ThemedText>
+                          )}
+
+                          {isActive && comment.points !== undefined && (
+                            myRating === undefined ? (
+                              <View style={styles.decisionButtonsRow}>
+                                <TouchableOpacity
+                                  style={[styles.decisionButton, { backgroundColor: GameColors.gold }]}
+                                  onPress={() => handleRateTargetReaction(comment.id, 1)}
+                                  disabled={isRating}
+                                  accessibilityLabel={t('game.ui.rateReactionPositive', { locale })}
+                                  accessibilityRole="button"
+                                >
+                                  {isRating ? (
+                                    <ActivityIndicator size="small" color={GameColors.white} />
+                                  ) : (
+                                    <ThemedText style={styles.decisionButtonText}>{t('game.ui.rateReactionPositive', { locale })}</ThemedText>
+                                  )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={[styles.decisionButton, { backgroundColor: GameColors.neutral }]}
+                                  onPress={() => handleRateTargetReaction(comment.id, 0)}
+                                  disabled={isRating}
+                                  accessibilityLabel={t('game.ui.rateReactionNone', { locale })}
+                                  accessibilityRole="button"
+                                >
+                                  {isRating ? (
+                                    <ActivityIndicator size="small" color={GameColors.white} />
+                                  ) : (
+                                    <ThemedText style={styles.decisionButtonText}>{t('game.ui.rateReactionNone', { locale })}</ThemedText>
+                                  )}
+                                </TouchableOpacity>
+                              </View>
+                            ) : (
+                              <ThemedText style={styles.waitingSubtext}>
+                                {t('game.ui.yourReactionRating', { locale, points: myRating })}
+                              </ThemedText>
+                            )
+                          )}
+
+                          {isActive && comment.points === undefined && (
+                            <ThemedText style={styles.waitingSubtext}>
+                              {t('game.ui.waitingForReactionRatings', { locale })}
+                            </ThemedText>
+                          )}
+                        </View>
+                      );
+                    })}
                   </View>
                 );
               }
@@ -717,7 +713,7 @@ export const ActivePhase: React.FC<Props> = ({
           locale={locale}
         />
       )}
-      
+
       <FaceMessage
         visible={faceMessage.visible}
         message={faceMessage.message}
@@ -749,28 +745,27 @@ buttonText: { color: GameColors.white, fontWeight: '600', fontSize: 15, fontFami
 targetView: { marginBottom: 20 },
 commentView: { marginBottom: 20 },
 waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
+waitingSubtext: { opacity: 0.7, fontSize: 13, marginTop: 8, fontFamily: Fonts.sans },
 commentsView: { marginTop: 16 },
 commentsTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
 commentCard: { padding: 16, borderRadius: 8, backgroundColor: GameColors.cardBg, marginBottom: 12 },
 commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22, fontFamily: Fonts.sans },
 pointsGivenText: { fontSize: 14, fontWeight: '600', color: GameColors.green, marginTop: 8, fontFamily: Fonts.sans },
 submitCommentButton: { flexDirection: 'row', borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 14, paddingHorizontal: 24, gap: 8, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
-  pointsSelectionTitle: { textAlign: 'center', fontSize: 16, fontWeight: '600', marginBottom: 12, fontFamily: Fonts.sans },
-  pointsButtonsContainer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  pointsButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: GameColors.lightPageBg,
-    justifyContent: 'center',
+  decisionButtonsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  decisionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    borderRadius: 999,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: GameColors.cardBorder,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  pointsButtonText: {
-    fontSize: 18,
+  decisionButtonText: {
+    color: GameColors.white,
+    fontSize: 13,
     fontWeight: '600',
-    color: GameColors.textDark,
     fontFamily: Fonts.sans,
   },
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },

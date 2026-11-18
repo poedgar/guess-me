@@ -245,7 +245,10 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                       {t('game.ui.guessPrompt')}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {possibleAuthors.map(author => (
+                      {/* The viewer is always guessing comments written about
+                          themselves — they can never be the author, since
+                          self-comments are blocked at submission time. */}
+                      {possibleAuthors.filter(author => author.userId !== user?.uid).map(author => (
                         <button
                           key={author.userId}
                           type="button"

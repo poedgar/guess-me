@@ -376,73 +376,8 @@ describe('submitComment — uses runTransaction to prevent concurrent comment lo
   });
 });
 
-// ─── 6. givePointsToTarget — uses runTransaction ──────────────────────────────
-
-describe('givePointsToTarget — uses runTransaction to prevent concurrent point loss', () => {
-  const mockTxn = { get: jest.fn(), update: jest.fn() };
-
-  const activeGameDoc = makeGameDoc({
-    status: 'active',
-    currentRound: ACTIVE_ROUND,
-    scores: { 'player-uid': 0 },
-  });
-
-  beforeEach(() => {
-    const firestore = require('firebase/firestore');
-
-    firestore.doc.mockReturnValue({ path: 'games/game-x' });
-    firestore.setDoc.mockResolvedValue(undefined);
-    firestore.updateDoc.mockResolvedValue(undefined);
-    firestore.serverTimestamp.mockReturnValue(new Date());
-    firestore.arrayUnion.mockImplementation((v: unknown) => v);
-    firestore.onSnapshot.mockReturnValue(jest.fn());
-
-    firestore.getDoc
-      .mockResolvedValueOnce({ exists: () => true, data: () => ({ password: 'SECRET' }) })
-      .mockResolvedValueOnce({ exists: () => false })
-      .mockResolvedValue(makeSnap(activeGameDoc));
-
-    firestore.onSnapshot.mockImplementationOnce((_ref: unknown, cb: (s: unknown) => void) => {
-      cb(makeSnap(activeGameDoc));
-      return jest.fn();
-    });
-
-    mockTxn.get.mockResolvedValue(makeSnap(activeGameDoc));
-    mockTxn.update.mockImplementation(() => {});
-    firestore.runTransaction.mockImplementation(async (_db: unknown, cb: (t: typeof mockTxn) => Promise<void>) => {
-      await cb(mockTxn);
-    });
-  });
-
-  it('calls runTransaction when giving points to target', async () => {
-    const firestore = require('firebase/firestore');
-    const { result } = renderHook(() => useGame(), { wrapper });
-
-    await act(async () => { await result.current.enterGame('SECRET'); });
-    firestore.runTransaction.mockClear();
-
-    await act(async () => { await result.current.givePointsToTarget('player-uid', 1); });
-
-    expect(firestore.runTransaction).toHaveBeenCalled();
-  });
-
-  it('writes updated targetPoints and scores via txn.update inside the transaction', async () => {
-    const { result } = renderHook(() => useGame(), { wrapper });
-
-    await act(async () => { await result.current.enterGame('SECRET'); });
-    mockTxn.update.mockClear();
-
-    await act(async () => { await result.current.givePointsToTarget('player-uid', 2); });
-
-    expect(mockTxn.update).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        'currentRound.targetPoints': expect.any(Number),
-        scores: expect.objectContaining({ 'player-uid': expect.any(Number) }),
-      }),
-    );
-  });
-});
+// givePointsToTarget's runTransaction coverage was replaced by
+// rateTargetReaction's dedicated suite in GameContext.rateTargetReaction.test.tsx.
 
 // ─── 6b. awardCommentPoints — uses runTransaction ─────────────────────────────
 //
@@ -492,7 +427,7 @@ describe('awardCommentPoints — uses runTransaction to prevent concurrent point
     await act(async () => { await result.current.enterGame('SECRET'); });
     firestore.runTransaction.mockClear();
 
-    await act(async () => { await result.current.awardCommentPoints('c1', 3); });
+    await act(async () => { await result.current.awardCommentPoints('c1', 1); });
 
     expect(firestore.runTransaction).toHaveBeenCalled();
   });
@@ -503,31 +438,33 @@ describe('awardCommentPoints — uses runTransaction to prevent concurrent point
     await act(async () => { await result.current.enterGame('SECRET'); });
     mockTxn.update.mockClear();
 
-    await act(async () => { await result.current.awardCommentPoints('c1', 3); });
+    await act(async () => { await result.current.awardCommentPoints('c1', 1); });
 
     expect(mockTxn.update).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         'currentRound.comments': expect.arrayContaining([
-          expect.objectContaining({ id: 'c1', points: 3 }),
+          expect.objectContaining({ id: 'c1', points: 1 }),
         ]),
-        'scores.author-a': 3,
+        'scores.author-a': 1,
       }),
     );
   });
 
   it('does not drop a concurrently-awarded comment when a second award reads fresh state', async () => {
-    // Simulates awarding comment A, then quickly awarding comment B: the
-    // second transaction's fresh read reflects comment A's already-applied
-    // points/score, so that award must survive in the second write's array.
+    // Simulates awarding comment A, then activating and quickly awarding
+    // comment B: the second transaction's fresh read reflects comment A's
+    // already-applied points/score, so that award must survive in the
+    // second write's array.
     const firestore = require('firebase/firestore');
     const gameAfterFirstAward = makeGameDoc({
       status: 'active',
       currentRound: {
         ...roundWithTwoComments,
-        comments: [{ ...COMMENT_A, points: 3 }, COMMENT_B],
+        activeCommentIndex: 1,
+        comments: [{ ...COMMENT_A, points: 1 }, COMMENT_B],
       },
-      scores: { 'author-a': 3 },
+      scores: { 'author-a': 1 },
     });
     mockTxn.get.mockResolvedValue(makeSnap(gameAfterFirstAward));
 
@@ -535,16 +472,16 @@ describe('awardCommentPoints — uses runTransaction to prevent concurrent point
     await act(async () => { await result.current.enterGame('SECRET'); });
     mockTxn.update.mockClear();
 
-    await act(async () => { await result.current.awardCommentPoints('c2', 2); });
+    await act(async () => { await result.current.awardCommentPoints('c2', 1); });
 
     const arg = mockTxn.update.mock.calls[0][1];
     expect(arg['currentRound.comments']).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: 'c1', points: 3 }),
-        expect.objectContaining({ id: 'c2', points: 2 }),
+        expect.objectContaining({ id: 'c1', points: 1 }),
+        expect.objectContaining({ id: 'c2', points: 1 }),
       ]),
     );
-    expect(arg['scores.author-b']).toBe(2);
+    expect(arg['scores.author-b']).toBe(1);
     // Untouched by this call — author-a's already-committed score isn't re-sent/clobbered
     expect(arg['scores.author-a']).toBeUndefined();
   });

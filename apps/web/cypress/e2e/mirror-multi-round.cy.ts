@@ -122,32 +122,34 @@ describe('Mirror mode wrong guess and multi-round completion', () => {
         cy.get('[data-cy=show-comments-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Target awards the comment a point, then finishes ─────────────────
+        // ── Target decides on the (only, so active) comment ──────────────────
         cy.signInAsTestUser(round1TargetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
-        cy.get('[data-cy=award-comment-points-button]').click();
-        cy.get('[data-cy=finish-awarding-points-button]').click();
-        cy.get('[data-cy=finish-awarding-points-button]').should('not.exist');
+        cy.get('[data-cy=award-comment-points-button][data-cy-points=1]').click();
+        cy.get('[data-cy=award-comment-points-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Non-target gives a reciprocal point to the target, confirms in
-        // the alert ────────────────────────────────────────────────────────
+        // ── Non-target rates the target's reaction to that comment ──────────
         cy.signInAsTestUser(round1CommenterRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
-        cy.get('[data-cy=give-points-to-target-button][data-cy-points=1]').click();
-        cy.get('[data-cy=alert-button][data-cy-style=primary]').click();
-        cy.get('[data-cy=give-points-to-target-button]').should('not.exist');
+        cy.get('[data-cy=rate-target-reaction-button][data-cy-points=1]').click();
+        cy.get('[data-cy=rate-target-reaction-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Admin starts guessing phase ───────────────────────────────────────
+        // ── Admin advances past the last comment, finishing the review ───────
         cy.signInAsTestUser('test1');
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
+        cy.get('[data-cy=activate-next-comment-button]').click();
+        cy.get('[data-cy=activate-next-comment-button]').should('not.exist');
+        cy.wait(SETTLE_MS);
+
+        // ── Admin starts guessing phase ───────────────────────────────────────
         cy.get('[data-cy=start-guessing-button]').click();
         cy.get('[data-cy=start-guessing-button]').should('not.exist');
         cy.wait(SETTLE_MS);
@@ -164,7 +166,7 @@ describe('Mirror mode wrong guess and multi-round completion', () => {
         // fresh client actually has GuessingPhase's data loaded before
         // trusting guess-author-button's count.
         cy.get('[data-cy=guessing-phase-info]').should('exist');
-        cy.get('[data-cy=guess-author-button]').should('have.length', 3);
+        cy.get('[data-cy=guess-author-button]').should('have.length', 2);
         cy.contains('[data-cy=guess-author-button]', '1.').click();
         cy.get('[data-cy=submit-guesses-button]').click();
         cy.get('[data-cy=submit-guesses-button]').should('not.exist');
@@ -212,31 +214,34 @@ describe('Mirror mode wrong guess and multi-round completion', () => {
         cy.get('[data-cy=show-comments-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Target awards the comment a point, then finishes ─────────────────
+        // ── Target decides on the (only, so active) comment ──────────────────
         cy.signInAsTestUser(round2TargetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=2]').should('exist');
-        cy.get('[data-cy=award-comment-points-button]').click();
-        cy.get('[data-cy=finish-awarding-points-button]').click();
-        cy.get('[data-cy=finish-awarding-points-button]').should('not.exist');
+        cy.get('[data-cy=award-comment-points-button][data-cy-points=1]').click();
+        cy.get('[data-cy=award-comment-points-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Round 2 commenter gives a reciprocal point to round 2's target ───
+        // ── Round 2 commenter rates round 2's target's reaction ──────────────
         cy.signInAsTestUser(round2CommenterRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=2]').should('exist');
-        cy.get('[data-cy=give-points-to-target-button][data-cy-points=1]').click();
-        cy.get('[data-cy=alert-button][data-cy-style=primary]').click();
-        cy.get('[data-cy=give-points-to-target-button]').should('not.exist');
+        cy.get('[data-cy=rate-target-reaction-button][data-cy-points=1]').click();
+        cy.get('[data-cy=rate-target-reaction-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Admin starts guessing phase ───────────────────────────────────────
+        // ── Admin advances past the last comment, finishing the review ───────
         cy.signInAsTestUser('test1');
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=2]').should('exist');
+        cy.get('[data-cy=activate-next-comment-button]').click();
+        cy.get('[data-cy=activate-next-comment-button]').should('not.exist');
+        cy.wait(SETTLE_MS);
+
+        // ── Admin starts guessing phase ───────────────────────────────────────
         cy.get('[data-cy=start-guessing-button]').click();
         cy.get('[data-cy=start-guessing-button]').should('not.exist');
         cy.wait(SETTLE_MS);
@@ -250,7 +255,7 @@ describe('Mirror mode wrong guess and multi-round completion', () => {
         // fresh client actually has GuessingPhase's data loaded before
         // trusting guess-author-button's count.
         cy.get('[data-cy=guessing-phase-info]').should('exist');
-        cy.get('[data-cy=guess-author-button]').should('have.length', 3);
+        cy.get('[data-cy=guess-author-button]').should('have.length', 2);
         cy.contains('[data-cy=guess-author-button]', `${round2CommenterPlayerNumber}.`).click();
         cy.get('[data-cy=submit-guesses-button]').click();
         cy.get('[data-cy=submit-guesses-button]').should('not.exist');

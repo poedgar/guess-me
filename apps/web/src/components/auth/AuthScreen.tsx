@@ -175,6 +175,16 @@ export const AuthScreen: React.FC = () => {
               </button>
             </div>
 
+            <button type="button"
+              onClick={handleSignIn}
+              data-cy="google-signin-button"
+              className="w-full bg-game-blue text-white px-6 py-4 rounded-lg font-semibold hover:opacity-90 transition-opacity mb-6 text-lg"
+            >
+              {t('auth.signInGoogle') || 'Sign in with Google'}
+            </button>
+
+            <p className="text-center text-gray-400 mb-6 text-sm">{t('common.or')}</p>
+
             <div className="mb-6 space-y-3">
               {authMode === 'register' && (
                 <input
@@ -231,16 +241,6 @@ export const AuthScreen: React.FC = () => {
                 </button>
               )}
             </div>
-
-            <p className="text-center text-gray-400 mb-6 text-sm">{t('common.or')}</p>
-
-            <button type="button"
-              onClick={handleSignIn}
-              data-cy="google-signin-button"
-              className="w-full bg-game-blue text-white px-6 py-4 rounded-lg font-semibold hover:opacity-90 transition-opacity mb-8 text-lg"
-            >
-              {t('auth.signInGoogle') || 'Sign in with Google'}
-            </button>
           </>
         )}
 

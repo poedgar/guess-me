@@ -384,6 +384,56 @@ export const AuthScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
+            <View style={styles.buttonContainer}>
+              {isSigningIn ? (
+                <View style={styles.loadingButton}>
+                  <ActivityIndicator size="small" color={GameColors.white} />
+                  <IconSymbol
+                    name="hourglass"
+                    size={16}
+                    color={GameColors.white}
+                    style={{ marginLeft: 8 }}
+                  />
+                </View>
+              ) : Platform.OS === "web" ? (
+                <TouchableOpacity
+                  style={[
+                    styles.webGoogleButton,
+                    {
+                      backgroundColor: GameColors.green,
+                      shadowColor: GameColors.shadow,
+                    },
+                  ]}
+                  onPress={handleSignIn}
+                  disabled={isSigningIn}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.webGoogleButtonContent}>
+                    <View style={styles.webGoogleIcon}>
+                      <IconSymbol
+                        name="lock.shield"
+                        size={16}
+                        color={GameColors.blue}
+                      />
+                    </View>
+                    <ThemedText style={styles.webGoogleButtonText}>
+                      {t("auth.signInWithGoogle", { locale })}
+                    </ThemedText>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <GoogleSigninButton
+                  style={styles.googleButton}
+                  size={GoogleSigninButton.Size.Wide}
+                  color={GoogleSigninButton.Color.Dark}
+                  onPress={handleSignIn}
+                  disabled={isSigningIn}
+                />
+              )}
+            </View>
+
+            <ThemedText style={styles.orDivider}>{t("common.or", { locale })}</ThemedText>
+
             <View style={styles.emailFormContainer}>
               {authMode === "register" && (
                 <TextInput
@@ -446,60 +496,7 @@ export const AuthScreen: React.FC = () => {
                 </TouchableOpacity>
               )}
             </View>
-
-            <ThemedText style={styles.orDivider}>{t("common.or", { locale })}</ThemedText>
           </>
-        )}
-
-        {/* Google Sign-In Button */}
-        {authMode !== "forgot" && (
-        <View style={styles.buttonContainer}>
-          {isSigningIn ? (
-            <View style={styles.loadingButton}>
-              <ActivityIndicator size="small" color={GameColors.white} />
-              <IconSymbol
-                name="hourglass"
-                size={16}
-                color={GameColors.white}
-                style={{ marginLeft: 8 }}
-              />
-            </View>
-          ) : Platform.OS === "web" ? (
-            <TouchableOpacity
-              style={[
-                styles.webGoogleButton,
-                {
-                  backgroundColor: GameColors.green,
-                  shadowColor: GameColors.shadow,
-                },
-              ]}
-              onPress={handleSignIn}
-              disabled={isSigningIn}
-              activeOpacity={0.8}
-            >
-              <View style={styles.webGoogleButtonContent}>
-                <View style={styles.webGoogleIcon}>
-                  <IconSymbol
-                    name="lock.shield"
-                    size={16}
-                    color={GameColors.blue}
-                  />
-                </View>
-                <ThemedText style={styles.webGoogleButtonText}>
-                  {t("auth.signInWithGoogle", { locale })}
-                </ThemedText>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <GoogleSigninButton
-              style={styles.googleButton}
-              size={GoogleSigninButton.Size.Wide}
-              color={GoogleSigninButton.Color.Dark}
-              onPress={handleSignIn}
-              disabled={isSigningIn}
-            />
-          )}
-        </View>
         )}
       </View>
       </ScrollView>

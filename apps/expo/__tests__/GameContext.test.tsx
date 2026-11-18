@@ -46,12 +46,12 @@ describe('GameContext', () => {
       const { result } = renderHook(() => useGame(), { wrapper });
       const fns = [
         'createGame', 'joinGame', 'enterGame', 'leaveGame', 'startGame',
-        'submitComment', 'showComments', 'awardCommentPoints', 'finishAwardingPoints',
-        'startNextRound', 'givePointsToTarget', 'startGuessingPhase',
+        'submitComment', 'showComments', 'awardCommentPoints', 'activateNextComment',
+        'startNextRound', 'rateTargetReaction', 'startGuessingPhase',
         'finalizeGuessingPhase', 'submitGuess', 'markPlayerGuessesSubmitted',
         'updateAdminWritesComments', 'updateShowSurnames', 'updateTargetSelectionMode',
         'updateShowGuessResults', 'startPostGuessingPointPhase',
-        'awardPointsToPlayers', 'skipPostCommentPhase', 'setGameType',
+        'awardPointsToPlayers', 'setGameType',
       ];
       for (const fn of fns) {
         expect(typeof (result.current as any)[fn]).toBe('function');

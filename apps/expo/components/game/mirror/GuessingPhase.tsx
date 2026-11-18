@@ -382,7 +382,12 @@ export const GuessingPhase: React.FC<Props> = ({
                       {t('game.ui.guessPrompt', { locale })}
                     </ThemedText>
                     <View style={styles.authorOptionsContainer}>
-                      {(game.guessingData?.possibleAuthors || []).map((author) => (
+                      {/* The viewer is always guessing comments written about
+                          themselves — they can never be the author, since
+                          self-comments are blocked at submission time. */}
+                      {(game.guessingData?.possibleAuthors || [])
+                        .filter((author) => author.userId !== user?.uid)
+                        .map((author) => (
                         <TouchableOpacity
                           key={author.userId}
                           style={[

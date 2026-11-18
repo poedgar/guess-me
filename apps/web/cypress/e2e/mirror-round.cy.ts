@@ -118,7 +118,7 @@ describe('Full mirror-mode round', () => {
         cy.get('[data-cy=comment-input]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Admin reveals comments ──────────────────────────────────────
+        // ── Admin starts the sequential comment review ──────────────────
         cy.signInAsTestUser('test1');
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
@@ -126,27 +126,23 @@ describe('Full mirror-mode round', () => {
         cy.get('[data-cy=show-comments-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Target awards the comment a point, then finishes ────────────
+        // ── Target decides on the (only, so active) comment ──────────────
         cy.signInAsTestUser(targetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
-        cy.get('[data-cy=award-comment-points-button]').click();
-        cy.get('[data-cy=finish-awarding-points-button]').click();
-        // Otherwise the admin, signed into next, may still see
-        // targetFinishedPoints as false.
-        cy.get('[data-cy=finish-awarding-points-button]').should('not.exist');
+        cy.get('[data-cy=award-comment-points-button][data-cy-points=1]').click();
+        cy.get('[data-cy=award-comment-points-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Non-target awards points to the target, confirms in the alert ─
+        // ── Non-target rates the target's reaction to that comment ──────
         cy.signInAsTestUser(commenterRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
-        cy.get('[data-cy=give-points-to-target-button][data-cy-points=1]').click();
-        cy.get('[data-cy=alert-button][data-cy-style=primary]').click();
-        // The admin (signed into next, after the freeze check below) needs
-        // allPlayersCompletedPointsPhase to already be true so
-        // start-guessing-button isn't clicked while still disabled.
-        cy.get('[data-cy=give-points-to-target-button]').should('not.exist');
+        cy.get('[data-cy=rate-target-reaction-button][data-cy-points=1]').click();
+        // The admin (signed into next) needs the active comment's review to
+        // already be fully resolved so activate-next-comment-button isn't
+        // clicked while still disabled.
+        cy.get('[data-cy=rate-target-reaction-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
         // ── Freeze-until-round-end check: inline leaderboard still 0 ────
@@ -154,10 +150,17 @@ describe('Full mirror-mode round', () => {
           cy.wrap($row).find('[data-cy=leaderboard-total-points]').should('have.text', '0');
         });
 
-        // ── Admin starts guessing phase ─────────────────────────────────
+        // ── Admin advances past the last comment, finishing the review ──
         cy.signInAsTestUser('test1');
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=activate-next-comment-button]').click();
+        // This was the only/last comment, so this click flips pointsGiven
+        // and replaces activate-next-comment-button with start-guessing-button.
+        cy.get('[data-cy=activate-next-comment-button]').should('not.exist');
+        cy.wait(SETTLE_MS);
+
+        // ── Admin starts guessing phase ─────────────────────────────────
         cy.get('[data-cy=start-guessing-button]').click();
         // Once status flips to 'guessing_phase', ActivePhase (and this
         // button) is replaced by GuessingPhase entirely.
@@ -167,9 +170,9 @@ describe('Full mirror-mode round', () => {
         // ── Target guesses the (known, deterministic) real author ──────
         // possibleAuthors in GuessingPhase is every participant (not just
         // comment writers — see startGuessingPhase() in GameContext.tsx),
-        // so there's one guess-author-button per participant (3 here), not
-        // one. Pick the commenter's own button by player number instead of
-        // assuming a single button exists.
+        // minus the guesser themselves (3 participants - 1 guesser = 2
+        // buttons here). Pick the commenter's own button by player number
+        // instead of assuming a single button exists.
         cy.signInAsTestUser(targetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
@@ -177,7 +180,7 @@ describe('Full mirror-mode round', () => {
         // fresh client actually has GuessingPhase's data loaded before
         // trusting guess-author-button's count.
         cy.get('[data-cy=guessing-phase-info]').should('exist');
-        cy.get('[data-cy=guess-author-button]').should('have.length', 3);
+        cy.get('[data-cy=guess-author-button]').should('have.length', 2);
         cy.contains('[data-cy=guess-author-button]', `${commenterPlayerNumber}.`).click();
         cy.get('[data-cy=submit-guesses-button]').click();
         // Otherwise the admin, signed into next, may see

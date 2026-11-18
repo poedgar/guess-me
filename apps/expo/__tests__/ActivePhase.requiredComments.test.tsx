@@ -38,10 +38,9 @@ jest.mock('@/contexts/GameContext', () => ({
     submitComment: jest.fn(),
     showComments: mockShowComments,
     awardCommentPoints: jest.fn(),
-    finishAwardingPoints: jest.fn(),
-    givePointsToTarget: jest.fn(),
+    activateNextComment: jest.fn(),
+    rateTargetReaction: jest.fn(),
     startGuessingPhase: jest.fn(),
-    skipPostCommentPhase: jest.fn(),
   }),
 }));
 
@@ -147,7 +146,7 @@ describe('ActivePhase — requiredComments off-by-one (adminWritesComments true,
     const { getByLabelText } = renderPanel();
 
     await act(async () => {
-      fireEvent.press(getByLabelText('game.ui.showComments'));
+      fireEvent.press(getByLabelText('game.ui.startReview'));
     });
 
     expect(alertSpy).toHaveBeenCalled();
@@ -185,7 +184,7 @@ describe('ActivePhase — requiredComments off-by-one (adminWritesComments true,
     );
 
     await act(async () => {
-      fireEvent.press(getByLabelText('game.ui.showComments'));
+      fireEvent.press(getByLabelText('game.ui.startReview'));
     });
 
     expect(alertSpy).not.toHaveBeenCalled();
@@ -229,7 +228,7 @@ describe('ActivePhase — requiredComments unaffected when adminWritesComments i
     );
 
     await act(async () => {
-      fireEvent.press(getByLabelText('game.ui.showComments'));
+      fireEvent.press(getByLabelText('game.ui.startReview'));
     });
 
     expect(alertSpy).toHaveBeenCalled();

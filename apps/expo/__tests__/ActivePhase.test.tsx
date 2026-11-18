@@ -27,17 +27,16 @@ jest.mock('@/contexts/SoundContext', () => ({
 }));
 
 let mockLoading = false;
-let mockGivePointsToTarget: jest.Mock;
+let mockRateTargetReaction: jest.Mock;
 jest.mock('@/contexts/GameContext', () => ({
   useGame: () => ({
     loading: mockLoading,
     submitComment: jest.fn(),
     showComments: jest.fn(),
     awardCommentPoints: jest.fn(),
-    finishAwardingPoints: jest.fn(),
-    givePointsToTarget: (...args: unknown[]) => mockGivePointsToTarget(...args),
+    activateNextComment: jest.fn(),
+    rateTargetReaction: (...args: unknown[]) => mockRateTargetReaction(...args),
     startGuessingPhase: jest.fn(),
-    skipPostCommentPhase: jest.fn(),
   }),
 }));
 
@@ -126,64 +125,43 @@ function makeGame(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('ActivePhase — 3.3 give points to target includes name', () => {
-  let mockShowFancyAlert: jest.Mock;
-  let mockShowFaceMessage: jest.Mock;
+function makeReviewInProgressGame(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'game-1',
+    adminId: 'admin-1',
+    adminName: 'Admin User',
+    status: 'active',
+    adminWritesComments: true,
+    showSurnames: true,
+    participants,
+    scores: {},
+    postGuessingPointPhase: false,
+    currentRound: {
+      roundNumber: 1,
+      targetUserId: TARGET_UID,
+      targetUserName: TARGET_NAME,
+      comments: [
+        // Authored by the viewing player themselves — the design allows a
+        // comment's own author to rate the target's reaction to it too.
+        { id: 'c1', text: 'Great player', authorId: PLAYER_UID, points: 1, targetReactionPoints: {} },
+      ],
+      commentsVisible: true,
+      pointsGiven: false,
+      activeCommentIndex: 0,
+    },
+    ...overrides,
+  };
+}
 
+describe('ActivePhase — rating the target\'s reaction to the active comment', () => {
   beforeEach(() => {
-    mockGivePointsToTarget = jest.fn().mockResolvedValue(undefined);
-    mockShowFancyAlert = jest.fn();
-    mockShowFaceMessage = jest.fn();
+    mockRateTargetReaction = jest.fn().mockResolvedValue(undefined);
   });
 
-  it('face message after giving points includes the target player display name', async () => {
-    const { getByText } = render(
-      <ActivePhase
-        game={makeGame()}
-        isAdmin={false}
-        user={{ uid: PLAYER_UID }}
-        participantsByJoin={participants}
-        joinIndexById={joinIndexById}
-        getDisplayName={(name: string) => name.split(' ')[0]}
-        showFancyAlert={mockShowFancyAlert}
-        showFaceMessage={mockShowFaceMessage}
-        locale="en"
-        isDark={false}
-      />
-    );
-
-    // Points buttons 0..2 should be visible; press "1"
-    fireEvent.press(getByText('1'));
-
-    // Confirmation dialog should appear
-    expect(mockShowFancyAlert).toHaveBeenCalled();
-    const buttons: Array<{ text: string; onPress?: () => Promise<void> }> =
-      mockShowFancyAlert.mock.calls[0][2];
-    const yesBtn = buttons.find((b) => b.text === 'common.yes');
-    expect(yesBtn).toBeDefined();
-
-    await act(async () => {
-      await yesBtn!.onPress!();
-    });
-
-    // showFaceMessage must include the target's name ('Bob' = getDisplayName('Bob Smith'))
-    expect(mockShowFaceMessage).toHaveBeenCalled();
-    const message: string = mockShowFaceMessage.mock.calls[0][0];
-    expect(message).toContain('Bob');
-  });
-});
-
-// ─── 7.1 points-selection buttons must have accessibilityLabel ───────────────
-
-describe('ActivePhase — 7.1 points-selection buttons have accessibilityLabel', () => {
-  beforeEach(() => {
-    mockGivePointsToTarget = jest.fn().mockResolvedValue(undefined);
-  });
-
-  it('each points button carries an accessibilityLabel with its value', () => {
+  it('shows accessible rating buttons for the active, already-decided comment', () => {
     const { getByLabelText } = render(
       <ActivePhase
-        game={makeGame()}
+        game={makeReviewInProgressGame()}
         isAdmin={false}
         user={{ uid: PLAYER_UID }}
         participantsByJoin={participants}
@@ -195,8 +173,31 @@ describe('ActivePhase — 7.1 points-selection buttons have accessibilityLabel',
         isDark={false}
       />
     );
-    // t('game.ui.givePointsLabel', { locale, count: 1 }) → 'game.ui.givePointsLabel[1]' via mock
-    expect(getByLabelText('game.ui.givePointsLabel[1]')).toBeTruthy();
+    expect(getByLabelText('game.ui.rateReactionPositive')).toBeTruthy();
+    expect(getByLabelText('game.ui.rateReactionNone')).toBeTruthy();
+  });
+
+  it('calls rateTargetReaction with the active comment id and chosen points', async () => {
+    const { getByLabelText } = render(
+      <ActivePhase
+        game={makeReviewInProgressGame()}
+        isAdmin={false}
+        user={{ uid: PLAYER_UID }}
+        participantsByJoin={participants}
+        joinIndexById={joinIndexById}
+        getDisplayName={(name: string) => name.split(' ')[0]}
+        showFancyAlert={jest.fn()}
+        showFaceMessage={jest.fn()}
+        locale="en"
+        isDark={false}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByLabelText('game.ui.rateReactionPositive'));
+    });
+
+    expect(mockRateTargetReaction).toHaveBeenCalledWith('c1', 1);
   });
 });
 
@@ -205,7 +206,7 @@ describe('ActivePhase — 7.1 points-selection buttons have accessibilityLabel',
 describe('ActivePhase — 6.1 loading text uses i18n key', () => {
   beforeEach(() => {
     mockLoading = true;
-    mockGivePointsToTarget = jest.fn();
+    mockRateTargetReaction = jest.fn();
   });
 
   afterEach(() => {
@@ -269,7 +270,7 @@ describe('ActivePhase — admin comment-completion checklist', () => {
   }
 
   beforeEach(() => {
-    mockGivePointsToTarget = jest.fn().mockResolvedValue(undefined);
+    mockRateTargetReaction = jest.fn().mockResolvedValue(undefined);
   });
 
   it('shows the checklist with progress count and per-player status while writing', () => {
