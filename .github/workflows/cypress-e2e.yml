@@ -1,11 +1,16 @@
 name: Cypress E2E Tests
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/web/**"
-      - "packages/shared/**"
+  # push trigger temporarily disabled — testing whether Vercel's "Blocked"
+  # deployment status is gated on this check passing, since this workflow
+  # tests the live production URL and can't pass on a push that it itself
+  # is blocking from reaching that URL. Re-enable once that's confirmed
+  # either way. Still runnable manually and still runs on schedule below.
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "apps/web/**"
+  #     - "packages/shared/**"
   workflow_dispatch: {}
   schedule:
     # Every 24 hours (00:00 UTC) — a periodic health
