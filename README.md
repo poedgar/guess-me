@@ -108,3 +108,7 @@ Haptic feedback → not applicable on web
 ActivityIndicator → using text "Loading…" in buttons is fine
 Props drilling → hooks approach is correct for web
 Which of these do you want to implement?
+
+_____
+
+App connect pass 10buboukrnetQ!!1
