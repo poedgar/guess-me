@@ -371,6 +371,9 @@ export const GuessingPhase: React.FC<Props> = ({
               <ThemedText style={styles.guessingInstructions}>
                 {t('game.ui.guessingInstructions', { locale })}
               </ThemedText>
+              <ThemedText style={styles.guessPrompt}>
+                {t('game.ui.guessPrompt', { locale })}
+              </ThemedText>
               {commentsForPlayer.map((comment) => {
                 const guessResult = getGuessResultDisplay(comment.id);
                 return (
@@ -378,9 +381,6 @@ export const GuessingPhase: React.FC<Props> = ({
                     <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
                       <ThemedText style={styles.commentText}>"{comment.text}"</ThemedText>
                     </WithAnonymousAvatar>
-                    <ThemedText style={styles.guessPrompt}>
-                      {t('game.ui.guessPrompt', { locale })}
-                    </ThemedText>
                     <View style={styles.authorOptionsContainer}>
                       {/* The viewer is always guessing comments written about
                           themselves — they can never be the author, since

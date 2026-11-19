@@ -235,15 +235,15 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {t('game.ui.guessingInstructions')}
                 </p>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                  {t('game.ui.guessPrompt')}
+                </p>
                 {commentsForPlayer.map(comment => (
                   <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <div className="flex items-start gap-3 mb-3">
                       <AnonymousAvatar avatarId={commentAvatars[comment.id]} />
                       <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white italic">"{comment.text}"</p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                      {t('game.ui.guessPrompt')}
-                    </p>
                     <div className="flex flex-wrap gap-2">
                       {/* The viewer is always guessing comments written about
                           themselves — they can never be the author, since

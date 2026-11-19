@@ -71,9 +71,9 @@ describe('i18n pluralization — 6.2 Ukrainian point strings', () => {
 
 describe('i18n locale parity — 6.4 game.ui.postGuessing keys', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const en = require('../locales/en.json');
+  const en = require('../../../packages/shared/src/locales/en.json');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const uk = require('../locales/uk.json');
+  const uk = require('../../../packages/shared/src/locales/uk.json');
 
   const enKeys = Object.keys(en.game.ui.postGuessing) as string[];
 
