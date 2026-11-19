@@ -36,15 +36,19 @@ test('an interpolated message translates its placeholder correctly', function ()
     GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
     $target = User::factory()->create();
     GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $target->id]);
-    $author = User::factory()->create();
-    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $author->id]);
-    Round::factory()->create([
+    $rater = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $rater->id]);
+    $round = Round::factory()->create([
         'game_id' => $game->id, 'round_number' => 1, 'target_user_id' => $target->id,
-        'comments_visible' => true, 'points_given' => true,
     ]);
+    $comment = Comment::factory()->create(['round_id' => $round->id, 'points' => 1]);
+    $round->update(['comments_visible' => true, 'active_comment_id' => $comment->id]);
 
-    expect(fn () => app(\App\Services\GuessingPhaseService::class)->startGuessingPhase($game))
-        ->toThrow(RuntimeException::class, 'Зачекайте, поки 1 гравець(ів) завершать фазу після коментарів.');
+    expect(fn () => app(\App\Services\CommentPhaseService::class)->activateNextComment($round->fresh()))
+        ->toThrow(
+            RuntimeException::class,
+            "Неможливо активувати наступний коментар. Очікуємо, поки 1 учасник(ів) оцінять реакцію цільового гравця на поточний коментар.",
+        );
 });
 
 test('a controller-level literal message is translated too', function () {

@@ -40,11 +40,10 @@ Route::middleware('auth')->group(function () {
     Route::post('games/{game}/leave', [GameController::class, 'leave'])->name('games.leave');
     Route::post('games/{game}/comments', [CommentController::class, 'store'])->name('games.comments.store');
     Route::post('games/{game}/show-comments', [RoundController::class, 'showComments'])->name('games.show-comments');
+    Route::post('games/{game}/activate-next-comment', [RoundController::class, 'activateNextComment'])->name('games.activate-next-comment');
     Route::post('games/{game}/next-round', [RoundController::class, 'next'])->name('games.next-round');
     Route::post('games/{game}/comment-points/{comment}', [CommentController::class, 'awardPoints'])->name('games.comment-points');
-    Route::post('games/{game}/finish-awarding-points', [CommentController::class, 'finishAwarding'])->name('games.finish-awarding-points');
-    Route::post('games/{game}/target-points', [CommentController::class, 'giveTargetPoints'])->name('games.target-points');
-    Route::post('games/{game}/skip-post-comment-phase', [CommentController::class, 'skipPostCommentPhase'])->name('games.skip-post-comment-phase');
+    Route::post('games/{game}/comments/{comment}/rate-reaction', [CommentController::class, 'rateTargetReaction'])->name('games.comments.rate-reaction');
     Route::post('games/{game}/start-guessing', [GuessingController::class, 'start'])->name('games.start-guessing');
     Route::post('games/{game}/guesses', [GuessingController::class, 'submitGuess'])->name('games.guesses.store');
     Route::post('games/{game}/mark-guesses-submitted', [GuessingController::class, 'markSubmitted'])->name('games.mark-guesses-submitted');

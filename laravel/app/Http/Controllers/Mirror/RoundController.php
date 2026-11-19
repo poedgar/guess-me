@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Game;
 use App\Services\CommentPhaseService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\ValidationException;
 
 class RoundController extends Controller
 {
@@ -18,7 +19,30 @@ class RoundController extends Controller
         $this->authorize('manage', $game);
 
         $round = $game->rounds()->latest('round_number')->firstOrFail();
-        $this->comments->showComments($round);
+
+        try {
+            $this->comments->showComments($round);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['game' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+
+    public function activateNextComment(Game $game): RedirectResponse
+    {
+        $this->authorize('manage', $game);
+
+        $round = $game->rounds()->latest('round_number')->firstOrFail();
+
+        try {
+            $this->comments->activateNextComment($round);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['game' => $e->getMessage()]);
+        }
+
         broadcast(new \App\Events\GameUpdated($game->id));
 
         return redirect("/games/{$game->id}");

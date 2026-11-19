@@ -13,6 +13,7 @@ class Round extends Model
 
     protected $fillable = [
         'game_id', 'round_number', 'target_user_id', 'comments_visible', 'points_given',
+        'active_comment_id',
         'guesses_finalized', 'target_points', 'target_points_given_by', 'target_points_by_player',
         'target_correct_guesses', 'started_at', 'start_scores_snapshot', 'start_guess_results_snapshot',
         'guessing_possible_authors', 'guessing_players_submitted', 'guessing_all_submitted',
@@ -47,6 +48,11 @@ class Round extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function activeComment(): BelongsTo
+    {
+        return $this->belongsTo(Comment::class, 'active_comment_id');
     }
 
     public function guesses(): HasMany

@@ -25,24 +25,17 @@ function makeRoundReadyForGuessing(): array {
     return compact('game', 'admin', 'target', 'author', 'round');
 }
 
-test('starting the guessing phase requires all non-target participants to have completed the post-comment phase', function () {
-    ['game' => $game] = makeRoundReadyForGuessing();
-
-    expect(fn () => app(GuessingPhaseService::class)->startGuessingPhase($game))
-        ->toThrow(RuntimeException::class, 'Cannot start guessing phase. Waiting for 1 player(s) to complete the post-comment phase.');
-});
-
 test('starting the guessing phase requires comments to be visible and points to have been given', function () {
-    ['game' => $game, 'author' => $author, 'round' => $round] = makeRoundReadyForGuessing();
-    $game->update(['players_who_completed_post_comment_phase' => [(string) $author->id]]);
+    ['game' => $game, 'round' => $round] = makeRoundReadyForGuessing();
     $round->update(['comments_visible' => false]);
 
     expect(fn () => app(GuessingPhaseService::class)->startGuessingPhase($game->fresh()))
         ->toThrow(RuntimeException::class, 'Cannot start the guessing phase until comments have been shown and points have been awarded.');
 });
 
-test('POST /games/{game}/start-guessing returns a validation error, not a 500, when players have not completed the post-comment phase', function () {
-    ['game' => $game, 'admin' => $admin] = makeRoundReadyForGuessing();
+test('POST /games/{game}/start-guessing returns a validation error, not a 500, when points have not been given', function () {
+    ['game' => $game, 'admin' => $admin, 'round' => $round] = makeRoundReadyForGuessing();
+    $round->update(['points_given' => false]);
 
     $response = $this->actingAs($admin)->post("/games/{$game->id}/start-guessing");
 
@@ -50,9 +43,8 @@ test('POST /games/{game}/start-guessing returns a validation error, not a 500, w
     expect($game->fresh()->status)->toBe('active');
 });
 
-test('starting the guessing phase succeeds once all non-target participants have completed the post-comment phase', function () {
+test('starting the guessing phase succeeds once comments are visible and points have been given', function () {
     ['game' => $game, 'author' => $author, 'round' => $round] = makeRoundReadyForGuessing();
-    $game->update(['players_who_completed_post_comment_phase' => [(string) $author->id]]);
 
     app(GuessingPhaseService::class)->startGuessingPhase($game->fresh());
 

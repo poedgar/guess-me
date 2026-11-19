@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive } from 'vue';
+import { computed } from 'vue';
 import { usePage, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({ game: Object });
@@ -10,6 +10,7 @@ const round = computed(() => props.game.currentRound);
 const isTarget = computed(() => round.value?.targetUserId === currentUserId.value);
 const myComment = computed(() => round.value?.comments.find((c) => c.authorId === currentUserId.value));
 const isAdminNotWriting = computed(() => props.game.isAdmin && !props.game.settings.adminWritesComments);
+const activeComment = computed(() => round.value?.comments.find((c) => c.id === round.value.activeCommentId));
 
 const commentForm = useForm({ text: '' });
 const submitComment = () => commentForm.post(route('games.comments.store', props.game.id), {
@@ -23,34 +24,20 @@ const canShowComments = computed(
     () => props.game.isAdmin && round.value?.comments.length > 0 && !round.value?.commentsVisible,
 );
 
-const pointsByComment = reactive({});
-const awardForms = reactive({});
-const awardPoints = (commentId) => {
-    if (!awardForms[commentId]) {
-        awardForms[commentId] = useForm({ points: 0 });
-    }
-    awardForms[commentId].points = pointsByComment[commentId] ?? 0;
-    awardForms[commentId].post(route('games.comment-points', [props.game.id, commentId]));
+const awardPointsForm = useForm({ points: 0 });
+const awardPoints = (points) => {
+    awardPointsForm.points = points;
+    awardPointsForm.post(route('games.comment-points', [props.game.id, activeComment.value.id]));
 };
 
-const finishAwardingForm = useForm({});
-const finishAwarding = () => finishAwardingForm.post(route('games.finish-awarding-points', props.game.id));
+const rateReactionForm = useForm({ rating: 0 });
+const rateReaction = (rating) => {
+    rateReactionForm.rating = rating;
+    rateReactionForm.post(route('games.comments.rate-reaction', [props.game.id, activeComment.value.id]));
+};
 
-const allCommentsAwarded = computed(
-    () => round.value?.comments.length > 0 && round.value.comments.every((c) => c.points !== null),
-);
-
-// "Post-comment phase": once the target has finished awarding, everyone else either
-// gives the target bonus points or explicitly skips — tracked per-user so a reload
-// shows a waiting message instead of the action buttons again.
-const iAlreadyCompletedPostComment = computed(
-    () => props.game.playersWhoCompletedPostCommentPhase.includes(String(currentUserId.value)),
-);
-const targetPointsForm = useForm({ points: 1 });
-const giveTargetPoints = () => targetPointsForm.post(route('games.target-points', props.game.id));
-
-const skipForm = useForm({});
-const skipPostComment = () => skipForm.post(route('games.skip-post-comment-phase', props.game.id));
+const activateNextCommentForm = useForm({});
+const activateNextComment = () => activateNextCommentForm.post(route('games.activate-next-comment', props.game.id));
 
 const startGuessingForm = useForm({});
 const startGuessing = () => startGuessingForm.post(route('games.start-guessing', props.game.id));
@@ -67,40 +54,31 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
                 {{ $t('game.waitingForCommentsAboutYou') }}
             </p>
 
-            <template v-else-if="!round.pointsGiven">
+            <template v-else-if="!round.pointsGiven && activeComment">
                 <h2 class="font-semibold">{{ $t('game.awardPointsToComments') }}</h2>
-                <ul class="space-y-3">
-                    <li v-for="comment in round.comments" :key="comment.id" class="rounded border p-3">
-                        <p class="text-sm">{{ comment.text }}</p>
-                        <div class="mt-2 flex items-center gap-2">
-                            <input
-                                type="number"
-                                min="0"
-                                v-model.number="pointsByComment[comment.id]"
-                                class="w-20 rounded border-gray-300 text-sm"
-                                :disabled="comment.points !== null"
-                            />
-                            <button
-                                type="button"
-                                class="rounded bg-indigo-600 px-3 py-1 text-sm text-white disabled:opacity-25"
-                                :disabled="comment.points !== null"
-                                @click="awardPoints(comment.id)"
-                            >
-                                {{ comment.points !== null ? comment.points : $t('game.givePoints') }}
-                            </button>
-                        </div>
-                        <p v-if="awardForms[comment.id]?.errors.points" class="text-sm text-red-600">{{ awardForms[comment.id].errors.points }}</p>
-                    </li>
-                </ul>
-                <button
-                    type="button"
-                    class="w-full rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-25"
-                    :disabled="!allCommentsAwarded"
-                    @click="finishAwarding"
-                >
-                    {{ $t('game.finishAwarding') }}
-                </button>
-                <p v-if="finishAwardingForm.errors.game" class="text-sm text-red-600">{{ finishAwardingForm.errors.game }}</p>
+                <div class="rounded border p-3">
+                    <p class="text-sm">{{ activeComment.text }}</p>
+                    <div v-if="activeComment.points === null" class="mt-2 flex items-center gap-2">
+                        <button
+                            type="button"
+                            class="rounded bg-indigo-600 px-3 py-1 text-sm text-white"
+                            @click="awardPoints(1)"
+                        >
+                            {{ $t('game.giveOnePoint') }}
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded bg-gray-200 px-3 py-1 text-sm text-gray-800"
+                            @click="awardPoints(0)"
+                        >
+                            {{ $t('game.noPoint') }}
+                        </button>
+                    </div>
+                    <p v-else class="mt-2 text-sm text-gray-500">
+                        {{ $t('game.waitingForReactionRatings') }}
+                    </p>
+                    <p v-if="awardPointsForm.errors.points" class="text-sm text-red-600">{{ awardPointsForm.errors.points }}</p>
+                </div>
             </template>
 
             <p v-else class="text-sm text-gray-500">
@@ -137,27 +115,27 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
             <p class="text-sm text-green-700">{{ $t('game.commentSentWaitingShow') }}</p>
         </template>
 
-        <template v-else-if="round.pointsGiven && !iAlreadyCompletedPostComment">
-            <h2 class="font-semibold">{{ $t('game.awardPointsToTarget') }}</h2>
-            <div class="flex items-center gap-2">
-                <input type="number" min="1" v-model.number="targetPointsForm.points" class="w-20 rounded border-gray-300 text-sm" />
-                <button type="button" class="rounded bg-indigo-600 px-3 py-1 text-sm text-white" @click="giveTargetPoints">
-                    {{ $t('game.givePoints') }}
+        <template v-else-if="round.commentsVisible && !round.pointsGiven && activeComment">
+            <h2 class="font-semibold">{{ $t('game.rateTargetReactionPrompt') }}</h2>
+            <p class="text-sm">{{ activeComment.text }}</p>
+
+            <p v-if="activeComment.points === null" class="mt-2 text-sm text-gray-500">
+                {{ $t('game.waitingForTargetPoints') }}
+            </p>
+            <div v-else-if="activeComment.myReactionRating === null" class="mt-2 flex items-center gap-2">
+                <button type="button" class="rounded bg-indigo-600 px-3 py-1 text-sm text-white" @click="rateReaction(1)">
+                    {{ $t('game.giveOnePoint') }}
                 </button>
-                <button type="button" class="text-sm text-gray-500 underline" @click="skipPostComment">
-                    {{ $t('game.skip') }}
+                <button type="button" class="rounded bg-gray-200 px-3 py-1 text-sm text-gray-800" @click="rateReaction(0)">
+                    {{ $t('game.noPoint') }}
                 </button>
             </div>
-            <p v-if="targetPointsForm.errors.points" class="text-sm text-red-600">{{ targetPointsForm.errors.points }}</p>
-            <p v-if="skipForm.errors.phase" class="text-sm text-red-600">{{ skipForm.errors.phase }}</p>
-        </template>
-
-        <template v-else-if="round.pointsGiven && iAlreadyCompletedPostComment">
-            <p class="text-sm text-gray-500">{{ $t('game.waitingForAllPlayers') }}</p>
+            <p v-else class="mt-2 text-sm text-gray-500">{{ $t('game.waitingForAllPlayers') }}</p>
+            <p v-if="rateReactionForm.errors.rating" class="text-sm text-red-600">{{ rateReactionForm.errors.rating }}</p>
         </template>
 
         <template v-else>
-            <p class="text-sm text-gray-500">{{ $t('game.waitingForTargetPoints') }}</p>
+            <p class="text-sm text-gray-500">{{ $t('game.waitingForAllPlayers') }}</p>
         </template>
 
         <button
@@ -168,6 +146,16 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
         >
             {{ $t('game.showComments') }}
         </button>
+
+        <button
+            v-if="game.isAdmin && round.commentsVisible && !round.pointsGiven"
+            type="button"
+            class="mt-2 w-full rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+            @click="activateNextComment"
+        >
+            {{ $t('game.activateNextComment') }}
+        </button>
+        <p v-if="activateNextCommentForm.errors.game" class="text-sm text-red-600">{{ activateNextCommentForm.errors.game }}</p>
 
         <button
             v-if="game.isAdmin && round.commentsVisible && round.pointsGiven"

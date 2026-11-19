@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mirror;
 
 use App\Http\Controllers\Controller;
+use App\Models\Comment;
 use App\Models\Game;
 use App\Services\CommentPhaseService;
 use Illuminate\Http\RedirectResponse;
@@ -33,7 +34,7 @@ class CommentController extends Controller
         return redirect("/games/{$game->id}");
     }
 
-    public function awardPoints(Request $request, Game $game, \App\Models\Comment $comment): RedirectResponse
+    public function awardPoints(Request $request, Game $game, Comment $comment): RedirectResponse
     {
         $this->authorize('view', $game);
 
@@ -41,7 +42,7 @@ class CommentController extends Controller
             abort(404);
         }
 
-        $validated = $request->validate(['points' => ['required', 'integer', 'min:0']]);
+        $validated = $request->validate(['points' => ['required', 'integer', 'in:0,1']]);
 
         try {
             $this->comments->awardCommentPoints($comment, $request->user(), $validated['points']);
@@ -54,48 +55,20 @@ class CommentController extends Controller
         return redirect("/games/{$game->id}");
     }
 
-    public function finishAwarding(Request $request, Game $game): RedirectResponse
+    public function rateTargetReaction(Request $request, Game $game, Comment $comment): RedirectResponse
     {
         $this->authorize('view', $game);
-        $round = $game->rounds()->latest('round_number')->firstOrFail();
 
-        try {
-            $this->comments->finishAwardingPoints($round, $request->user());
-        } catch (\RuntimeException $e) {
-            throw ValidationException::withMessages(['game' => $e->getMessage()]);
+        if ($comment->round->game_id !== $game->id) {
+            abort(404);
         }
 
-        broadcast(new \App\Events\GameUpdated($game->id));
-
-        return redirect("/games/{$game->id}");
-    }
-
-    public function giveTargetPoints(Request $request, Game $game): RedirectResponse
-    {
-        $this->authorize('view', $game);
-        $validated = $request->validate(['points' => ['sometimes', 'integer', 'min:1']]);
-        $round = $game->rounds()->latest('round_number')->firstOrFail();
+        $validated = $request->validate(['rating' => ['required', 'integer', 'in:0,1']]);
 
         try {
-            $this->comments->givePointsToTarget($round, $request->user(), $validated['points'] ?? 1);
+            $this->comments->rateTargetReaction($comment, $request->user(), $validated['rating']);
         } catch (\RuntimeException $e) {
-            throw ValidationException::withMessages(['points' => $e->getMessage()]);
-        }
-
-        broadcast(new \App\Events\GameUpdated($game->id));
-
-        return redirect("/games/{$game->id}");
-    }
-
-    public function skipPostCommentPhase(Request $request, Game $game): RedirectResponse
-    {
-        $this->authorize('view', $game);
-        $round = $game->rounds()->latest('round_number')->firstOrFail();
-
-        try {
-            $this->comments->skipPostCommentPhase($round, $request->user());
-        } catch (\RuntimeException $e) {
-            throw ValidationException::withMessages(['phase' => $e->getMessage()]);
+            throw ValidationException::withMessages(['rating' => $e->getMessage()]);
         }
 
         broadcast(new \App\Events\GameUpdated($game->id));

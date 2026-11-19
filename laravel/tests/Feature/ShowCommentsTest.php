@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Comment;
 use App\Models\Game;
 use App\Models\GameParticipant;
 use App\Models\Round;
@@ -12,6 +13,26 @@ test('showComments marks the round comments visible', function () {
     app(CommentPhaseService::class)->showComments($round);
 
     expect($round->fresh()->comments_visible)->toBeTrue();
+});
+
+test('showComments assigns a display order to every comment and activates the first one', function () {
+    $round = Round::factory()->create();
+    $comments = Comment::factory()->count(3)->create(['round_id' => $round->id]);
+
+    app(CommentPhaseService::class)->showComments($round);
+
+    $fresh = $round->fresh();
+    $orders = $fresh->comments()->orderBy('display_order')->pluck('id');
+    expect($orders)->toHaveCount(3);
+    expect($orders->unique())->toHaveCount(3);
+    expect($fresh->active_comment_id)->toBe($orders->first());
+});
+
+test('showComments is rejected once comments are already visible', function () {
+    $round = Round::factory()->create(['comments_visible' => true]);
+
+    expect(fn () => app(CommentPhaseService::class)->showComments($round))
+        ->toThrow(RuntimeException::class, 'Comments are already visible for this round');
 });
 
 test('POST show-comments is admin-only', function () {

@@ -67,7 +67,7 @@ const hasAnyBonusPoints = computed(() => otherParticipants.value.some((p) => (bo
                             >
                                 <option :value="null" disabled>{{ $t('game.target') }}?</option>
                                 <option
-                                    v-for="author in round.guessingPossibleAuthors"
+                                    v-for="author in round.guessingPossibleAuthors.filter((a) => Number(a.userId) !== currentUserId.value)"
                                     :key="author.userId"
                                     :value="Number(author.userId)"
                                 >

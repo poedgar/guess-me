@@ -64,3 +64,27 @@ test('once points are given, the resource exposes who has already completed the 
         ->where('game.playersWhoCompletedPostCommentPhase', [])
     );
 });
+
+test('exposes the active comment id and the viewer\'s own reaction rating', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'active']);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+    $target = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $target->id]);
+    $rater = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $rater->id]);
+    $round = Round::factory()->create([
+        'game_id' => $game->id, 'round_number' => 1, 'target_user_id' => $target->id,
+        'comments_visible' => true, 'points_given' => false,
+    ]);
+    $comment = Comment::factory()->create(['round_id' => $round->id, 'points' => 1]);
+    $round->update(['active_comment_id' => $comment->id]);
+    \App\Models\CommentReactionRating::create(['comment_id' => $comment->id, 'rater_id' => $rater->id, 'rating' => true]);
+
+    $response = $this->actingAs($rater)->get("/games/{$game->id}");
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('game.currentRound.activeCommentId', $comment->id)
+        ->where('game.currentRound.comments.0.myReactionRating', 1)
+    );
+});

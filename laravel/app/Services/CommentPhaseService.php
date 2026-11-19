@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Comment;
+use App\Models\CommentReactionRating;
 use App\Models\GameScore;
 use App\Models\Round;
 use App\Models\User;
@@ -44,14 +45,35 @@ class CommentPhaseService
 
     public function showComments(Round $round): void
     {
-        $round->update(['comments_visible' => true]);
+        if ($round->comments_visible) {
+            throw new RuntimeException(__('Comments are already visible for this round'));
+        }
+
+        DB::transaction(function () use ($round) {
+            $ids = $round->comments()->pluck('id')->shuffle()->values();
+            foreach ($ids as $index => $commentId) {
+                Comment::whereKey($commentId)->update(['display_order' => $index]);
+            }
+
+            $round->update([
+                'comments_visible' => true,
+                'active_comment_id' => $ids->first(),
+            ]);
+        });
     }
 
+    /**
+     * The target's 0/1 decision on the currently active comment's author.
+     */
     public function awardCommentPoints(Comment $comment, User $target, int $points): void
     {
         $round = $comment->round;
         if ($target->id !== $round->target_user_id) {
             throw new RuntimeException(__('Only the target person can give points'));
+        }
+
+        if ($comment->id !== $round->active_comment_id) {
+            throw new RuntimeException(__('This is not the currently active comment'));
         }
 
         if ($comment->points !== null) {
@@ -64,63 +86,84 @@ class CommentPhaseService
         });
     }
 
-    public function finishAwardingPoints(Round $round, User $target): void
+    /**
+     * Admin-only: advances the round past the active comment once the target
+     * has decided its points and every required rater has rated the target's
+     * reaction to it — or finishes the round's review if it was the last one.
+     */
+    public function activateNextComment(Round $round): void
     {
-        if ($target->id !== $round->target_user_id) {
-            throw new RuntimeException(__('Only the target can finish giving points'));
+        if ($round->points_given) {
+            throw new RuntimeException(__('Comment review has already finished for this round'));
         }
 
-        $round->update(['points_given' => true]);
-    }
-
-    public function givePointsToTarget(Round $round, User $giver, int $points = 1): void
-    {
-        if (! $round->points_given) {
-            throw new RuntimeException(__('Target has not finished giving points yet'));
+        $activeComment = $round->activeComment;
+        if ($activeComment === null) {
+            throw new RuntimeException(__('No comment is currently active'));
         }
 
-        $alreadyGiven = in_array((string) $giver->id, $round->target_points_given_by ?? [], true);
-        if ($alreadyGiven) {
-            throw new RuntimeException(__('You already gave points to this target this round'));
-        }
-
-        DB::transaction(function () use ($round, $giver, $points) {
-            $round->update([
-                'target_points' => $round->target_points + $points,
-                'target_points_given_by' => [...($round->target_points_given_by ?? []), (string) $giver->id],
-                'target_points_by_player' => [
-                    ...($round->target_points_by_player ?? []),
-                    (string) $giver->id => $points,
-                ],
-            ]);
-
-            GameScore::incrementFor($round->game, $round->target, $points);
-
-            $game = $round->game;
-            $completed = $game->players_who_completed_post_comment_phase ?? [];
-            if (! in_array((string) $giver->id, $completed, true)) {
-                $game->update(['players_who_completed_post_comment_phase' => [...$completed, (string) $giver->id]]);
-            }
-        });
-    }
-
-    public function skipPostCommentPhase(Round $round, User $skipper): void
-    {
-        if (! $round->points_given) {
-            throw new RuntimeException(__('Target has not finished giving points yet'));
+        if ($activeComment->points === null) {
+            throw new RuntimeException(__('The target has not yet decided points for the active comment'));
         }
 
         $game = $round->game;
-        $completed = $game->players_who_completed_post_comment_phase ?? [];
+        $requiredRaterIds = $game->participants()
+            ->where('user_id', '!=', $round->target_user_id)
+            ->when(! $game->admin_writes_comments, fn ($q) => $q->where('user_id', '!=', $game->admin_id))
+            ->pluck('user_id');
+        $ratedIds = $activeComment->reactionRatings()->pluck('rater_id');
+        $missing = $requiredRaterIds->diff($ratedIds);
 
-        if (in_array((string) $skipper->id, $completed, true)) {
-            throw new RuntimeException(__('You have already completed this phase'));
+        if ($missing->isNotEmpty()) {
+            throw new RuntimeException(__(
+                "Cannot activate the next comment yet. Waiting for :count participant(s) to rate the target's reaction to the current comment.",
+                ['count' => $missing->count()],
+            ));
         }
 
-        if ($skipper->id === $round->target_user_id) {
-            throw new RuntimeException(__('Target cannot skip this phase'));
+        DB::transaction(function () use ($round, $activeComment) {
+            $orderedIds = $round->comments()->orderBy('display_order')->pluck('id');
+            $nextId = $orderedIds->get($orderedIds->search($activeComment->id) + 1);
+
+            $round->update($nextId
+                ? ['active_comment_id' => $nextId]
+                : ['active_comment_id' => null, 'points_given' => true]);
+        });
+    }
+
+    /**
+     * Any required non-target participant's 0/1 rating of the target's
+     * reaction to the currently active comment.
+     */
+    public function rateTargetReaction(Comment $comment, User $rater, int $rating): void
+    {
+        $round = $comment->round;
+        $game = $round->game;
+
+        if ($rater->id === $round->target_user_id) {
+            throw new RuntimeException(__('The target cannot rate their own reaction'));
         }
 
-        $game->update(['players_who_completed_post_comment_phase' => [...$completed, (string) $skipper->id]]);
+        if (! $game->admin_writes_comments && $rater->id === $game->admin_id) {
+            throw new RuntimeException(__('The admin does not participate in rating reactions'));
+        }
+
+        if ($comment->id !== $round->active_comment_id) {
+            throw new RuntimeException(__('This is not the currently active comment'));
+        }
+
+        DB::transaction(function () use ($comment, $round, $rater, $rating) {
+            if ($comment->reactionRatings()->where('rater_id', $rater->id)->exists()) {
+                throw new RuntimeException(__("You have already rated the target's reaction to this comment"));
+            }
+
+            CommentReactionRating::create([
+                'comment_id' => $comment->id,
+                'rater_id' => $rater->id,
+                'rating' => (bool) $rating,
+            ]);
+
+            GameScore::incrementFor($round->game, $round->target, $rating);
+        });
     }
 }

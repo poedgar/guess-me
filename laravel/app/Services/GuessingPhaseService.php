@@ -22,20 +22,6 @@ class GuessingPhaseService
             throw new RuntimeException(__('Cannot start the guessing phase until comments have been shown and points have been awarded.'));
         }
 
-        $nonTargetParticipants = $game->participants()
-            ->where('user_id', '!=', $round->target_user_id)
-            ->when(! $game->admin_writes_comments, fn ($q) => $q->where('user_id', '!=', $game->admin_id))
-            ->get();
-
-        $completed = $game->players_who_completed_post_comment_phase ?? [];
-        $incomplete = $nonTargetParticipants->reject(fn ($p) => in_array((string) $p->user_id, $completed, true));
-
-        if ($incomplete->isNotEmpty()) {
-            throw new RuntimeException(
-                __('Cannot start guessing phase. Waiting for :count player(s) to complete the post-comment phase.', ['count' => $incomplete->count()])
-            );
-        }
-
         DB::transaction(function () use ($game, $round) {
             $possibleAuthors = $game->participants()->with('user')->get()->map(fn ($p) => [
                 'userId' => (string) $p->user_id,

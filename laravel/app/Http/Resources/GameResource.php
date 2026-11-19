@@ -42,19 +42,28 @@ class GameResource extends JsonResource
                 'targetUserName' => $currentRound->target->name,
                 'commentsVisible' => $currentRound->comments_visible,
                 'pointsGiven' => $currentRound->points_given,
+                'activeCommentId' => $currentRound->active_comment_id,
                 'guessesFinalized' => $currentRound->guesses_finalized,
                 'targetPoints' => $currentRound->target_points,
                 'targetCorrectGuesses' => $currentRound->target_correct_guesses,
-                'comments' => $currentRound->comments()->with('author')->get()->map(fn ($c) => [
-                    'id' => $c->id,
-                    // Gated on guesses_finalized, not comments_visible: comments_visible flips
-                    // true as soon as the admin reveals comments (still in the comment-writing
-                    // phase) and stays true throughout guessing_phase. Using it here would hand
-                    // the target the answer key while they're actively guessing authorship.
-                    'authorId' => ($currentRound->guesses_finalized || $c->author_id === $userId || $this->admin_id === $userId) ? $c->author_id : null,
-                    'text' => ($currentRound->comments_visible || $c->author_id === $userId || $this->admin_id === $userId) ? $c->text : null,
-                    'points' => $c->points,
-                ]),
+                'comments' => $currentRound->comments()->with(['author', 'reactionRatings'])
+                    ->orderBy('display_order')->orderBy('id')->get()->map(function ($c) use ($currentRound, $userId) {
+                        $myRating = $c->reactionRatings->firstWhere('rater_id', $userId);
+
+                        return [
+                            'id' => $c->id,
+                            // Gated on guesses_finalized, not comments_visible: comments_visible flips
+                            // true as soon as the admin reveals comments (still in the comment-writing
+                            // phase) and stays true throughout guessing_phase. Using it here would hand
+                            // the target the answer key while they're actively guessing authorship.
+                            'authorId' => ($currentRound->guesses_finalized || $c->author_id === $userId || $this->admin_id === $userId) ? $c->author_id : null,
+                            'text' => ($currentRound->comments_visible || $c->author_id === $userId || $this->admin_id === $userId) ? $c->text : null,
+                            'points' => $c->points,
+                            // Viewer-scoped only — nobody else's individual reaction votes are
+                            // exposed, same privacy posture as guessedAuthorId/correct below.
+                            'myReactionRating' => $myRating ? (int) $myRating->rating : null,
+                        ];
+                    }),
                 'guessingPossibleAuthors' => $currentRound->guessing_possible_authors ?? [],
                 'guesses' => $currentRound->guesses->map(fn ($g) => [
                     'commentId' => $g->comment_id,

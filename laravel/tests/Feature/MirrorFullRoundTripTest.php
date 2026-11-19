@@ -32,9 +32,9 @@ test('a full Mirror round trip: create, join, start, comment, award, guess, and 
 
     $comment = $round->fresh()->comments()->sole();
     $roundTarget = User::find($round->target_user_id);
-    $this->actingAs($roundTarget)->post("/games/{$game->id}/comment-points/{$comment->id}", ['points' => 3])->assertRedirect();
-    $this->actingAs($roundTarget)->post("/games/{$game->id}/finish-awarding-points")->assertRedirect();
-    $this->actingAs($commenter)->post("/games/{$game->id}/target-points", ['points' => 1])->assertRedirect();
+    $this->actingAs($roundTarget)->post("/games/{$game->id}/comment-points/{$comment->id}", ['points' => 1])->assertRedirect();
+    $this->actingAs($commenter)->post("/games/{$game->id}/comments/{$comment->id}/rate-reaction", ['rating' => 1])->assertRedirect();
+    $this->actingAs($admin)->post("/games/{$game->id}/activate-next-comment")->assertRedirect();
 
     // Guessing phase
     $this->actingAs($admin)->post("/games/{$game->id}/start-guessing")->assertRedirect();
@@ -50,7 +50,7 @@ test('a full Mirror round trip: create, join, start, comment, award, guess, and 
 
     expect($round->fresh()->guesses_finalized)->toBeTrue();
     expect($game->fresh()->status)->toBe('active');
-    expect(GameScore::where('game_id', $game->id)->where('user_id', $commenter->id)->value('points'))->toBe(3);
+    expect(GameScore::where('game_id', $game->id)->where('user_id', $commenter->id)->value('points'))->toBe(1);
     expect(GameScore::where('game_id', $game->id)->where('user_id', $roundTarget->id)->value('points'))->toBe(1);
 
     // Next round: the game has two non-admin participants (target, author), and per
