@@ -25,6 +25,19 @@ const statusColorMap: Record<string, string> = {
   idea_rating: 'bg-game-purple',
 };
 
+const statusLabelKeyMap: Record<string, string> = {
+  waiting: 'game.ui.statusWaiting',
+  active: 'game.ui.statusActive',
+  guessing_phase: 'game.ui.statusGuessing',
+  finished: 'game.ui.statusFinished',
+  basket_writing: 'game.ui.statusBasketWriting',
+  basket_guessing: 'game.ui.statusBasketGuessing',
+  clash_writing: 'game.ui.statusClashWriting',
+  clash_guessing: 'game.ui.statusClashGuessing',
+  idea_writing: 'game.ui.statusIdeaWriting',
+  idea_rating: 'game.ui.statusIdeaRating',
+};
+
 export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -55,7 +68,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
           <span
             className={`${statusColorMap[game.status] || 'bg-gray-400'} text-white px-4 py-2 rounded-lg font-semibold text-sm capitalize`}
           >
-            {game.status.replace('_', ' ')}
+            {statusLabelKeyMap[game.status] ? t(statusLabelKeyMap[game.status]) : game.status.replace('_', ' ')}
           </span>
           {isAdmin && (
             <span className="bg-game-blue text-white px-3 py-1 rounded text-xs font-semibold">

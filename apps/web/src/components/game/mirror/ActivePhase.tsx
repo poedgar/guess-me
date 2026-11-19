@@ -245,7 +245,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
       <div className="space-y-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-green">
           <div className="text-center mb-4" data-cy="round-info" data-cy-round={currentRound.roundNumber}>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Round {currentRound.roundNumber}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('game.ui.round')} {currentRound.roundNumber}</p>
             <p className="text-lg font-semibold text-gray-900 dark:text-white">
               {t('game.ui.target')}: {currentRound.targetUserName}
             </p>

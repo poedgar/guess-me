@@ -1,8 +1,10 @@
 import React from 'react';
 import { useSound } from '../../contexts/SoundContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export const SoundToggle: React.FC = () => {
   const { isSoundEnabled, toggleSound } = useSound();
+  const { t } = useLanguage();
 
   return (
     <button type="button"
@@ -14,7 +16,7 @@ export const SoundToggle: React.FC = () => {
       }`}
     >
       <span>{isSoundEnabled ? '🔊' : '🔇'}</span>
-      <span>{isSoundEnabled ? 'Sound On' : 'Sound Off'}</span>
+      <span>{isSoundEnabled ? t('common.soundOn') : t('common.soundOff')}</span>
     </button>
   );
 };
