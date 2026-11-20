@@ -128,6 +128,9 @@ export interface Comment {
   // Per-voter 0/1 rating of the target's reaction to THIS comment, from
   // every participant except the target (comment's own author included).
   targetReactionPoints?: { [voterId: string]: number };
+  // Set by the admin before comments are revealed, to send this comment
+  // back to its author for editing. Cleared when the author resubmits.
+  needsRevision?: boolean;
 }
 
 export interface GuessingData {

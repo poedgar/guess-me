@@ -11,7 +11,9 @@ class Comment extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['round_id', 'author_id', 'text', 'points', 'display_order'];
+    protected $fillable = ['round_id', 'author_id', 'text', 'points', 'display_order', 'needs_revision'];
+
+    protected $casts = ['needs_revision' => 'boolean'];
 
     public function round(): BelongsTo
     {

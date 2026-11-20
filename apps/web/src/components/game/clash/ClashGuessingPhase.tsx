@@ -285,7 +285,7 @@ export const ClashGuessingPhase: React.FC<Props> = ({ game }) => {
         </div>
 
         {isAdmin && (
-          <div className="flex justify-center pt-2 border-t border-red-200 dark:border-red-800" ref={adminScrollRef}>
+          <div className="flex flex-col items-center pt-2 border-t border-red-200 dark:border-red-800" ref={adminScrollRef}>
             <button type="button" data-cy="clash-advance-button" onClick={handleAdvance}
               disabled={isAdvancing || loading || !currentGroupDone}
               className={`px-6 py-3 rounded-full text-white font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity ${

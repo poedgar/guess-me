@@ -60,8 +60,9 @@ export const ActivePhase: React.FC<Props> = ({
     loading,
     submitComment,
     showComments,
+    sendCommentBackForEdit,
     awardCommentPoints,
-    activateNextComment,
+    activateComment,
     rateTargetReaction,
     startGuessingPhase,
     startNextRound,
@@ -85,7 +86,8 @@ export const ActivePhase: React.FC<Props> = ({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isDeciding, setIsDeciding] = useState(false);
   const [isRating, setIsRating] = useState(false);
-  const [isActivatingNext, setIsActivatingNext] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
+  const [isSendingBack, setIsSendingBack] = useState(false);
   const [faceMessage, setFaceMessage] = useState<{ visible: boolean; message: string; face?: string }>({
     visible: false,
     message: '',
@@ -103,6 +105,18 @@ export const ActivePhase: React.FC<Props> = ({
       return true;
     }).length;
   }, [game.currentRound, game.adminId, game.adminWritesComments, game.participants]);
+
+  const userComment = game.currentRound?.comments?.find((c: Comment) => c.authorId === user?.uid);
+
+  // Pre-fills the form with the original text the moment the admin sends
+  // this author's comment back for editing, so they revise rather than
+  // retype from scratch.
+  useEffect(() => {
+    if (userComment?.needsRevision && commentText === '') {
+      setCommentText(userComment.text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userComment?.needsRevision]);
 
   const handleSubmitComment = async () => {
     if (!commentText.trim()) {
@@ -194,20 +208,33 @@ export const ActivePhase: React.FC<Props> = ({
     }
   };
 
-  const handleActivateNextComment = async () => {
+  const handleActivateComment = async (commentId: string) => {
     try {
-      setIsActivatingNext(true);
+      setIsActivating(true);
       await playSound('click');
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await activateNextComment();
+      await activateComment(commentId);
       await playSound('success');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: unknown) {
       await playSound('error');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.activateNextCommentFailed', { locale }));
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.activateCommentFailed', { locale }));
     } finally {
-      setIsActivatingNext(false);
+      setIsActivating(false);
+    }
+  };
+
+  const handleSendCommentBack = async (commentId: string) => {
+    try {
+      setIsSendingBack(true);
+      await sendCommentBackForEdit(commentId);
+      await playSound('click');
+    } catch (error: unknown) {
+      await playSound('error');
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.sendCommentBackFailed', { locale }));
+    } finally {
+      setIsSendingBack(false);
     }
   };
 
@@ -241,20 +268,21 @@ export const ActivePhase: React.FC<Props> = ({
     void doStartGuessingPhase();
   };
 
-  const activeIndex = game.currentRound?.activeCommentIndex ?? 0;
-  const activeComment = game.currentRound?.comments?.[activeIndex];
+  const activeComment = game.currentRound?.activeCommentIndex !== undefined
+    ? game.currentRound?.comments?.[game.currentRound.activeCommentIndex]
+    : undefined;
   const reviewFinished = game.currentRound?.pointsGiven ?? false;
 
   const adminPulse = usePulseBorderOnChange(
-    `${game.currentRound?.roundNumber ?? 'none'}:admin:${game.currentRound?.commentsVisible ?? false}:${activeIndex}`,
+    `${game.currentRound?.roundNumber ?? 'none'}:admin:${game.currentRound?.commentsVisible ?? false}`,
     GameColors.green,
   );
   const targetPulse = usePulseBorderOnChange(
-    `${game.currentRound?.roundNumber ?? 'none'}:target:${game.currentRound?.commentsVisible ?? false}:${activeIndex}:${reviewFinished}`,
+    `${game.currentRound?.roundNumber ?? 'none'}:target:${game.currentRound?.commentsVisible ?? false}:${activeComment?.id ?? 'none'}:${reviewFinished}`,
     GameColors.green,
   );
   const otherPulse = usePulseBorderOnChange(
-    `${game.currentRound?.roundNumber ?? 'none'}:other:${game.currentRound?.commentsVisible ?? false}:${activeIndex}:${reviewFinished}`,
+    `${game.currentRound?.roundNumber ?? 'none'}:other:${game.currentRound?.commentsVisible ?? false}:${activeComment?.id ?? 'none'}:${reviewFinished}`,
     GameColors.green,
   );
 
@@ -313,18 +341,20 @@ export const ActivePhase: React.FC<Props> = ({
     if (p.userId === game.adminId && !game.adminWritesComments) return false;
     return true;
   });
-  const submittedAuthorIds = new Set(game.currentRound.comments?.map((c: Comment) => c.authorId) ?? []);
-  const submittedCount = expectedCommenters.filter(p => submittedAuthorIds.has(p.userId)).length;
+  const commentsByAuthor = new Map((game.currentRound.comments ?? []).map((c: Comment) => [c.authorId, c]));
+  const submittedCount = expectedCommenters.filter(p => {
+    const c = commentsByAuthor.get(p.userId);
+    return c && !c.needsRevision;
+  }).length;
 
   const activeCommentVotes = activeComment?.targetReactionPoints ?? {};
   const votersWhoRated = expectedCommenters.filter(p => activeCommentVotes[p.userId] !== undefined);
-  const allVotersRated = activeComment ? votersWhoRated.length === expectedCommenters.length : false;
-  const targetDecidedActive = activeComment?.points !== undefined;
-  const canActivateNext = targetDecidedActive && allVotersRated;
 
-  const visibleComments: Comment[] = reviewFinished
-    ? game.currentRound.comments ?? []
-    : (game.currentRound.comments ?? []).slice(0, activeIndex + 1);
+  const isCommentFullyRated = (comment: Comment) => {
+    const voted = comment.targetReactionPoints ?? {};
+    return expectedCommenters.every(p => voted[p.userId] !== undefined);
+  };
+  const allReactionsRated = (game.currentRound.comments ?? []).every(isCommentFullyRated);
 
   return (
     <View style={styles.phaseWrapper}>
@@ -352,7 +382,7 @@ export const ActivePhase: React.FC<Props> = ({
         {isAdmin && (
           <ScrollIntoView
             enabled
-            scrollIntoViewKey={`${game.currentRound.roundNumber}:admin:${game.currentRound.commentsVisible}:${activeIndex}`}
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:admin:${game.currentRound.commentsVisible}`}
             align="center"
             animated
             insets={SCROLL_INSETS}
@@ -367,40 +397,41 @@ export const ActivePhase: React.FC<Props> = ({
                   {t('game.ui.commentsProgress', { locale, received: submittedCount, required: expectedCommenters.length })}
                 </ThemedText>
                 {expectedCommenters.map(p => {
-                  const hasSubmitted = submittedAuthorIds.has(p.userId);
+                  const comment = commentsByAuthor.get(p.userId);
                   return (
-                    <View key={p.userId} style={styles.checklistRow}>
-                      <ThemedText style={styles.checklistNumber}>
-                        {numbers[p.userId] ? `${numbers[p.userId]}.` : ''}
-                      </ThemedText>
-                      <ThemedText style={styles.checklistName}>{getDisplayName(p.userName)}</ThemedText>
-                      <ThemedText style={hasSubmitted ? styles.checklistStatusDone : styles.checklistStatusPending}>
-                        {hasSubmitted ? `✅ ${t('game.ui.submitted', { locale })}` : `⏳ ${t('game.ui.pending', { locale })}`}
-                      </ThemedText>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-            {game.currentRound.commentsVisible && !reviewFinished && (
-              <View style={styles.checklistContainer}>
-                <ThemedText style={styles.checklistTitle}>
-                  {t('game.ui.commentProgressLabel', { locale, current: activeIndex + 1, total: game.currentRound.comments?.length ?? 0 })}
-                </ThemedText>
-                <ThemedText style={styles.checklistProgress}>
-                  {t('game.ui.reactionProgress', { locale, received: votersWhoRated.length, required: expectedCommenters.length })}
-                </ThemedText>
-                {expectedCommenters.map(p => {
-                  const hasRated = activeCommentVotes[p.userId] !== undefined;
-                  return (
-                    <View key={p.userId} style={styles.checklistRow}>
-                      <ThemedText style={styles.checklistNumber}>
-                        {numbers[p.userId] ? `${numbers[p.userId]}.` : ''}
-                      </ThemedText>
-                      <ThemedText style={styles.checklistName}>{getDisplayName(p.userName)}</ThemedText>
-                      <ThemedText style={hasRated ? styles.checklistStatusDone : styles.checklistStatusPending}>
-                        {hasRated ? `✅ ${t('game.ui.submitted', { locale })}` : `⏳ ${t('game.ui.pending', { locale })}`}
-                      </ThemedText>
+                    <View key={p.userId} style={styles.checklistItem}>
+                      <View style={styles.checklistRow}>
+                        <ThemedText style={styles.checklistNumber}>
+                          {numbers[p.userId] ? `${numbers[p.userId]}.` : ''}
+                        </ThemedText>
+                        <ThemedText style={styles.checklistName}>{getDisplayName(p.userName)}</ThemedText>
+                        <ThemedText style={
+                          !comment ? styles.checklistStatusPending
+                            : comment.needsRevision ? styles.checklistStatusRevision
+                            : styles.checklistStatusDone
+                        }>
+                          {!comment
+                            ? `⏳ ${t('game.ui.pending', { locale })}`
+                            : comment.needsRevision
+                              ? `🔄 ${t('game.ui.sentBackForRevision', { locale })}`
+                              : `✅ ${t('game.ui.submitted', { locale })}`}
+                        </ThemedText>
+                      </View>
+                      {comment && !comment.needsRevision && (
+                        <View style={styles.checklistCommentBlock}>
+                          <ThemedText style={styles.checklistCommentText}>{comment.text}</ThemedText>
+                          <TouchableOpacity
+                            onPress={() => handleSendCommentBack(comment.id)}
+                            disabled={isSendingBack || loading}
+                            accessibilityLabel={t('game.ui.sendBackForEdit', { locale })}
+                            accessibilityRole="button"
+                          >
+                            <ThemedText style={styles.checklistSendBackLink}>
+                              {t('game.ui.sendBackForEdit', { locale })}
+                            </ThemedText>
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </View>
                   );
                 })}
@@ -420,25 +451,6 @@ export const ActivePhase: React.FC<Props> = ({
                 >
                   <IconSymbol name="eye.fill" size={16} color={GameColors.white} />
                   <ThemedText style={styles.buttonText}>{t('game.ui.startReview', { locale })}</ThemedText>
-                </TouchableOpacity>
-              )}
-              {game.currentRound.commentsVisible && !reviewFinished && (
-                <TouchableOpacity
-                  style={[
-                    styles.adminButton,
-                    { backgroundColor: GameColors.admin, shadowColor: GameColors.shadow },
-                    (isActivatingNext || loading || !canActivateNext) && gameStyles.buttonDisabled,
-                  ]}
-                  onPress={handleActivateNextComment}
-                  disabled={isActivatingNext || loading || !canActivateNext}
-                  activeOpacity={0.8}
-                  accessibilityLabel={t('game.ui.activateNextComment', { locale })}
-                  accessibilityRole="button"
-                >
-                  {isActivatingNext
-                    ? <ActivityIndicator size="small" color={GameColors.white} />
-                    : <IconSymbol name="arrow.right.circle.fill" size={16} color={GameColors.white} />}
-                  <ThemedText style={styles.buttonText}>{t('game.ui.activateNextComment', { locale })}</ThemedText>
                 </TouchableOpacity>
               )}
               {reviewFinished && (
@@ -476,7 +488,7 @@ export const ActivePhase: React.FC<Props> = ({
         {user?.uid === game.currentRound.targetUserId && (
           <ScrollIntoView
             enabled
-            scrollIntoViewKey={`${game.currentRound.roundNumber}:target:${game.currentRound.commentsVisible}:${activeIndex}:${reviewFinished}`}
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:target:${game.currentRound.commentsVisible}:${activeComment?.id ?? 'none'}:${reviewFinished}`}
             align="top"
             animated
             insets={SCROLL_INSETS}
@@ -486,58 +498,82 @@ export const ActivePhase: React.FC<Props> = ({
               <ThemedText style={styles.waitingText}>
                 {t('game.ui.waitingForCommentsAboutYou', { locale })}
               </ThemedText>
-            ) : !reviewFinished && activeComment ? (
+            ) : !reviewFinished ? (
               <View style={styles.commentsView}>
                 <ThemedText type="subtitle" style={styles.commentsTitle}>
                   {t('game.ui.commentsAboutYou', { locale })}
                 </ThemedText>
-                <ThemedText style={styles.checklistProgress}>
-                  {t('game.ui.commentProgressLabel', { locale, current: activeIndex + 1, total: game.currentRound.comments?.length ?? 0 })}
-                </ThemedText>
-                <View key={activeComment.id} style={styles.commentCard}>
-                  <WithAnonymousAvatar avatarId={commentAvatars[activeComment.id]}>
-                    <ThemedText style={styles.commentText}>{activeComment.text}</ThemedText>
-                  </WithAnonymousAvatar>
-                  {activeComment.points === undefined ? (
-                    <View style={styles.decisionButtonsRow}>
-                      <TouchableOpacity
-                        style={[styles.decisionButton, { backgroundColor: GameColors.green }]}
-                        onPress={() => handleDecideCommentPoints(activeComment.id, 1)}
-                        disabled={isDeciding}
-                        accessibilityLabel={t('game.ui.awardOnePoint', { locale })}
-                        accessibilityRole="button"
-                      >
-                        {isDeciding ? (
-                          <ActivityIndicator size="small" color={GameColors.white} />
-                        ) : (
-                          <ThemedText style={styles.decisionButtonText}>{t('game.ui.awardOnePoint', { locale })}</ThemedText>
-                        )}
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.decisionButton, { backgroundColor: GameColors.neutral }]}
-                        onPress={() => handleDecideCommentPoints(activeComment.id, 0)}
-                        disabled={isDeciding}
-                        accessibilityLabel={t('game.ui.declineCommentPoint', { locale })}
-                        accessibilityRole="button"
-                      >
-                        {isDeciding ? (
-                          <ActivityIndicator size="small" color={GameColors.white} />
-                        ) : (
-                          <ThemedText style={styles.decisionButtonText}>{t('game.ui.declineCommentPoint', { locale })}</ThemedText>
-                        )}
-                      </TouchableOpacity>
+                {(game.currentRound.comments ?? []).map((comment: Comment) => {
+                  const commentFullyRated = isCommentFullyRated(comment);
+                  const isActive = comment.id === activeComment?.id;
+                  return (
+                    <View key={comment.id} style={styles.commentCard}>
+                      <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
+                        <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
+                      </WithAnonymousAvatar>
+                      {comment.points !== undefined ? (
+                        <ThemedText style={styles.pointsGivenText}>
+                          {t('game.ui.pointsAwarded', { locale })} {comment.points}
+                        </ThemedText>
+                      ) : allReactionsRated ? (
+                        <View style={styles.decisionButtonsRow}>
+                          <TouchableOpacity
+                            style={[styles.decisionButton, { backgroundColor: GameColors.green }]}
+                            onPress={() => handleDecideCommentPoints(comment.id, 1)}
+                            disabled={isDeciding}
+                            accessibilityLabel={t('game.ui.awardOnePoint', { locale })}
+                            accessibilityRole="button"
+                          >
+                            {isDeciding ? (
+                              <ActivityIndicator size="small" color={GameColors.white} />
+                            ) : (
+                              <ThemedText style={styles.decisionButtonText}>{t('game.ui.awardOnePoint', { locale })}</ThemedText>
+                            )}
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.decisionButton, { backgroundColor: GameColors.neutral }]}
+                            onPress={() => handleDecideCommentPoints(comment.id, 0)}
+                            disabled={isDeciding}
+                            accessibilityLabel={t('game.ui.declineCommentPoint', { locale })}
+                            accessibilityRole="button"
+                          >
+                            {isDeciding ? (
+                              <ActivityIndicator size="small" color={GameColors.white} />
+                            ) : (
+                              <ThemedText style={styles.decisionButtonText}>{t('game.ui.declineCommentPoint', { locale })}</ThemedText>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      ) : isActive ? (
+                        <ThemedText style={styles.waitingSubtext}>
+                          {t('game.ui.reactionProgress', { locale, received: votersWhoRated.length, required: expectedCommenters.length })}
+                        </ThemedText>
+                      ) : commentFullyRated ? (
+                        <ThemedText style={styles.waitingSubtext}>
+                          {t('game.ui.reactionsCompleteWaitingTurn', { locale })}
+                        </ThemedText>
+                      ) : (
+                        <TouchableOpacity
+                          style={[
+                            styles.decisionButton,
+                            { backgroundColor: GameColors.admin, alignSelf: 'flex-start', paddingHorizontal: 16 },
+                            (isActivating || loading || (activeComment !== undefined && !isCommentFullyRated(activeComment))) && gameStyles.buttonDisabled,
+                          ]}
+                          onPress={() => handleActivateComment(comment.id)}
+                          disabled={isActivating || loading || (activeComment !== undefined && !isCommentFullyRated(activeComment))}
+                          accessibilityLabel={t('game.ui.activateComment', { locale })}
+                          accessibilityRole="button"
+                        >
+                          {isActivating ? (
+                            <ActivityIndicator size="small" color={GameColors.white} />
+                          ) : (
+                            <ThemedText style={styles.decisionButtonText}>{t('game.ui.activateComment', { locale })}</ThemedText>
+                          )}
+                        </TouchableOpacity>
+                      )}
                     </View>
-                  ) : (
-                    <View>
-                      <ThemedText style={styles.pointsGivenText}>
-                        {t('game.ui.pointsAwarded', { locale })} {activeComment.points}
-                      </ThemedText>
-                      <ThemedText style={styles.waitingSubtext}>
-                        {t('game.ui.reactionProgress', { locale, received: votersWhoRated.length, required: expectedCommenters.length })}
-                      </ThemedText>
-                    </View>
-                  )}
-                </View>
+                  );
+                })}
               </View>
             ) : (
               <ThemedText style={styles.waitingText}>
@@ -552,7 +588,7 @@ export const ActivePhase: React.FC<Props> = ({
         {user?.uid !== game.currentRound.targetUserId && (
           <ScrollIntoView
             enabled
-            scrollIntoViewKey={`${game.currentRound.roundNumber}:other:${game.currentRound.commentsVisible}:${activeIndex}:${reviewFinished}`}
+            scrollIntoViewKey={`${game.currentRound.roundNumber}:other:${game.currentRound.commentsVisible}:${activeComment?.id ?? 'none'}:${reviewFinished}`}
             align="top"
             animated
             insets={SCROLL_INSETS}
@@ -569,12 +605,18 @@ export const ActivePhase: React.FC<Props> = ({
                 (c: Comment) => c.authorId === user?.uid
               );
 
-              if (!userComment && shouldUserWriteComments) {
+              if ((!userComment || userComment.needsRevision) && shouldUserWriteComments) {
                 return (
                   <View>
-                    <ThemedText style={styles.commentPrompt}>
-                      {t('game.ui.writeAnonymousCommentAbout', { locale, name: `${game.currentRound && joinIndexById[game.currentRound.targetUserId] ? `${joinIndexById[game.currentRound.targetUserId]}. ` : ''}${getDisplayName(game.currentRound!.targetUserName)}` })}
-                    </ThemedText>
+                    {userComment?.needsRevision ? (
+                      <ThemedText style={styles.commentSentBackBanner}>
+                        {t('game.ui.commentSentBackBanner', { locale })}
+                      </ThemedText>
+                    ) : (
+                      <ThemedText style={styles.commentPrompt}>
+                        {t('game.ui.writeAnonymousCommentAbout', { locale, name: `${game.currentRound && joinIndexById[game.currentRound.targetUserId] ? `${joinIndexById[game.currentRound.targetUserId]}. ` : ''}${getDisplayName(game.currentRound!.targetUserName)}` })}
+                      </ThemedText>
+                    )}
                     <TextInput
                       style={[
                         styles.commentInput,
@@ -632,21 +674,19 @@ export const ActivePhase: React.FC<Props> = ({
                     <ThemedText type="subtitle" style={styles.commentsTitle}>
                       {t('game.ui.allComments', { locale })}
                     </ThemedText>
-                    {visibleComments.map((comment: Comment, i: number) => {
-                      const isActive = !reviewFinished && i === activeIndex;
+                    {(game.currentRound.comments ?? []).map((comment: Comment) => {
+                      const isActive = comment.id === activeComment?.id;
                       const myRating = comment.targetReactionPoints?.[user?.uid ?? ''];
                       return (
                         <View key={comment.id} style={styles.commentCard}>
                           <WithAnonymousAvatar avatarId={commentAvatars[comment.id]}>
                             <ThemedText style={styles.commentText}>{comment.text}</ThemedText>
                           </WithAnonymousAvatar>
-                          {comment.points !== undefined && (
+                          {comment.points !== undefined ? (
                             <ThemedText style={styles.pointsGivenText}>
                               {t('game.ui.points', { locale })} {comment.points}
                             </ThemedText>
-                          )}
-
-                          {isActive && comment.points !== undefined && (
+                          ) : isActive ? (
                             myRating === undefined ? (
                               <View style={styles.decisionButtonsRow}>
                                 <TouchableOpacity
@@ -681,11 +721,13 @@ export const ActivePhase: React.FC<Props> = ({
                                 {t('game.ui.yourReactionRating', { locale, points: myRating })}
                               </ThemedText>
                             )
-                          )}
-
-                          {isActive && comment.points === undefined && (
+                          ) : isCommentFullyRated(comment) ? (
                             <ThemedText style={styles.waitingSubtext}>
-                              {t('game.ui.waitingForReactionRatings', { locale })}
+                              {t('game.ui.reactionsCompleteWaitingTurn', { locale })}
+                            </ThemedText>
+                          ) : (
+                            <ThemedText style={styles.waitingSubtext}>
+                              {t('game.ui.notYetActivated', { locale })}
                             </ThemedText>
                           )}
                         </View>
@@ -735,11 +777,16 @@ adminButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
 checklistContainer: { marginBottom: 12, padding: 12, borderRadius: 8, backgroundColor: GameColors.cardBg },
 checklistTitle: { textAlign: 'center', fontWeight: '600', fontSize: 14, marginBottom: 4, fontFamily: Fonts.sans },
 checklistProgress: { textAlign: 'center', fontSize: 12, opacity: 0.7, marginBottom: 8, fontFamily: Fonts.sans },
-checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+checklistItem: { paddingVertical: 4 },
+checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 checklistNumber: { width: 20, fontSize: 13, opacity: 0.6, fontFamily: Fonts.sans },
 checklistName: { flex: 1, fontSize: 13, fontWeight: '500', fontFamily: Fonts.sans },
 checklistStatusDone: { fontSize: 12, fontWeight: '600', color: GameColors.green, fontFamily: Fonts.sans },
 checklistStatusPending: { fontSize: 12, fontWeight: '600', opacity: 0.5, fontFamily: Fonts.sans },
+checklistStatusRevision: { fontSize: 12, fontWeight: '600', color: GameColors.admin, fontFamily: Fonts.sans },
+checklistCommentBlock: { paddingLeft: 28, marginTop: 2 },
+checklistCommentText: { fontSize: 13, opacity: 0.8, fontFamily: Fonts.sans },
+checklistSendBackLink: { fontSize: 12, color: GameColors.danger, fontWeight: '600', marginTop: 2, fontFamily: Fonts.sans },
 adminButton: { flexDirection: 'row', borderRadius: 999, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', paddingVertical: 14, paddingHorizontal: 24, gap: 8, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 }, android: { elevation: 4 } }) },
 buttonText: { color: GameColors.white, fontWeight: '600', fontSize: 15, fontFamily: Fonts.sans },
 targetView: { marginBottom: 20 },
@@ -769,6 +816,7 @@ submitCommentButton: { flexDirection: 'row', borderRadius: 999, alignItems: 'cen
     fontFamily: Fonts.sans,
   },
   commentPrompt: { marginBottom: 12, fontSize: 16, fontFamily: Fonts.sans },
+  commentSentBackBanner: { marginBottom: 12, fontSize: 14, fontWeight: '600', color: GameColors.admin, fontFamily: Fonts.sans },
   commentInput: { minHeight: 100, borderRadius: 8, padding: 12, fontSize: 16, marginBottom: 4, borderWidth: 1, textAlignVertical: 'top', fontFamily: Fonts.sans, ...Platform.select({ ios: { shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }, android: { elevation: 2 } }) },
   charCounter: { fontSize: 12, opacity: 0.5, textAlign: 'right', marginBottom: 12, fontFamily: Fonts.sans },
   charCounterWarning: { opacity: 1, color: '#A63D2A' },

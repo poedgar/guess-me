@@ -2,7 +2,6 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import React from 'react';
 import { Game } from '@mirror/shared';
 import { useAuth } from '../../contexts/AuthContext';
-import { HeaderLogo } from '../ui/HeaderLogo';
 import { LanguageSelector } from '../ui/LanguageSelector';
 import { SoundToggle } from '../ui/SoundToggle';
 
@@ -45,10 +44,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
 
   return (
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 mb-6 rounded-lg">
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-20 h-20">
-          <HeaderLogo variant="icon" />
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <div className="flex gap-3">
           <LanguageSelector />
           <SoundToggle />

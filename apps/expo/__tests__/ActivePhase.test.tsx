@@ -34,7 +34,7 @@ jest.mock('@/contexts/GameContext', () => ({
     submitComment: jest.fn(),
     showComments: jest.fn(),
     awardCommentPoints: jest.fn(),
-    activateNextComment: jest.fn(),
+    activateComment: jest.fn(),
     rateTargetReaction: (...args: unknown[]) => mockRateTargetReaction(...args),
     startGuessingPhase: jest.fn(),
   }),
@@ -143,7 +143,8 @@ function makeReviewInProgressGame(overrides: Record<string, unknown> = {}) {
       comments: [
         // Authored by the viewing player themselves — the design allows a
         // comment's own author to rate the target's reaction to it too.
-        { id: 'c1', text: 'Great player', authorId: PLAYER_UID, points: 1, targetReactionPoints: {} },
+        // Rating no longer depends on the target having decided points first.
+        { id: 'c1', text: 'Great player', authorId: PLAYER_UID, points: undefined, targetReactionPoints: {} },
       ],
       commentsVisible: true,
       pointsGiven: false,

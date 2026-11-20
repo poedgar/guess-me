@@ -28,11 +28,15 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
     updateTargetSelectionMode,
     updateShowGuessResults,
     updateIdeaIncognitoMode,
+    updateMyName,
     setGameType,
   } = useGame();
   const { showAlert, AlertModal } = useAlert();
   const { t } = useLanguage();
   const [isStarting, setIsStarting] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
 
   const isAdmin = user?.uid === game.adminId;
   const isClashAdmin = isAdmin && game.gameType === 'clash';
@@ -99,6 +103,32 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
     () => !(game.ideaIncognitoMode ?? true),
   );
 
+  const startEditingName = (currentName: string) => {
+    setNameInput(currentName);
+    setIsEditingName(true);
+  };
+
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setNameInput('');
+  };
+
+  const handleSaveName = async () => {
+    try {
+      setIsSavingName(true);
+      await updateMyName(nameInput);
+      setIsEditingName(false);
+      setNameInput('');
+    } catch (error) {
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.updateSettingsFailed'),
+      );
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
   return (
     <>
       {AlertModal}
@@ -141,24 +171,69 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             {t('game.ui.participants')} ({game.participants?.length ?? 0})
           </p>
           <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
-            {game.participants?.map((p, idx) => (
-              <div
-                key={p.userId}
-                data-cy="participant-row"
-                data-cy-user-id={p.userId}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                  p.userId === game.adminId
-                    ? 'bg-game-orange/10 border border-game-orange/30'
-                    : 'bg-gray-50 dark:bg-gray-700'
-                }`}
-              >
-                <span className="text-sm text-gray-500 dark:text-gray-400 w-5">{idx + 1}.</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
-                  {getDisplayName(p.userName, game.showSurnames ?? false)}
-                  {p.userId === game.adminId && ' 👑'}
-                </span>
-              </div>
-            ))}
+            {game.participants?.map((p, idx) => {
+              const isSelf = p.userId === user?.uid;
+              return (
+                <div
+                  key={p.userId}
+                  data-cy="participant-row"
+                  data-cy-user-id={p.userId}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                    p.userId === game.adminId
+                      ? 'bg-game-orange/10 border border-game-orange/30'
+                      : 'bg-gray-50 dark:bg-gray-700'
+                  }`}
+                >
+                  <span className="text-sm text-gray-500 dark:text-gray-400 w-5">{idx + 1}.</span>
+                  {isSelf && isEditingName ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        maxLength={40}
+                        autoFocus
+                        data-cy="edit-name-input"
+                        className="flex-1 text-sm px-2 py-1 rounded border border-game-blue bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveName}
+                        disabled={isSavingName || !nameInput.trim()}
+                        data-cy="save-name-button"
+                        className="text-xs font-semibold text-game-green hover:opacity-80 disabled:opacity-50"
+                      >
+                        {isSavingName ? t('common.loading') : t('common.save')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditingName}
+                        disabled={isSavingName}
+                        className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
+                      {getDisplayName(p.userName, game.showSurnames ?? false)}
+                      {p.userId === game.adminId && ' 👑'}
+                      {isSelf && (
+                        <button
+                          type="button"
+                          onClick={() => startEditingName(p.userName)}
+                          title={t('game.ui.editName')}
+                          data-cy="edit-name-button"
+                          className="ml-2 text-xs text-gray-400 hover:text-game-blue"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Game type selector */}

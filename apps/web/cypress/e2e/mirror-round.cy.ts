@@ -126,12 +126,12 @@ describe('Full mirror-mode round', () => {
         cy.get('[data-cy=show-comments-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Target decides on the (only, so active) comment ──────────────
+        // ── Target activates the (only) comment for reaction rating ─────
         cy.signInAsTestUser(targetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
-        cy.get('[data-cy=award-comment-points-button][data-cy-points=1]').click();
-        cy.get('[data-cy=award-comment-points-button]').should('not.exist');
+        cy.get('[data-cy=activate-comment-button]').click();
+        cy.get('[data-cy=activate-comment-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
         // ── Non-target rates the target's reaction to that comment ──────
@@ -139,9 +139,6 @@ describe('Full mirror-mode round', () => {
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=rate-target-reaction-button][data-cy-points=1]').click();
-        // The admin (signed into next) needs the active comment's review to
-        // already be fully resolved so activate-next-comment-button isn't
-        // clicked while still disabled.
         cy.get('[data-cy=rate-target-reaction-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
@@ -150,17 +147,21 @@ describe('Full mirror-mode round', () => {
           cy.wrap($row).find('[data-cy=leaderboard-total-points]').should('have.text', '0');
         });
 
-        // ── Admin advances past the last comment, finishing the review ──
-        cy.signInAsTestUser('test1');
+        // ── Target awards points to the comment, finishing the review ──
+        cy.signInAsTestUser(targetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
-        cy.get('[data-cy=activate-next-comment-button]').click();
+        cy.get('[data-cy=award-comment-points-button][data-cy-points=1]').click();
         // This was the only/last comment, so this click flips pointsGiven
-        // and replaces activate-next-comment-button with start-guessing-button.
-        cy.get('[data-cy=activate-next-comment-button]').should('not.exist');
+        // and replaces award-comment-points-button with start-guessing-button
+        // (for the admin, once they sign in next).
+        cy.get('[data-cy=award-comment-points-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
         // ── Admin starts guessing phase ─────────────────────────────────
+        cy.signInAsTestUser('test1');
+        cy.get('[data-cy=game-input]').type(gameId);
+        cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=start-guessing-button]').click();
         // Once status flips to 'guessing_phase', ActivePhase (and this
         // button) is replaced by GuessingPhase entirely.

@@ -55,6 +55,44 @@ class CommentController extends Controller
         return redirect("/games/{$game->id}");
     }
 
+    public function activate(Request $request, Game $game, Comment $comment): RedirectResponse
+    {
+        $this->authorize('view', $game);
+
+        if ($comment->round->game_id !== $game->id) {
+            abort(404);
+        }
+
+        try {
+            $this->comments->activateComment($comment->round, $comment, $request->user());
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['comment' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+
+    public function sendBack(Request $request, Game $game, Comment $comment): RedirectResponse
+    {
+        $this->authorize('manage', $game);
+
+        if ($comment->round->game_id !== $game->id) {
+            abort(404);
+        }
+
+        try {
+            $this->comments->sendCommentBackForEdit($comment, $request->user());
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['comment' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+
     public function rateTargetReaction(Request $request, Game $game, Comment $comment): RedirectResponse
     {
         $this->authorize('view', $game);

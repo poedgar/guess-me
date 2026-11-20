@@ -59,6 +59,19 @@ test('a second comment from the same author in the same round is rejected', func
         ->toThrow(RuntimeException::class, 'You have already submitted a comment for this round');
 });
 
+test('resubmitting over a comment sent back for revision updates it in place', function () {
+    ['author' => $author, 'round' => $round] = makeActiveGame();
+    $original = app(CommentPhaseService::class)->submitComment($round, $author, 'First draft');
+    $original->update(['needs_revision' => true]);
+
+    $resubmitted = app(CommentPhaseService::class)->submitComment($round->fresh(), $author, 'Revised draft');
+
+    expect($resubmitted->id)->toBe($original->id);
+    expect($resubmitted->text)->toBe('Revised draft');
+    expect($resubmitted->needs_revision)->toBeFalse();
+    expect(Comment::where('round_id', $round->id)->count())->toBe(1);
+});
+
 test('a comment cannot be submitted once comments have already been made visible for the round', function () {
     ['author' => $author, 'round' => $round] = makeActiveGame();
     $round->update(['comments_visible' => true]);
@@ -74,4 +87,17 @@ test('POST comments route stores a comment for the current round', function () {
 
     $response->assertRedirect("/games/{$game->id}");
     expect(Comment::where('round_id', $round->id)->where('author_id', $author->id)->exists())->toBeTrue();
+});
+
+test('POST comments route updates a sent-back comment in place instead of creating a second one', function () {
+    ['game' => $game, 'author' => $author, 'round' => $round] = makeActiveGame();
+    $original = app(CommentPhaseService::class)->submitComment($round, $author, 'First draft');
+    $original->update(['needs_revision' => true]);
+
+    $response = $this->actingAs($author)->post("/games/{$game->id}/comments", ['text' => 'Revised draft.']);
+
+    $response->assertRedirect("/games/{$game->id}");
+    expect(Comment::where('round_id', $round->id)->count())->toBe(1);
+    expect($original->fresh()->text)->toBe('Revised draft.');
+    expect($original->fresh()->needs_revision)->toBeFalse();
 });

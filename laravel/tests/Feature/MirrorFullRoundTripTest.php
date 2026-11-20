@@ -32,9 +32,9 @@ test('a full Mirror round trip: create, join, start, comment, award, guess, and 
 
     $comment = $round->fresh()->comments()->sole();
     $roundTarget = User::find($round->target_user_id);
-    $this->actingAs($roundTarget)->post("/games/{$game->id}/comment-points/{$comment->id}", ['points' => 1])->assertRedirect();
+    $this->actingAs($roundTarget)->post("/games/{$game->id}/comments/{$comment->id}/activate")->assertRedirect();
     $this->actingAs($commenter)->post("/games/{$game->id}/comments/{$comment->id}/rate-reaction", ['rating' => 1])->assertRedirect();
-    $this->actingAs($admin)->post("/games/{$game->id}/activate-next-comment")->assertRedirect();
+    $this->actingAs($roundTarget)->post("/games/{$game->id}/comment-points/{$comment->id}", ['points' => 1])->assertRedirect();
 
     // Guessing phase
     $this->actingAs($admin)->post("/games/{$game->id}/start-guessing")->assertRedirect();

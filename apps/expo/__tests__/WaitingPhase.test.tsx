@@ -75,6 +75,7 @@ jest.mock('@/constants/theme', () => ({
     inputBg: '#f2f2f2', inputDark: '#1c1c1e', placeholderLight: '#ccc',
   },
   StatusColors: { waiting: '#FF9500' },
+  themedInput: () => ({ style: {}, placeholderTextColor: '#999' }),
 }));
 
 const { WaitingPhase } = require('../components/game/mirror/WaitingPhase');

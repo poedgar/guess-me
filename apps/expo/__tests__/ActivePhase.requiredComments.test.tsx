@@ -38,7 +38,7 @@ jest.mock('@/contexts/GameContext', () => ({
     submitComment: jest.fn(),
     showComments: mockShowComments,
     awardCommentPoints: jest.fn(),
-    activateNextComment: jest.fn(),
+    activateComment: jest.fn(),
     rateTargetReaction: jest.fn(),
     startGuessingPhase: jest.fn(),
   }),

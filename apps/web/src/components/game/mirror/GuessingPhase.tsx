@@ -291,7 +291,7 @@ export const GuessingPhase: React.FC<GuessingPhaseProps> = ({ game }) => {
 
           {/* Admin controls */}
           {isAdmin && (
-            <div className="mt-6 flex justify-center" ref={adminScrollRef}>
+            <div className="mt-6 flex flex-col items-center" ref={adminScrollRef}>
               {singleTargetId && targetSubmitted ? (
                 <button
                   type="button"

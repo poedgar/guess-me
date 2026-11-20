@@ -40,6 +40,7 @@ const MAPPING = {
   'speaker.wave.2.fill': 'volume-up',
   'speaker.slash.fill': 'volume-off',
   'hand.point.up.left.fill': 'touch-app',
+  'pencil': 'edit',
 } as const;
 
 /**

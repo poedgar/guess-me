@@ -393,8 +393,11 @@ describe('submitComment — uses runTransaction to prevent concurrent comment lo
 describe('awardCommentPoints — uses runTransaction to prevent concurrent point loss', () => {
   const mockTxn = { get: jest.fn(), update: jest.fn() };
 
-  const COMMENT_A = { id: 'c1', authorId: 'author-a', text: 'A', submittedAt: new Date() };
-  const COMMENT_B = { id: 'c2', authorId: 'author-b', text: 'B', submittedAt: new Date() };
+  // Every comment already has full reaction ratings from the required voter
+  // (player-uid, the only non-target participant) — awardCommentPoints now
+  // requires this before it will award points to any comment.
+  const COMMENT_A = { id: 'c1', authorId: 'author-a', text: 'A', submittedAt: new Date(), targetReactionPoints: { 'player-uid': 1 } };
+  const COMMENT_B = { id: 'c2', authorId: 'author-b', text: 'B', submittedAt: new Date(), targetReactionPoints: { 'player-uid': 1 } };
 
   const roundWithTwoComments = {
     ...ACTIVE_ROUND,

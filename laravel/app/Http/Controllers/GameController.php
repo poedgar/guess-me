@@ -68,6 +68,23 @@ class GameController extends Controller
         return redirect('/dashboard');
     }
 
+    public function updateName(Request $request, Game $game): RedirectResponse
+    {
+        $this->authorize('view', $game);
+
+        $validated = $request->validate(['name' => ['required', 'string', 'max:255']]);
+
+        try {
+            $this->lifecycle->updateMyName($game, $request->user(), $validated['name']);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['name' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+
     public function join(Request $request): RedirectResponse
     {
         $validated = $request->validate(['code' => ['required', 'string']]);

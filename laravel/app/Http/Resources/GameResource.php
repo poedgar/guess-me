@@ -46,24 +46,34 @@ class GameResource extends JsonResource
                 'guessesFinalized' => $currentRound->guesses_finalized,
                 'targetPoints' => $currentRound->target_points,
                 'targetCorrectGuesses' => $currentRound->target_correct_guesses,
-                'comments' => $currentRound->comments()->with(['author', 'reactionRatings'])
-                    ->orderBy('display_order')->orderBy('id')->get()->map(function ($c) use ($currentRound, $userId) {
-                        $myRating = $c->reactionRatings->firstWhere('rater_id', $userId);
+                'comments' => (function () use ($currentRound, $userId) {
+                    $requiredRaterIds = $this->participants()
+                        ->where('user_id', '!=', $currentRound->target_user_id)
+                        ->when(! $this->admin_writes_comments, fn ($q) => $q->where('user_id', '!=', $this->admin_id))
+                        ->pluck('user_id');
 
-                        return [
-                            'id' => $c->id,
-                            // Gated on guesses_finalized, not comments_visible: comments_visible flips
-                            // true as soon as the admin reveals comments (still in the comment-writing
-                            // phase) and stays true throughout guessing_phase. Using it here would hand
-                            // the target the answer key while they're actively guessing authorship.
-                            'authorId' => ($currentRound->guesses_finalized || $c->author_id === $userId || $this->admin_id === $userId) ? $c->author_id : null,
-                            'text' => ($currentRound->comments_visible || $c->author_id === $userId || $this->admin_id === $userId) ? $c->text : null,
-                            'points' => $c->points,
-                            // Viewer-scoped only — nobody else's individual reaction votes are
-                            // exposed, same privacy posture as guessedAuthorId/correct below.
-                            'myReactionRating' => $myRating ? (int) $myRating->rating : null,
-                        ];
-                    }),
+                    return $currentRound->comments()->with(['author', 'reactionRatings'])
+                        ->orderBy('display_order')->orderBy('id')->get()
+                        ->map(function ($c) use ($currentRound, $userId, $requiredRaterIds) {
+                            $myRating = $c->reactionRatings->firstWhere('rater_id', $userId);
+
+                            return [
+                                'id' => $c->id,
+                                // Gated on guesses_finalized, not comments_visible: comments_visible flips
+                                // true as soon as the admin reveals comments (still in the comment-writing
+                                // phase) and stays true throughout guessing_phase. Using it here would hand
+                                // the target the answer key while they're actively guessing authorship.
+                                'authorId' => ($currentRound->guesses_finalized || $c->author_id === $userId || $this->admin_id === $userId) ? $c->author_id : null,
+                                'text' => ($currentRound->comments_visible || $c->author_id === $userId || $this->admin_id === $userId) ? $c->text : null,
+                                'points' => $c->points,
+                                // Viewer-scoped only — nobody else's individual reaction votes are
+                                // exposed, same privacy posture as guessedAuthorId/correct below.
+                                'myReactionRating' => $myRating ? (int) $myRating->rating : null,
+                                'reactionsComplete' => $requiredRaterIds->diff($c->reactionRatings->pluck('rater_id'))->isEmpty(),
+                                'needsRevision' => $c->needs_revision,
+                            ];
+                        });
+                })(),
                 'guessingPossibleAuthors' => $currentRound->guessing_possible_authors ?? [],
                 'guesses' => $currentRound->guesses->map(fn ($g) => [
                     'commentId' => $g->comment_id,

@@ -18,6 +18,7 @@ import {
   Unsubscribe,
   updateDoc,
 } from "firebase/firestore";
+import { updateProfile } from "firebase/auth";
 import React, {
   createContext,
   ReactNode,
@@ -147,8 +148,10 @@ export interface Round {
   commentsVisible: boolean;
   pointsGiven: boolean;
   startedAt: Date | Timestamp;
-  // Index into `comments` of the comment currently under sequential review.
-  // Set to 0 when commentsVisible flips true; meaningless once pointsGiven.
+  // Index into `comments` of the comment currently active for reaction
+  // voting, or undefined if none is active — true at the start of review,
+  // between every activation, and once every comment has full reaction
+  // ratings (the award-points sub-phase needs no active comment at all).
   activeCommentIndex?: number;
   // Derived aggregates of every comment's targetReactionPoints votes this
   // round (see Comment.targetReactionPoints) — kept for playerSimilarity.ts
@@ -172,6 +175,9 @@ export interface Comment {
   // Per-voter 0/1 rating of the target's reaction to THIS comment, from
   // every participant except the target (comment's own author included).
   targetReactionPoints?: { [voterId: string]: number };
+  // Set by the admin before comments are revealed, to send this comment
+  // back to its author for editing. Cleared when the author resubmits.
+  needsRevision?: boolean;
 }
 
 export interface GuessingData {
@@ -265,12 +271,14 @@ interface GameContextType {
     adminWritesComments?: boolean,
   ) => Promise<string | void>;
   leaveGame: () => Promise<void>;
+  updateMyName: (newName: string) => Promise<void>;
   refreshGame: (gameId: string) => Promise<void>;
   startGame: () => Promise<void>;
   submitComment: (commentText: string) => Promise<void>;
   showComments: () => Promise<void>;
+  sendCommentBackForEdit: (commentId: string) => Promise<void>;
   awardCommentPoints: (commentId: string, points: 0 | 1) => Promise<void>;
-  activateNextComment: () => Promise<void>;
+  activateComment: (commentId: string) => Promise<void>;
   rateTargetReaction: (commentId: string, points: 0 | 1) => Promise<void>;
   startNextRound: () => Promise<void>;
   startGuessingPhase: () => Promise<void>;
@@ -642,6 +650,63 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const updateMyName = async (newName: string): Promise<void> => {
+    if (!user) {
+      throw new Error("You must be signed in to change your name");
+    }
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      throw new Error("Name cannot be empty");
+    }
+    if (!currentGame) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, "games", currentGame.id);
+
+      await runTransaction(db, async (transaction) => {
+        const gameSnap = await transaction.get(gameRef);
+        if (!gameSnap.exists()) {
+          return;
+        }
+
+        const gameData = gameSnap.data() as Game;
+        if (gameData.status !== "waiting") {
+          throw new Error("This setting can only be updated before the game starts");
+        }
+
+        const updatedParticipants = (gameData.participants || []).map((p) =>
+          p.userId === user.uid ? { ...p, userName: trimmed } : p,
+        );
+
+        const updates: Record<string, unknown> = {
+          participants: updatedParticipants,
+        };
+        if (gameData.adminId === user.uid) {
+          updates.adminName = trimmed;
+        }
+
+        transaction.update(gameRef, updates);
+      });
+
+      try {
+        await updateProfile(user, { displayName: trimmed });
+      } catch (error) {
+        // The in-game name is already updated — a failure to persist the
+        // display name to the Auth profile shouldn't be surfaced as a
+        // failure of the rename action itself.
+        console.error("Failed to update auth display name:", error);
+      }
+    } catch (error: unknown) {
+      console.error("Error updating name:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const refreshGame = async (gameId: string): Promise<void> => {
     try {
       const gameRef = doc(db, "games", gameId);
@@ -762,19 +827,28 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const existingComment = round.comments?.find(
           (c) => c.authorId === liveUid,
         );
-        if (existingComment) {
+        if (existingComment && !existingComment.needsRevision) {
           throw new Error("You have already submitted a comment for this round");
         }
 
-        const newComment: Comment = {
-          id: `${Date.now()}-${liveUid}`,
-          authorId: liveUid,
-          text: commentText.trim(),
-          submittedAt: new Date(),
-        };
+        const updatedComments = existingComment
+          ? (round.comments || []).map((c) =>
+              c.authorId === liveUid
+                ? { ...c, text: commentText.trim(), submittedAt: new Date(), needsRevision: false }
+                : c,
+            )
+          : [
+              ...(round.comments || []),
+              {
+                id: `${Date.now()}-${liveUid}`,
+                authorId: liveUid,
+                text: commentText.trim(),
+                submittedAt: new Date(),
+              } as Comment,
+            ];
 
         transaction.update(gameRef, {
-          "currentRound.comments": [...(round.comments || []), newComment],
+          "currentRound.comments": updatedComments,
         });
       });
     } catch (error: unknown) {
@@ -793,6 +867,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       .filter((p) => p.userId !== round.targetUserId)
       .filter((p) => (gameData.adminWritesComments ?? false) || p.userId !== gameData.adminId)
       .map((p) => p.userId);
+
+  const isCommentFullyRated = (gameData: Game, round: Round, comment: Comment): boolean => {
+    const requiredVoterIds = getRequiredReactionVoterIds(gameData, round);
+    const voted = comment.targetReactionPoints ?? {};
+    return requiredVoterIds.every((id) => voted[id] !== undefined);
+  };
+
+  const allCommentsFullyRated = (gameData: Game, round: Round): boolean =>
+    round.comments.every((c) => isCommentFullyRated(gameData, round, c));
 
   const showComments = async (): Promise<void> => {
     if (!currentGame || !user || user.uid !== currentGame.adminId) {
@@ -828,10 +911,49 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       await updateDoc(gameRef, {
         "currentRound.comments": shuffledComments,
         "currentRound.commentsVisible": true,
-        "currentRound.activeCommentIndex": 0,
       });
     } catch (error: unknown) {
       console.error("Error showing comments:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendCommentBackForEdit = async (commentId: string): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can send a comment back for editing");
+    }
+    if (!currentGame.currentRound) {
+      throw new Error("No active round");
+    }
+    if (currentGame.currentRound.commentsVisible) {
+      throw new Error("Cannot send a comment back once comments are visible");
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, "games", currentGame.id);
+      const gameDoc = await getDoc(gameRef);
+      if (!gameDoc.exists()) {
+        throw new Error("Game not found");
+      }
+      const gameData = gameDoc.data() as Game;
+      const round = gameData.currentRound;
+      if (!round) {
+        throw new Error("No active round");
+      }
+      const comment = round.comments.find((c) => c.id === commentId);
+      if (!comment) {
+        throw new Error("Comment not found");
+      }
+
+      const updatedComments = round.comments.map((c) =>
+        c.id === commentId ? { ...c, needsRevision: true } : c,
+      );
+      await updateDoc(gameRef, { "currentRound.comments": updatedComments });
+    } catch (error: unknown) {
+      console.error("Error sending comment back:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -868,24 +990,28 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           throw new Error("No active round");
         }
 
-        const activeIndex = currentRound.activeCommentIndex ?? 0;
-        const activeComment = currentRound.comments[activeIndex];
-        if (!activeComment || activeComment.id !== commentId) {
-          throw new Error("You can only decide on the currently active comment");
+        const comment = currentRound.comments.find((c) => c.id === commentId);
+        if (!comment) {
+          throw new Error("Comment not found");
         }
-        if (activeComment.points !== undefined) {
+        if (comment.points !== undefined) {
           throw new Error("You already decided on this comment");
         }
+        if (!allCommentsFullyRated(gameData, currentRound)) {
+          throw new Error("You can only give points once everyone has rated your reactions to every comment");
+        }
 
-        const updatedComments = currentRound.comments.map((comment, i) =>
-          i === activeIndex ? { ...comment, points } : comment,
+        const updatedComments = currentRound.comments.map((c) =>
+          c.id === commentId ? { ...c, points } : c,
         );
 
-        const authorCurrentScore = gameData.scores?.[activeComment.authorId] || 0;
+        const authorCurrentScore = gameData.scores?.[comment.authorId] || 0;
+        const allDecided = updatedComments.every((c) => c.points !== undefined);
 
         transaction.update(gameRef, {
           "currentRound.comments": updatedComments,
-          [`scores.${activeComment.authorId}`]: authorCurrentScore + points,
+          [`scores.${comment.authorId}`]: authorCurrentScore + points,
+          ...(allDecided ? { "currentRound.pointsGiven": true } : {}),
         });
       });
     } catch (error: unknown) {
@@ -896,11 +1022,15 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
-  const activateNextComment = async (): Promise<void> => {
-    if (!currentGame || !user || user.uid !== currentGame.adminId) {
-      throw new Error("Only the admin can activate the next comment");
+  const activateComment = async (commentId: string): Promise<void> => {
+    if (!auth.currentUser) throw new Error("You must be signed in");
+    if (!currentGame || !currentGame.currentRound) {
+      throw new Error("No active round");
     }
-    if (!currentGame.currentRound?.commentsVisible) {
+    if (auth.currentUser.uid !== currentGame.currentRound.targetUserId) {
+      throw new Error("Only the target can activate a comment");
+    }
+    if (!currentGame.currentRound.commentsVisible) {
       throw new Error("Review has not started");
     }
     if (currentGame.currentRound.pointsGiven) {
@@ -919,33 +1049,29 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const round = gameData.currentRound;
         if (!round) throw new Error("No active round on server");
 
-        const activeIndex = round.activeCommentIndex ?? 0;
-        const activeComment = round.comments[activeIndex];
-        if (!activeComment) throw new Error("No active comment");
-
-        if (activeComment.points === undefined) {
-          throw new Error("Target has not decided on this comment yet");
+        const comment = round.comments.find((c) => c.id === commentId);
+        if (!comment) throw new Error("Comment not found");
+        if (isCommentFullyRated(gameData, round, comment)) {
+          throw new Error("This comment's reactions are already complete");
         }
 
-        const requiredVoterIds = getRequiredReactionVoterIds(gameData, round);
-        const voted = activeComment.targetReactionPoints ?? {};
-        const missing = requiredVoterIds.filter((id) => voted[id] === undefined);
-        if (missing.length > 0) {
-          throw new Error(
-            `Waiting for ${missing.length} player(s) to rate the target's reaction`,
-          );
+        const currentActive = round.activeCommentIndex !== undefined
+          ? round.comments[round.activeCommentIndex]
+          : undefined;
+        if (currentActive) {
+          if (currentActive.id === commentId) {
+            throw new Error("This comment is already active");
+          }
+          if (!isCommentFullyRated(gameData, round, currentActive)) {
+            throw new Error("You must finish rating the active comment before activating another");
+          }
         }
 
-        if (activeIndex >= round.comments.length - 1) {
-          transaction.update(gameRef, { "currentRound.pointsGiven": true });
-        } else {
-          transaction.update(gameRef, {
-            "currentRound.activeCommentIndex": activeIndex + 1,
-          });
-        }
+        const targetIndex = round.comments.findIndex((c) => c.id === commentId);
+        transaction.update(gameRef, { "currentRound.activeCommentIndex": targetIndex });
       });
     } catch (error: unknown) {
-      console.error("Error activating next comment:", error);
+      console.error("Error activating comment:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -965,8 +1091,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw new Error("Admin is not participating this game");
     }
 
-    const activeIndex = round.activeCommentIndex ?? 0;
-    const activeComment = round.comments[activeIndex];
+    const activeComment = round.activeCommentIndex !== undefined
+      ? round.comments[round.activeCommentIndex]
+      : undefined;
     if (!activeComment || activeComment.id !== commentId) {
       throw new Error("You can only rate the currently active comment");
     }
@@ -977,8 +1104,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     // Keep previous state to rollback on failure
     const prevGame = currentGame;
 
-    const updatedComments = round.comments.map((c, i) =>
-      i === activeIndex
+    const updatedComments = round.comments.map((c) =>
+      c.id === commentId
         ? { ...c, targetReactionPoints: { ...(c.targetReactionPoints ?? {}), [userId]: points } }
         : c,
     );
@@ -1014,8 +1141,9 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         const serverRound = gameData.currentRound;
         if (!serverRound) throw new Error("No active round on server");
 
-        const serverIndex = serverRound.activeCommentIndex ?? 0;
-        const serverComment = serverRound.comments[serverIndex];
+        const serverComment = serverRound.activeCommentIndex !== undefined
+          ? serverRound.comments[serverRound.activeCommentIndex]
+          : undefined;
         if (!serverComment || serverComment.id !== commentId) {
           throw new Error("This comment is no longer active");
         }
@@ -1023,8 +1151,8 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           throw new Error("You already rated this comment");
         }
 
-        const serverUpdatedComments = serverRound.comments.map((c, i) =>
-          i === serverIndex
+        const serverUpdatedComments = serverRound.comments.map((c) =>
+          c.id === commentId
             ? { ...c, targetReactionPoints: { ...(c.targetReactionPoints ?? {}), [userId]: points } }
             : c,
         );
@@ -2836,12 +2964,14 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       joinGame,
       enterGame,
       leaveGame,
+      updateMyName,
       refreshGame,
       startGame,
       submitComment,
       showComments,
+      sendCommentBackForEdit,
       awardCommentPoints,
-      activateNextComment,
+      activateComment,
       rateTargetReaction,
       startNextRound,
       startGuessingPhase,

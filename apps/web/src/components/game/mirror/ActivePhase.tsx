@@ -1,8 +1,8 @@
 import { useLanguage } from '../../../contexts/LanguageContext';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Game, assignAnonymousAvatars } from '@mirror/shared';
 import { AnonymousAvatar } from '../../ui/AnonymousAvatar';
-import { useGame } from '../../../contexts/GameContext';
+import { Comment, useGame } from '../../../contexts/GameContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useSound } from '../../../contexts/SoundContext';
 import { useAlert } from '../../../hooks/useAlert';
@@ -25,8 +25,9 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     loading,
     submitComment,
     showComments,
+    sendCommentBackForEdit,
     awardCommentPoints,
-    activateNextComment,
+    activateComment,
     rateTargetReaction,
     startGuessingPhase,
     startNextRound,
@@ -40,7 +41,8 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isDeciding, setIsDeciding] = useState(false);
   const [isRating, setIsRating] = useState(false);
-  const [isActivatingNext, setIsActivatingNext] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
+  const [isSendingBack, setIsSendingBack] = useState(false);
   const [isStartingNextRound, setIsStartingNextRound] = useState(false);
 
   const currentRound = game.currentRound;
@@ -55,8 +57,9 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     `${game.id}:mirror:${targetUserId}`,
   );
   const reviewFinished = currentRound?.pointsGiven ?? false;
-  const activeIndex = currentRound?.activeCommentIndex ?? 0;
-  const activeComment = currentRound?.comments?.[activeIndex];
+  const activeComment = currentRound?.activeCommentIndex !== undefined
+    ? currentRound?.comments?.[currentRound.activeCommentIndex]
+    : undefined;
 
   // Hooks must run unconditionally on every render (Rules of Hooks), so these
   // are declared before the `!currentRound` early return below, with
@@ -65,20 +68,32 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
   // is never the round's target in mirror mode, so those two conditions
   // overlap for every admin, every round).
   const targetScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRound?.roundNumber ?? 'none'}:target:${commentsVisible}:${activeIndex}:${reviewFinished}`,
+    `${currentRound?.roundNumber ?? 'none'}:target:${commentsVisible}:${activeComment?.id ?? 'none'}:${reviewFinished}`,
     'start',
     PULSE_COLORS.green,
   );
   const otherScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRound?.roundNumber ?? 'none'}:other:${commentsVisible}:${activeIndex}:${reviewFinished}`,
+    `${currentRound?.roundNumber ?? 'none'}:other:${commentsVisible}:${activeComment?.id ?? 'none'}:${reviewFinished}`,
     'start',
     PULSE_COLORS.green,
   );
   const adminScrollRef = useScrollIntoViewOnChange<HTMLDivElement>(
-    `${currentRound?.roundNumber ?? 'none'}:admin:${commentsVisible}:${activeIndex}`,
+    `${currentRound?.roundNumber ?? 'none'}:admin:${commentsVisible}`,
     'center',
     PULSE_COLORS.green,
   );
+
+  const userComment = currentRound?.comments?.find(c => c.authorId === user?.uid);
+
+  // Pre-fills the form with the original text the moment the admin sends
+  // this author's comment back for editing, so they revise rather than
+  // retype from scratch.
+  useEffect(() => {
+    if (userComment?.needsRevision && commentText === '') {
+      setCommentText(userComment.text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userComment?.needsRevision]);
 
   const handleStartNextRound = async () => {
     setIsStartingNextRound(true);
@@ -121,7 +136,6 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     );
   }
 
-  const userComment = currentRound.comments?.find(c => c.authorId === user?.uid);
   const shouldWriteComments = !(
     user?.uid === game.adminId &&
     !game.adminWritesComments &&
@@ -136,18 +150,20 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     return true;
   });
 
-  const submittedAuthorIds = new Set(currentRound.comments?.map(c => c.authorId) ?? []);
-  const submittedCount = nonTargetPlayers.filter(p => submittedAuthorIds.has(p.userId)).length;
+  const commentsByAuthor = new Map((currentRound.comments ?? []).map(c => [c.authorId, c]));
+  const submittedCount = nonTargetPlayers.filter(p => {
+    const c = commentsByAuthor.get(p.userId);
+    return c && !c.needsRevision;
+  }).length;
 
   const activeCommentVotes = activeComment?.targetReactionPoints ?? {};
   const votersWhoRated = nonTargetPlayers.filter(p => activeCommentVotes[p.userId] !== undefined);
-  const allVotersRated = activeComment ? votersWhoRated.length === nonTargetPlayers.length : false;
-  const targetDecidedActive = activeComment?.points !== undefined;
-  const canActivateNext = targetDecidedActive && allVotersRated;
 
-  const visibleComments = reviewFinished
-    ? currentRound.comments ?? []
-    : (currentRound.comments ?? []).slice(0, activeIndex + 1);
+  const isCommentFullyRated = (comment: Comment) => {
+    const voted = comment.targetReactionPoints ?? {};
+    return nonTargetPlayers.every(p => voted[p.userId] !== undefined);
+  };
+  const allReactionsRated = (currentRound.comments ?? []).every(isCommentFullyRated);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +195,21 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
         t('common.error'),
         (error instanceof Error && error.message) || t('game.alerts.showCommentsFailed'),
       );
+    }
+  };
+
+  const handleSendCommentBack = async (commentId: string) => {
+    try {
+      setIsSendingBack(true);
+      await sendCommentBackForEdit(commentId);
+      await playSound('click');
+    } catch (error) {
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.sendCommentBackFailed'),
+      );
+    } finally {
+      setIsSendingBack(false);
     }
   };
 
@@ -224,18 +255,18 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
     }
   };
 
-  const handleActivateNextComment = async () => {
+  const handleActivateComment = async (commentId: string) => {
     try {
-      setIsActivatingNext(true);
-      await activateNextComment();
+      setIsActivating(true);
+      await activateComment(commentId);
       await playSound('notification');
     } catch (error) {
       showAlert(
         t('common.error'),
-        (error instanceof Error && error.message) || t('game.alerts.activateNextCommentFailed'),
+        (error instanceof Error && error.message) || t('game.alerts.activateCommentFailed'),
       );
     } finally {
-      setIsActivatingNext(false);
+      setIsActivating(false);
     }
   };
 
@@ -262,63 +293,47 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                   <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">
                     {t('game.ui.commentsProgress', { received: submittedCount, required: nonTargetPlayers.length })}
                   </p>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                  <div className="space-y-1 max-h-80 overflow-y-auto">
                     {nonTargetPlayers.map(p => {
-                      const hasSubmitted = submittedAuthorIds.has(p.userId);
+                      const comment = commentsByAuthor.get(p.userId);
                       return (
                         <div
                           key={p.userId}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700"
+                          className="px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700"
                         >
-                          <span className="text-sm text-gray-500 dark:text-gray-400 w-6">
-                            {getPlayerNumber(game, p.userId)}.
-                          </span>
-                          <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
-                            {getDisplayName(p.userName, game.showSurnames ?? false)}
-                          </span>
-                          <span
-                            className={`text-xs font-semibold ${
-                              hasSubmitted ? 'text-game-green' : 'text-gray-400'
-                            }`}
-                          >
-                            {hasSubmitted ? `✅ ${t('game.ui.submitted')}` : `⏳ ${t('game.ui.pending')}`}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {commentsVisible && !reviewFinished && (
-                <div className="mb-4">
-                  <p className="text-sm font-semibold text-center text-gray-700 dark:text-gray-300 mb-1">
-                    {t('game.ui.commentProgressLabel', { current: activeIndex + 1, total: currentRound.comments?.length ?? 0 })}
-                  </p>
-                  <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">
-                    {t('game.ui.reactionProgress', { received: votersWhoRated.length, required: nonTargetPlayers.length })}
-                  </p>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {nonTargetPlayers.map(p => {
-                      const hasRated = activeCommentVotes[p.userId] !== undefined;
-                      return (
-                        <div
-                          key={p.userId}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700"
-                        >
-                          <span className="text-sm text-gray-500 dark:text-gray-400 w-6">
-                            {getPlayerNumber(game, p.userId)}.
-                          </span>
-                          <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
-                            {getDisplayName(p.userName, game.showSurnames ?? false)}
-                          </span>
-                          <span
-                            className={`text-xs font-semibold ${
-                              hasRated ? 'text-game-green' : 'text-gray-400'
-                            }`}
-                          >
-                            {hasRated ? `✅ ${t('game.ui.submitted')}` : `⏳ ${t('game.ui.pending')}`}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500 dark:text-gray-400 w-6">
+                              {getPlayerNumber(game, p.userId)}.
+                            </span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-white flex-1">
+                              {getDisplayName(p.userName, game.showSurnames ?? false)}
+                            </span>
+                            <span
+                              className={`text-xs font-semibold ${
+                                !comment ? 'text-gray-400' : comment.needsRevision ? 'text-game-orange' : 'text-game-green'
+                              }`}
+                            >
+                              {!comment
+                                ? `⏳ ${t('game.ui.pending')}`
+                                : comment.needsRevision
+                                  ? `🔄 ${t('game.ui.sentBackForRevision')}`
+                                  : `✅ ${t('game.ui.submitted')}`}
+                            </span>
+                          </div>
+                          {comment && !comment.needsRevision && (
+                            <div className="mt-1 pl-8">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 break-words">{comment.text}</p>
+                              <button
+                                type="button"
+                                onClick={() => handleSendCommentBack(comment.id)}
+                                disabled={isSendingBack || loading}
+                                data-cy="send-comment-back-button"
+                                className="text-xs text-game-danger hover:underline mt-1 disabled:opacity-50"
+                              >
+                                {t('game.ui.sendBackForEdit')}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -336,17 +351,6 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                     className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
                   >
                     {loading ? t('common.loading') : t('game.ui.startReview')}
-                  </button>
-                )}
-                {commentsVisible && !reviewFinished && (
-                  <button
-                    type="button"
-                    onClick={handleActivateNextComment}
-                    disabled={isActivatingNext || loading || !canActivateNext}
-                    data-cy="activate-next-comment-button"
-                    className="bg-game-orange text-white px-6 py-2 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                  >
-                    {isActivatingNext ? t('common.loading') : t('game.ui.activateNextComment')}
                   </button>
                 )}
                 {reviewFinished && (
@@ -372,52 +376,67 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                 <p className="text-center text-gray-500 dark:text-gray-400 py-4" data-cy="target-waiting-view">
                   {t('game.ui.waitingForCommentsAboutYou')}
                 </p>
-              ) : !reviewFinished && activeComment ? (
+              ) : !reviewFinished ? (
                 <div>
                   <p className="font-semibold text-center mb-1">{t('game.ui.commentsAboutYou')}</p>
-                  <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-4">
-                    {t('game.ui.commentProgressLabel', { current: activeIndex + 1, total: currentRound.comments?.length ?? 0 })}
-                  </p>
                   <div className="space-y-3">
-                    <div key={activeComment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                      <div className="flex items-start gap-3 mb-3">
-                        <AnonymousAvatar avatarId={commentAvatars[activeComment.id]} />
-                        <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white">{activeComment.text}</p>
-                      </div>
-                      {activeComment.points === undefined ? (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleDecideCommentPoints(activeComment.id, 1)}
-                            disabled={isDeciding || loading}
-                            data-cy="award-comment-points-button"
-                            data-cy-points={1}
-                            className="bg-game-green text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                          >
-                            {isDeciding ? t('common.loading') : t('game.ui.awardOnePoint')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDecideCommentPoints(activeComment.id, 0)}
-                            disabled={isDeciding || loading}
-                            data-cy="award-comment-points-button"
-                            data-cy-points={0}
-                            className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-                          >
-                            {isDeciding ? t('common.loading') : t('game.ui.declineCommentPoint')}
-                          </button>
+                    {(currentRound.comments ?? []).map((comment) => {
+                      const commentFullyRated = isCommentFullyRated(comment);
+                      return (
+                        <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                          <div className="flex items-start gap-3 mb-3">
+                            <AnonymousAvatar avatarId={commentAvatars[comment.id]} />
+                            <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white">{comment.text}</p>
+                          </div>
+                          {comment.points !== undefined ? (
+                            <p className="text-game-green text-sm font-semibold">
+                              {t('game.ui.pointsAwarded')} {comment.points}
+                            </p>
+                          ) : allReactionsRated ? (
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleDecideCommentPoints(comment.id, 1)}
+                                disabled={isDeciding || loading}
+                                data-cy="award-comment-points-button"
+                                data-cy-points={1}
+                                className="bg-game-green text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                              >
+                                {isDeciding ? t('common.loading') : t('game.ui.awardOnePoint')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDecideCommentPoints(comment.id, 0)}
+                                disabled={isDeciding || loading}
+                                data-cy="award-comment-points-button"
+                                data-cy-points={0}
+                                className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                              >
+                                {isDeciding ? t('common.loading') : t('game.ui.declineCommentPoint')}
+                              </button>
+                            </div>
+                          ) : comment.id === activeComment?.id ? (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {t('game.ui.reactionProgress', { received: votersWhoRated.length, required: nonTargetPlayers.length })}
+                            </p>
+                          ) : commentFullyRated ? (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {t('game.ui.reactionsCompleteWaitingTurn')}
+                            </p>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleActivateComment(comment.id)}
+                              disabled={isActivating || loading || (activeComment !== undefined && !isCommentFullyRated(activeComment))}
+                              data-cy="activate-comment-button"
+                              className="bg-game-orange text-white px-4 py-1 rounded-full text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+                            >
+                              {isActivating ? t('common.loading') : t('game.ui.activateComment')}
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <div>
-                          <p className="text-game-green text-sm font-semibold">
-                            {t('game.ui.pointsAwarded')} {activeComment.points}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {t('game.ui.reactionProgress', { received: votersWhoRated.length, required: nonTargetPlayers.length })}
-                          </p>
-                        </div>
-                      )}
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -433,11 +452,17 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
             <div ref={otherScrollRef}>
               {!commentsVisible ? (
                 <>
-                  {!userComment && shouldWriteComments ? (
+                  {(!userComment || userComment.needsRevision) && shouldWriteComments ? (
                     <form onSubmit={handleSubmitComment} className="space-y-3">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('game.ui.writeAnonymousCommentAbout', { name: currentRound.targetUserName })}
-                      </p>
+                      {userComment?.needsRevision ? (
+                        <p className="text-sm text-game-orange font-semibold">
+                          {t('game.ui.commentSentBackBanner')}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {t('game.ui.writeAnonymousCommentAbout', { name: currentRound.targetUserName })}
+                        </p>
+                      )}
                       <textarea
                         value={commentText}
                         onChange={e => setCommentText(e.target.value)}
@@ -476,8 +501,8 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                 <div>
                   <p className="font-semibold text-center mb-4">{t('game.ui.allComments')}</p>
                   <div className="space-y-3">
-                    {visibleComments.map((comment, i) => {
-                      const isActive = !reviewFinished && i === activeIndex;
+                    {(currentRound.comments ?? []).map((comment) => {
+                      const isActive = comment.id === activeComment?.id;
                       const myRating = comment.targetReactionPoints?.[user?.uid ?? ''];
                       return (
                         <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
@@ -485,13 +510,11 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                             <AnonymousAvatar avatarId={commentAvatars[comment.id]} />
                             <p className="flex-1 min-w-0 break-words text-gray-900 dark:text-white">{comment.text}</p>
                           </div>
-                          {comment.points !== undefined && (
+                          {comment.points !== undefined ? (
                             <p className="text-game-green text-sm font-semibold">
                               {t('game.ui.points')} {comment.points}
                             </p>
-                          )}
-
-                          {isActive && comment.points !== undefined && (
+                          ) : isActive ? (
                             myRating === undefined ? (
                               <div className="flex gap-2 mt-3">
                                 <button
@@ -520,11 +543,13 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                                 {t('game.ui.yourReactionRating', { points: myRating })}
                               </p>
                             )
-                          )}
-
-                          {isActive && comment.points === undefined && (
+                          ) : isCommentFullyRated(comment) ? (
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                              {t('game.ui.waitingForReactionRatings')}
+                              {t('game.ui.reactionsCompleteWaitingTurn')}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                              {t('game.ui.notYetActivated')}
                             </p>
                           )}
                         </div>

@@ -123,6 +123,20 @@ class GameLifecycleService
         });
     }
 
+    public function updateMyName(Game $game, User $user, string $name): void
+    {
+        $trimmed = trim($name);
+        if ($trimmed === '') {
+            throw new \RuntimeException(__('Name cannot be empty'));
+        }
+
+        if ($game->status !== 'waiting') {
+            throw new \RuntimeException(__('This setting can only be updated before the game starts'));
+        }
+
+        $user->update(['name' => $trimmed]);
+    }
+
     public function leaveGame(Game $game, User $user): void
     {
         DB::transaction(function () use ($game, $user) {

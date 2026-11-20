@@ -103,15 +103,15 @@ describe('adminWritesComments toggled on', () => {
         cy.get('[data-cy=show-comments-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Target decides on the (only, so active) comment — this is the
-        // test's other core claim: whichever account is the target
+        // ── Target activates the (only) comment for reaction rating — this
+        // is the test's other core claim: whichever account is the target
         // (possibly test1, the admin) completes a normal target's flow ────
         cy.signInAsTestUser(round1TargetRole);
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
-        cy.get('[data-cy=award-comment-points-button][data-cy-points=1]').click();
-        cy.get('[data-cy=award-comment-points-button]').should('not.exist');
+        cy.get('[data-cy=activate-comment-button]').click();
+        cy.get('[data-cy=activate-comment-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
         // ── Commenter rates the target's reaction ─────────────────────────
@@ -123,14 +123,20 @@ describe('adminWritesComments toggled on', () => {
         cy.get('[data-cy=rate-target-reaction-button]').should('not.exist');
         cy.wait(SETTLE_MS);
 
-        // ── Admin advances past the last comment, then starts guessing ────
+        // ── Target awards points, finishing the review, then admin starts
+        // guessing ──────────────────────────────────────────────────────
+        cy.signInAsTestUser(round1TargetRole);
+        cy.get('[data-cy=game-input]').type(gameId);
+        cy.get('[data-cy=game-input-submit]').click();
+        cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
+        cy.get('[data-cy=award-comment-points-button][data-cy-points=1]').click();
+        cy.get('[data-cy=award-comment-points-button]').should('not.exist');
+        cy.wait(SETTLE_MS);
+
         cy.signInAsTestUser('test1');
         cy.get('[data-cy=game-input]').type(gameId);
         cy.get('[data-cy=game-input-submit]').click();
         cy.get('[data-cy=round-info][data-cy-round=1]').should('exist');
-        cy.get('[data-cy=activate-next-comment-button]').click();
-        cy.get('[data-cy=activate-next-comment-button]').should('not.exist');
-        cy.wait(SETTLE_MS);
         cy.get('[data-cy=start-guessing-button]').click();
         cy.get('[data-cy=start-guessing-button]').should('not.exist');
         cy.wait(SETTLE_MS);

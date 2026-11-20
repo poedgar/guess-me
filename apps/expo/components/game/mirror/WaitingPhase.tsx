@@ -3,7 +3,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { ClashSetupPanel } from '@/components/game/clash/ClashSetupPanel';
-import { Fonts, GameColors, StatusColors } from '@/constants/theme';
+import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
 import { gameStyles } from '../gameStyles';
 import { useSound } from '@/contexts/SoundContext';
@@ -17,6 +17,7 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -53,9 +54,13 @@ export const WaitingPhase: React.FC<Props> = ({
   onCopyGameId,
 }) => {
   const { playSound } = useSound();
-  const { loading, startGame, startBasketGame, startClashGame, startIdeaGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, updateIdeaIncognitoMode, setGameType } = useGame();
+  const { loading, startGame, startBasketGame, startClashGame, startIdeaGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, updateIdeaIncognitoMode, updateMyName, setGameType } = useGame();
+  const inputTheme = themedInput(isDark);
 
   const [isCopied, setIsCopied] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
 
@@ -66,6 +71,32 @@ export const WaitingPhase: React.FC<Props> = ({
     await onCopyGameId();
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 1000);
+  };
+
+  const startEditingName = (currentName: string) => {
+    setNameInput(currentName);
+    setIsEditingName(true);
+  };
+
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setNameInput('');
+  };
+
+  const handleSaveName = async () => {
+    try {
+      setIsSavingName(true);
+      await updateMyName(nameInput);
+      setIsEditingName(false);
+      setNameInput('');
+    } catch (error) {
+      showFancyAlert(
+        t('common.error', { locale }),
+        (error instanceof Error && error.message) || t('game.alerts.updateSettingsFailed', { locale }),
+      );
+    } finally {
+      setIsSavingName(false);
+    }
   };
 
   const prevParticipantCount = useRef(game.participants.length);
@@ -405,26 +436,70 @@ export const WaitingPhase: React.FC<Props> = ({
           </ThemedText>
         </View>
         <ScrollView style={styles.participantsScroll} nestedScrollEnabled>
-          {participantsByJoin.map((participant: Participant, idx: number) => (
-            <View
-              key={participant.userId}
-              style={[
-                styles.participantItem,
-                participant.userId === game.adminId && styles.adminParticipant,
-              ]}
-            >
-              <PlayerAvatar name={participant.userName} photoURL={participant.photoURL} size={36} />
-              <View style={styles.participantInfo}>
-                <ThemedText style={styles.participantName}>
-                  {`${idx + 1}. `}{getDisplayName(participant.userName)}
-                  {participant.userId === game.adminId && ' 👑'}
-                </ThemedText>
-                <ThemedText style={styles.participantEmail}>
-                  {participant.userEmail}
-                </ThemedText>
+          {participantsByJoin.map((participant: Participant, idx: number) => {
+            const isSelf = participant.userId === user?.uid;
+            return (
+              <View
+                key={participant.userId}
+                style={[
+                  styles.participantItem,
+                  participant.userId === game.adminId && styles.adminParticipant,
+                ]}
+              >
+                <PlayerAvatar name={participant.userName} photoURL={participant.photoURL} size={36} />
+                <View style={styles.participantInfo}>
+                  {isSelf && isEditingName ? (
+                    <View style={styles.editNameRow}>
+                      <TextInput
+                        value={nameInput}
+                        onChangeText={setNameInput}
+                        maxLength={40}
+                        autoFocus
+                        style={[styles.editNameInput, inputTheme.style]}
+                        placeholderTextColor={inputTheme.placeholderTextColor}
+                      />
+                      <TouchableOpacity
+                        onPress={handleSaveName}
+                        disabled={isSavingName || !nameInput.trim()}
+                        style={styles.editNameButton}
+                      >
+                        <ThemedText style={styles.editNameSave}>
+                          {isSavingName ? t('common.loading', { locale }) : t('common.save', { locale })}
+                        </ThemedText>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={cancelEditingName}
+                        disabled={isSavingName}
+                        style={styles.editNameButton}
+                      >
+                        <ThemedText style={styles.editNameCancel}>
+                          {t('common.cancel', { locale })}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.participantNameRow}>
+                      <ThemedText style={styles.participantName}>
+                        {`${idx + 1}. `}{getDisplayName(participant.userName)}
+                        {participant.userId === game.adminId && ' 👑'}
+                      </ThemedText>
+                      {isSelf && (
+                        <TouchableOpacity
+                          onPress={() => startEditingName(participant.userName)}
+                          hitSlop={8}
+                        >
+                          <IconSymbol name="pencil" size={14} color={GameColors.admin} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                  <ThemedText style={styles.participantEmail}>
+                    {participant.userEmail}
+                  </ThemedText>
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -517,8 +592,23 @@ const styles = StyleSheet.create({
   participantItem: { padding: 12, borderRadius: 8, marginBottom: 8, backgroundColor: GameColors.cardBg },
   adminParticipant: { backgroundColor: 'rgba(255, 149, 0, 0.1)', borderWidth: 1, borderColor: 'rgba(255, 149, 0, 0.3)' },
   participantInfo: { flex: 1 },
-  participantName: { fontSize: 16, fontWeight: '600', marginBottom: 4, fontFamily: Fonts.sans },
+  participantNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  participantName: { fontSize: 16, fontWeight: '600', fontFamily: Fonts.sans },
   participantEmail: { fontSize: 14, opacity: 0.7, fontFamily: Fonts.sans },
+  editNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  editNameInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: GameColors.admin,
+    fontFamily: Fonts.sans,
+  },
+  editNameButton: { paddingHorizontal: 4 },
+  editNameSave: { fontSize: 13, fontWeight: '600', color: GameColors.green, fontFamily: Fonts.sans },
+  editNameCancel: { fontSize: 13, opacity: 0.6, fontFamily: Fonts.sans },
   participantsScroll: { maxHeight: 160, marginTop: 8 },
   buttonWrapper: { alignItems: 'center', gap: 6 },
   gameTypeButtons: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },

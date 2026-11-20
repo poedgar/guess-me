@@ -1,7 +1,11 @@
 <script setup>
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 const props = defineProps({ game: Object });
+
+const page = usePage();
+const currentUserId = page.props.auth.user.id;
 
 const settingsForm = useForm({});
 
@@ -14,6 +18,26 @@ const start = () => startForm.post(route('games.start', props.game.id));
 
 const leaveForm = useForm({});
 const leave = () => leaveForm.post(route('games.leave', props.game.id));
+
+const isEditingName = ref(false);
+const nameForm = useForm({ name: '' });
+
+const startEditingName = (currentName) => {
+    nameForm.clearErrors();
+    nameForm.name = currentName;
+    isEditingName.value = true;
+};
+
+const cancelEditingName = () => {
+    isEditingName.value = false;
+};
+
+const saveName = () => {
+    nameForm.post(route('games.update-name', props.game.id), {
+        preserveScroll: true,
+        onSuccess: () => { isEditingName.value = false; },
+    });
+};
 </script>
 
 <template>
@@ -30,7 +54,36 @@ const leave = () => leaveForm.post(route('games.leave', props.game.id));
         <div>
             <h2 class="font-semibold">{{ $t('game.participants') }} ({{ game.participants.length }})</h2>
             <ul class="mt-2 space-y-1">
-                <li v-for="p in game.participants" :key="p.userId" class="text-sm">{{ p.name }}</li>
+                <li v-for="p in game.participants" :key="p.userId" class="flex items-center gap-2 text-sm">
+                    <template v-if="p.userId === currentUserId && isEditingName">
+                        <input
+                            v-model="nameForm.name"
+                            type="text"
+                            maxlength="255"
+                            class="rounded border-gray-300 text-sm"
+                            @keyup.enter="saveName"
+                        />
+                        <button type="button" class="text-xs font-medium text-indigo-600" :disabled="nameForm.processing" @click="saveName">
+                            {{ $t('common.save') }}
+                        </button>
+                        <button type="button" class="text-xs text-gray-500" @click="cancelEditingName">
+                            {{ $t('common.cancel') }}
+                        </button>
+                        <p v-if="nameForm.errors.name" class="text-xs text-red-600">{{ nameForm.errors.name }}</p>
+                    </template>
+                    <template v-else>
+                        <span>{{ p.name }}</span>
+                        <button
+                            v-if="p.userId === currentUserId"
+                            type="button"
+                            class="text-xs text-gray-400 hover:text-indigo-600"
+                            :title="$t('game.editName')"
+                            @click="startEditingName(p.name)"
+                        >
+                            ✏️
+                        </button>
+                    </template>
+                </li>
             </ul>
         </div>
 

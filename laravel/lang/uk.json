@@ -33,5 +33,14 @@
     "Only the admin can update this setting": "Лише адміністратор може змінювати це налаштування",
     "This setting can only be updated before the game starts": "Це налаштування можна змінити лише до початку гри",
     "Incorrect admin password.": "Невірний пароль адміністратора.",
-    "No game found with that code.": "Гру з таким кодом не знайдено."
+    "No game found with that code.": "Гру з таким кодом не знайдено.",
+    "Name cannot be empty": "Ім'я не може бути порожнім",
+    "Only the target can activate a comment": "Лише цільовий гравець може активувати коментар",
+    "Review has not started": "Розгляд коментарів ще не розпочато",
+    "This comment's reactions are already complete": "Реакції на цей коментар вже повністю оцінено",
+    "This comment is already active": "Цей коментар вже активний",
+    "You must finish rating the active comment before activating another": "Спершу завершіть оцінювання активного коментаря, перш ніж активувати інший",
+    "You can only give points once everyone has rated your reactions to every comment": "Ви можете нараховувати бали лише після того, як усі оцінять вашу реакцію на кожен коментар",
+    "Only the admin can send a comment back for editing": "Лише адміністратор може повернути коментар на редагування",
+    "Cannot send a comment back once comments are visible": "Неможливо повернути коментар на редагування після того, як коментарі вже показано"
 }

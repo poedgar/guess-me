@@ -33,5 +33,14 @@
     "Only the admin can update this setting": "Only the admin can update this setting",
     "This setting can only be updated before the game starts": "This setting can only be updated before the game starts",
     "Incorrect admin password.": "Incorrect admin password.",
-    "No game found with that code.": "No game found with that code."
+    "No game found with that code.": "No game found with that code.",
+    "Name cannot be empty": "Name cannot be empty",
+    "Only the target can activate a comment": "Only the target can activate a comment",
+    "Review has not started": "Review has not started",
+    "This comment's reactions are already complete": "This comment's reactions are already complete",
+    "This comment is already active": "This comment is already active",
+    "You must finish rating the active comment before activating another": "You must finish rating the active comment before activating another",
+    "You can only give points once everyone has rated your reactions to every comment": "You can only give points once everyone has rated your reactions to every comment",
+    "Only the admin can send a comment back for editing": "Only the admin can send a comment back for editing",
+    "Cannot send a comment back once comments are visible": "Cannot send a comment back once comments are visible"
 }

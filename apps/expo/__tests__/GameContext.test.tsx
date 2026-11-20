@@ -46,7 +46,7 @@ describe('GameContext', () => {
       const { result } = renderHook(() => useGame(), { wrapper });
       const fns = [
         'createGame', 'joinGame', 'enterGame', 'leaveGame', 'startGame',
-        'submitComment', 'showComments', 'awardCommentPoints', 'activateNextComment',
+        'submitComment', 'showComments', 'awardCommentPoints', 'activateComment',
         'startNextRound', 'rateTargetReaction', 'startGuessingPhase',
         'finalizeGuessingPhase', 'submitGuess', 'markPlayerGuessesSubmitted',
         'updateAdminWritesComments', 'updateShowSurnames', 'updateTargetSelectionMode',
