@@ -61,7 +61,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
         </div>
       </div>
 
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <button
             type="button"
@@ -75,23 +75,16 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
             {t('game.admin') || 'Admin'}: {game.adminName}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <span
-            className={`${statusColorMap[game.status] || 'bg-gray-400'} text-white px-4 py-2 rounded-lg font-semibold text-sm capitalize ${
-              game.status === 'waiting' ? 'animate-pulse' : ''
-            }`}
-          >
-            {statusLabelKeyMap[game.status] ? t(statusLabelKeyMap[game.status]) : game.status.replace('_', ' ')}
-          </span>
-          {isAdmin && (
-            <span className="bg-game-blue text-white px-3 py-1 rounded text-xs font-semibold">
-              {t('game.youAreAdmin') || 'You are admin'}
-            </span>
-          )}
-        </div>
+        <span
+          className={`${statusColorMap[game.status] || 'bg-gray-400'} text-white px-4 py-2 rounded-lg font-semibold text-sm capitalize ${
+            game.status === 'waiting' ? 'animate-pulse' : ''
+          }`}
+        >
+          {statusLabelKeyMap[game.status] ? t(statusLabelKeyMap[game.status]) : game.status.replace('_', ' ')}
+        </span>
       </div>
 
-      <div className="flex justify-start">
+      <div className="flex items-center justify-between">
         <button type="button"
           onClick={onLeave}
           data-cy="leave-game-button"
@@ -99,6 +92,11 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
         >
           {t('game.leaveGame') || 'Leave Game'}
         </button>
+        {isAdmin && (
+          <span className="bg-game-blue text-white px-3 py-1 rounded text-xs font-semibold">
+            {t('game.youAreAdmin') || 'You are admin'}
+          </span>
+        )}
       </div>
     </div>
   );
