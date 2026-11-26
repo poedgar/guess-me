@@ -516,11 +516,16 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       let gameDoc;
       try {
         gameDoc = await getDoc(gameRef);
-      } catch {
+      } catch (err: unknown) {
         // A permission-denied read here means the game exists but isn't
         // joinable right now (e.g. already in progress) — surface the
-        // same not-found message rather than a raw Firebase error.
-        throw new Error("game_not_found");
+        // same not-found message rather than a raw Firebase error. Any
+        // other error (network blip, etc.) is a real failure and must
+        // not be mislabeled as "game not found".
+        if ((err as { code?: string })?.code === "permission-denied") {
+          throw new Error("game_not_found");
+        }
+        throw err;
       }
 
       if (!gameDoc.exists()) {

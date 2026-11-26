@@ -3,6 +3,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { IcebreakerQuestionsModal } from '@/components/ui/IcebreakerQuestionsModal';
+import { TopicsHintsModal } from '@/components/ui/TopicsHintsModal';
 import { ClashSetupPanel } from '@/components/game/clash/ClashSetupPanel';
 import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
@@ -64,6 +65,7 @@ export const WaitingPhase: React.FC<Props> = ({
   const [nameInput, setNameInput] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const [showIcebreaker, setShowIcebreaker] = useState(false);
+  const [showTopicsHints, setShowTopicsHints] = useState(false);
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
 
@@ -226,21 +228,37 @@ export const WaitingPhase: React.FC<Props> = ({
                 backgroundColor={isDark ? GameColors.inputDark : GameColors.white}
               />
             </View>
-            <TouchableOpacity
-              onPress={() => setShowIcebreaker(true)}
-              style={styles.icebreakerButton}
-              accessibilityRole="button"
-            >
-              <ThemedText style={styles.icebreakerButtonText}>
-                {t('game.ui.icebreaker.button', { locale })}
-              </ThemedText>
-            </TouchableOpacity>
+            <View style={{ gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => setShowIcebreaker(true)}
+                style={styles.icebreakerButton}
+                accessibilityRole="button"
+              >
+                <ThemedText style={styles.icebreakerButtonText}>
+                  {t('game.ui.icebreaker.button', { locale })}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowTopicsHints(true)}
+                style={styles.icebreakerButton}
+                accessibilityRole="button"
+              >
+                <ThemedText style={styles.icebreakerButtonText}>
+                  {t('game.ui.topicsHints.button', { locale })}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
       <IcebreakerQuestionsModal
         visible={showIcebreaker}
         onClose={() => setShowIcebreaker(false)}
+        locale={locale}
+      />
+      <TopicsHintsModal
+        visible={showTopicsHints}
+        onClose={() => setShowTopicsHints(false)}
         locale={locale}
       />
 

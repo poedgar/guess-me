@@ -450,7 +450,7 @@
       },
       "copyGameLink": "Copy game link",
       "icebreaker": {
-        "button": "Settings",
+        "button": "Dialogue setup",
         "modalTitle": "Question circles",
         "instructions": "Give a brief answer to the question (no comments from other participants).",
         "question1a": "What are you feeling, what are you thinking right at this moment?",
@@ -459,6 +459,30 @@
         "question2b": "Which historical figure, or figure from your own life, would you like to talk to? About what?",
         "question3a": "Would you want to know your fate in detail in advance?",
         "question3b": "Knowing it's inevitable, would you still try to change something?"
+      },
+      "topicsHints": {
+        "button": "Topics & hints",
+        "modalTitle": "Topics & hints",
+        "hintsButtonLabel": "Show hints",
+        "hintsModalTitle": "Hints",
+        "topic1Title": "\"Free-form statement\"",
+        "topic1Question": "What thought, emotion, or association comes to you as you focus on this person?",
+        "topic2Title": "\"Recruiting\"",
+        "topic2HintA": "What kind of work suits this person? In what kind of organization?",
+        "topic2HintB": "Are they an executor, or someone with creative, exploratory potential?",
+        "topic2HintC": "How will they get along with a team? Will they build a career?",
+        "topic3Title": "\"Film, animation, literature\"",
+        "topic3HintA": "Which well-known character from a film, animation, book, or fairy tale does this person bring to mind?",
+        "topic3HintB": "What film genre would you cast this person in? What kind of role?",
+        "topic3HintC": "What would that character's story be, in that work of art?",
+        "topic4Title": "\"Portrait\"",
+        "topic4HintA": "In what artistic style would you depict this person?",
+        "topic4HintB": "Against what background? In what clothing?",
+        "topic4HintC": "What colors would you use?",
+        "topic5Title": "\"Psychologist\"",
+        "topic5HintA": "What life script might this person be following?",
+        "topic5HintB": "What might they not admit even to themselves? What might they not suspect about themselves?",
+        "topic5HintC": "In which relationships might they be \"toxic\", and in which would they fit in naturally?"
       }
     },
     "joiningGame": "Joining game…"

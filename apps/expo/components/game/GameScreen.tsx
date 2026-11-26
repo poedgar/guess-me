@@ -172,7 +172,6 @@ export const GameScreen: React.FC = () => {
               await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               await leaveGame();
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              showFancyAlert(t('game.alerts.leftGameTitle', { locale }));
             } catch (error: unknown) {
               console.error('handleLeaveGame error', error);
               showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.leaveGameFailed', { locale }));

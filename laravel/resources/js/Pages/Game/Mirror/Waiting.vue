@@ -2,6 +2,7 @@
 import { useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import IcebreakerQuestionsModal from '@/Components/IcebreakerQuestionsModal.vue';
+import TopicsHintsModal from '@/Components/TopicsHintsModal.vue';
 
 const props = defineProps({ game: Object });
 
@@ -31,6 +32,7 @@ const isEditingName = ref(false);
 const nameForm = useForm({ name: '' });
 
 const showIcebreaker = ref(false);
+const showTopicsHints = ref(false);
 
 const startEditingName = (currentName) => {
     nameForm.clearErrors();
@@ -61,15 +63,25 @@ const saveName = () => {
 
         <div v-if="game.isAdmin" class="flex items-center justify-between">
             <p class="text-sm text-gray-500">{{ $t('game.youAreAdmin') }}</p>
-            <button
-                type="button"
-                class="rounded-lg border border-amber-600 px-4 py-2 text-sm font-semibold text-amber-600 hover:bg-amber-50"
-                @click="showIcebreaker = true"
-            >
-                {{ $t('game.icebreaker.button') }}
-            </button>
+            <div class="flex flex-col gap-2">
+                <button
+                    type="button"
+                    class="rounded-lg border border-amber-600 px-4 py-2 text-sm font-semibold text-amber-600 hover:bg-amber-50"
+                    @click="showIcebreaker = true"
+                >
+                    {{ $t('game.icebreaker.button') }}
+                </button>
+                <button
+                    type="button"
+                    class="rounded-lg border border-amber-600 px-4 py-2 text-sm font-semibold text-amber-600 hover:bg-amber-50"
+                    @click="showTopicsHints = true"
+                >
+                    {{ $t('game.topicsHints.button') }}
+                </button>
+            </div>
         </div>
         <IcebreakerQuestionsModal :show="showIcebreaker" @close="showIcebreaker = false" />
+        <TopicsHintsModal :show="showTopicsHints" @close="showTopicsHints = false" />
 
         <div>
             <h2 class="font-semibold">{{ $t('game.participants') }} ({{ visibleParticipants.length }})</h2>

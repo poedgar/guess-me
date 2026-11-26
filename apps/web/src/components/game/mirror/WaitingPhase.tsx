@@ -10,6 +10,7 @@ import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnCha
 import { getDisplayName } from '../../../utils/displayName';
 import { TargetControlPanel } from './TargetControlPanel';
 import { IcebreakerQuestionsModal } from './IcebreakerQuestionsModal';
+import { TopicsHintsModal } from './TopicsHintsModal';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
@@ -39,6 +40,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const [nameInput, setNameInput] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
   const [showIcebreaker, setShowIcebreaker] = useState(false);
+  const [showTopicsHints, setShowTopicsHints] = useState(false);
 
   const isAdmin = user?.uid === game.adminId;
   const isClashAdmin = isAdmin && game.gameType === 'clash';
@@ -152,17 +154,28 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                   level="M"
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => setShowIcebreaker(true)}
-                data-cy="icebreaker-button"
-                className="text-sm font-semibold text-game-orange border border-game-orange/40 px-4 py-2 rounded-lg hover:bg-game-orange/10 transition-colors"
-              >
-                {t('game.ui.icebreaker.button')}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowIcebreaker(true)}
+                  data-cy="icebreaker-button"
+                  className="text-sm font-semibold text-game-orange border border-game-orange/40 px-4 py-2 rounded-lg hover:bg-game-orange/10 transition-colors"
+                >
+                  {t('game.ui.icebreaker.button')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTopicsHints(true)}
+                  data-cy="topics-hints-button"
+                  className="text-sm font-semibold text-game-orange border border-game-orange/40 px-4 py-2 rounded-lg hover:bg-game-orange/10 transition-colors"
+                >
+                  {t('game.ui.topicsHints.button')}
+                </button>
+              </div>
             </div>
           )}
           {showIcebreaker && <IcebreakerQuestionsModal onClose={() => setShowIcebreaker(false)} />}
+          {showTopicsHints && <TopicsHintsModal onClose={() => setShowTopicsHints(false)} />}
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {t('game.ui.participants')} ({visibleParticipants.length})

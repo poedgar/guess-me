@@ -43,7 +43,6 @@ export const GameScreen: React.FC = () => {
           onPress: async () => {
             try {
               await leaveGame();
-              showAlert(t('game.alerts.leftGameTitle'), '');
             } catch (error) {
               showAlert(
                 t('common.error'),
