@@ -61,7 +61,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-start justify-between mb-4">
         <div>
           <button
             type="button"
