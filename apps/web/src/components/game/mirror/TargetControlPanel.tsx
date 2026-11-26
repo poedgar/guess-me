@@ -102,7 +102,9 @@ export const TargetControlPanel: React.FC<TargetControlPanelProps> = ({ game }) 
       </button>
 
       <div className="space-y-2 max-h-72 overflow-y-auto">
-        {game.participants.map((participant) => {
+        {game.participants
+          .filter((p) => (game.adminWritesComments ?? false) || p.userId !== game.adminId)
+          .map((participant) => {
           const isPreferred = preferredTarget === participant.userId;
           const isSkipped = skippedTargets.includes(participant.userId);
           const isCurrentTarget = game.currentRound?.targetUserId === participant.userId;

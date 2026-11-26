@@ -124,7 +124,9 @@ export function TargetControlPanel({ locale, showFancyAlert }: Props) {
       </TouchableOpacity>
 
       <ScrollView style={styles.participantsList} showsVerticalScrollIndicator={false}>
-        {currentGame.participants.map((participant) => {
+        {currentGame.participants
+          .filter((p) => (currentGame.adminWritesComments ?? false) || p.userId !== currentGame.adminId)
+          .map((participant) => {
           const isPreferred = preferredTarget === participant.userId;
           const isSkipped = skippedTargets.includes(participant.userId);
           const isCurrentTarget = currentGame.currentRound?.targetUserId === participant.userId;

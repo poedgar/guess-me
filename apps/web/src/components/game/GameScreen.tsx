@@ -58,7 +58,12 @@ export const GameScreen: React.FC = () => {
   };
 
   if (!currentGame) {
-    return <JoinScreen />;
+    return (
+      <>
+        {AlertModal}
+        <JoinScreen />
+      </>
+    );
   }
 
   const gameType = currentGame.gameType || 'mirror';
