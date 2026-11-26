@@ -26,6 +26,7 @@ class Game extends Model
         'admin_left',
         'admin_next_target_preference',
         'admin_skipped_targets',
+        'active_topic_index',
     ];
 
     protected $casts = [

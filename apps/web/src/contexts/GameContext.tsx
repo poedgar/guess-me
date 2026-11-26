@@ -94,6 +94,9 @@ export interface Game {
   // until the round ends and a fresh snapshot is taken.
   roundStartScores?: { [userId: string]: number };
   roundStartGuessResults?: { [userId: string]: { correctGuesses: number } };
+  // Index (0-4) of the lobby "Topics & hints" topic the admin is currently
+  // displaying to everyone, or null/undefined when none is active.
+  activeTopicIndex?: number | null;
 }
 
 export interface Participant {
@@ -295,6 +298,7 @@ interface GameContextType {
   ) => Promise<void>;
   updateAdminWritesComments: (adminWritesComments: boolean) => Promise<void>;
   updateShowSurnames: (showSurnames: boolean) => Promise<void>;
+  setActiveTopic: (index: number | null) => Promise<void>;
   updateTargetSelectionMode: (
     targetSelectionMode: "random" | "chronological",
   ) => Promise<void>;
@@ -1950,6 +1954,32 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     }
   };
 
+  const setActiveTopic = async (index: number | null): Promise<void> => {
+    if (!currentGame || !user || user.uid !== currentGame.adminId) {
+      throw new Error("Only the admin can update this setting");
+    }
+
+    if (currentGame.status !== "waiting") {
+      throw new Error(
+        "This setting can only be updated before the game starts",
+      );
+    }
+
+    try {
+      setLoading(true);
+      const gameRef = doc(db, "games", currentGame.id);
+
+      await updateDoc(gameRef, {
+        activeTopicIndex: index,
+      });
+    } catch (err) {
+      console.error("Error updating active topic:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateTargetSelectionMode = async (
     targetSelectionMode: "random" | "chronological",
   ): Promise<void> => {
@@ -3042,6 +3072,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       markPlayerGuessesSubmitted,
       updateAdminWritesComments,
       updateShowSurnames,
+      setActiveTopic,
       updateTargetSelectionMode,
       updateShowGuessResults,
       setGameType,

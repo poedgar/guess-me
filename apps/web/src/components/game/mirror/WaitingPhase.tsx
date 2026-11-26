@@ -11,6 +11,7 @@ import { getDisplayName } from '../../../utils/displayName';
 import { TargetControlPanel } from './TargetControlPanel';
 import { IcebreakerQuestionsModal } from './IcebreakerQuestionsModal';
 import { TopicsHintsModal } from './TopicsHintsModal';
+import { ActiveTopicBanner } from './ActiveTopicBanner';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
@@ -32,6 +33,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
     updateIdeaIncognitoMode,
     updateMyName,
     setGameType,
+    setActiveTopic,
   } = useGame();
   const { showAlert, AlertModal } = useAlert();
   const { t } = useLanguage();
@@ -105,6 +107,28 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
     updateTargetSelectionMode,
     () => (game.targetSelectionMode ?? 'random') === 'random' ? 'chronological' : 'random',
   );
+
+  const handleSelectTopic = async (index: number) => {
+    try {
+      await setActiveTopic(index);
+    } catch (error) {
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.updateSettingsFailed'),
+      );
+    }
+  };
+
+  const handleClearTopic = async () => {
+    try {
+      await setActiveTopic(null);
+    } catch (error) {
+      showAlert(
+        t('common.error'),
+        (error instanceof Error && error.message) || t('game.alerts.updateSettingsFailed'),
+      );
+    }
+  };
   const handleToggleShowGuessResults = makeToggler(
     updateShowGuessResults,
     () => !(game.showGuessResults ?? false),
@@ -175,7 +199,16 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
             </div>
           )}
           {showIcebreaker && <IcebreakerQuestionsModal onClose={() => setShowIcebreaker(false)} />}
-          {showTopicsHints && <TopicsHintsModal onClose={() => setShowTopicsHints(false)} />}
+          {showTopicsHints && (
+            <TopicsHintsModal
+              activeIndex={game.activeTopicIndex ?? null}
+              onSelect={handleSelectTopic}
+              onClear={handleClearTopic}
+              onClose={() => setShowTopicsHints(false)}
+            />
+          )}
+
+          <ActiveTopicBanner activeTopicIndex={game.activeTopicIndex} />
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {t('game.ui.participants')} ({visibleParticipants.length})

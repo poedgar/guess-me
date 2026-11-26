@@ -78,6 +78,9 @@ export interface Game {
   // until the round ends and a fresh snapshot is taken.
   roundStartScores?: { [userId: string]: number };
   roundStartGuessResults?: { [userId: string]: { correctGuesses: number } };
+  // Index (0-4) of the lobby "Topics & hints" topic the admin is currently
+  // displaying to everyone, or null/undefined when none is active.
+  activeTopicIndex?: number | null;
 }
 
 export interface Participant {

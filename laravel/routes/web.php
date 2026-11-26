@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::post('games/{game}/settings/show-surnames', [SettingsController::class, 'showSurnames'])->name('games.settings.show-surnames');
     Route::post('games/{game}/settings/target-selection-mode', [SettingsController::class, 'targetSelectionMode'])->name('games.settings.target-selection-mode');
     Route::post('games/{game}/settings/show-guess-results', [SettingsController::class, 'showGuessResults'])->name('games.settings.show-guess-results');
+    Route::post('games/{game}/settings/active-topic', [SettingsController::class, 'activeTopic'])->name('games.settings.active-topic');
 });
 
 require __DIR__.'/auth.php';

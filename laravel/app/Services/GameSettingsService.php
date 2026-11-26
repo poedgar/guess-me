@@ -28,6 +28,11 @@ class GameSettingsService
         $this->update($game, $caller, ['show_guess_results' => $value]);
     }
 
+    public function setActiveTopic(Game $game, User $caller, ?int $value): void
+    {
+        $this->update($game, $caller, ['active_topic_index' => $value]);
+    }
+
     private function update(Game $game, User $caller, array $attributes): void
     {
         if ($caller->id !== $game->admin_id) {

@@ -44,6 +44,21 @@ class SettingsController extends Controller
         return $this->apply($request, $game, 'value', fn ($v) => $this->settings->updateShowGuessResults($game, $request->user(), (bool) $v));
     }
 
+    public function activeTopic(Request $request, Game $game): RedirectResponse
+    {
+        $validated = $request->validate(['value' => ['nullable', 'integer', 'between:0,4']]);
+
+        try {
+            $this->settings->setActiveTopic($game, $request->user(), $validated['value']);
+        } catch (\RuntimeException $e) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['value' => $e->getMessage()]);
+        }
+
+        broadcast(new \App\Events\GameUpdated($game->id));
+
+        return redirect("/games/{$game->id}");
+    }
+
     private function apply(Request $request, Game $game, string $field, callable $fn): RedirectResponse
     {
         $validated = $request->validate([$field => ['required']]);

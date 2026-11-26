@@ -4,6 +4,7 @@ import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
 import { IcebreakerQuestionsModal } from '@/components/ui/IcebreakerQuestionsModal';
 import { TopicsHintsModal } from '@/components/ui/TopicsHintsModal';
+import { ActiveTopicBanner } from '@/components/ui/ActiveTopicBanner';
 import { ClashSetupPanel } from '@/components/game/clash/ClashSetupPanel';
 import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
@@ -57,7 +58,7 @@ export const WaitingPhase: React.FC<Props> = ({
   onCopyGameId,
 }) => {
   const { playSound } = useSound();
-  const { loading, startGame, startBasketGame, startClashGame, startIdeaGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, updateIdeaIncognitoMode, updateMyName, setGameType } = useGame();
+  const { loading, startGame, startBasketGame, startClashGame, startIdeaGame, updateAdminWritesComments, updateShowSurnames, updateTargetSelectionMode, updateShowGuessResults, updateIdeaIncognitoMode, updateMyName, setGameType, setActiveTopic } = useGame();
   const inputTheme = themedInput(isDark);
 
   const [isCopied, setIsCopied] = useState(false);
@@ -168,6 +169,22 @@ export const WaitingPhase: React.FC<Props> = ({
     updateIdeaIncognitoMode
   );
 
+  const handleSelectTopic = async (index: number) => {
+    try {
+      await setActiveTopic(index);
+    } catch (error: unknown) {
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.updateSettingsFailed', { locale }));
+    }
+  };
+
+  const handleClearTopic = async () => {
+    try {
+      await setActiveTopic(null);
+    } catch (error: unknown) {
+      showFancyAlert(t('common.error', { locale }), (error instanceof Error && error.message) || t('game.alerts.updateSettingsFailed', { locale }));
+    }
+  };
+
   const handleStartGame = async () => {
     if (isMounted.current === false) return;
     try {
@@ -258,9 +275,13 @@ export const WaitingPhase: React.FC<Props> = ({
       />
       <TopicsHintsModal
         visible={showTopicsHints}
+        activeIndex={game.activeTopicIndex ?? null}
+        onSelect={handleSelectTopic}
+        onClear={handleClearTopic}
         onClose={() => setShowTopicsHints(false)}
         locale={locale}
       />
+      <ActiveTopicBanner activeTopicIndex={game.activeTopicIndex} locale={locale} />
 
       {/* Status */}
       <View style={styles.gameStatusContainer}>

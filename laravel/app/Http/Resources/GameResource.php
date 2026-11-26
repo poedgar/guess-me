@@ -30,6 +30,7 @@ class GameResource extends JsonResource
             'isAdmin' => $this->admin_id === $userId,
             'adminId' => $this->admin_id,
             'adminLeft' => $this->admin_left,
+            'activeTopicIndex' => $this->active_topic_index,
             'settings' => [
                 'adminWritesComments' => $this->admin_writes_comments,
                 'showSurnames' => $this->show_surnames,

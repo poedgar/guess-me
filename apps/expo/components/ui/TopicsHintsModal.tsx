@@ -3,54 +3,25 @@ import { GameColors, ModalStyles } from '@/constants/theme';
 import { t } from '@/i18n';
 import React, { useState } from 'react';
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { TOPICS } from './topicsData';
+import { TopicHintsModal } from './TopicHintsModal';
 
 interface Props {
   visible: boolean;
+  activeIndex: number | null;
+  onSelect: (index: number) => void;
+  onClear: () => void;
   onClose: () => void;
   locale: string;
 }
 
-interface Topic {
-  titleKey: string;
-  questionKey?: string;
-  hintKeys?: string[];
-}
-
-const TOPICS: Topic[] = [
-  { titleKey: 'game.ui.topicsHints.topic1Title', questionKey: 'game.ui.topicsHints.topic1Question' },
-  {
-    titleKey: 'game.ui.topicsHints.topic2Title',
-    hintKeys: ['game.ui.topicsHints.topic2HintA', 'game.ui.topicsHints.topic2HintB', 'game.ui.topicsHints.topic2HintC'],
-  },
-  {
-    titleKey: 'game.ui.topicsHints.topic3Title',
-    hintKeys: ['game.ui.topicsHints.topic3HintA', 'game.ui.topicsHints.topic3HintB', 'game.ui.topicsHints.topic3HintC'],
-  },
-  {
-    titleKey: 'game.ui.topicsHints.topic4Title',
-    hintKeys: ['game.ui.topicsHints.topic4HintA', 'game.ui.topicsHints.topic4HintB', 'game.ui.topicsHints.topic4HintC'],
-  },
-  {
-    titleKey: 'game.ui.topicsHints.topic5Title',
-    hintKeys: ['game.ui.topicsHints.topic5HintA', 'game.ui.topicsHints.topic5HintB', 'game.ui.topicsHints.topic5HintC'],
-  },
-];
-
-const HINT_LABELS = ['а', 'б', 'в'];
-
-export function TopicsHintsModal({ visible, onClose, locale }: Props) {
-  const [activeIndex, setActiveIndex] = useState(0);
+export function TopicsHintsModal({ visible, activeIndex, onSelect, onClear, onClose, locale }: Props) {
   const [showHints, setShowHints] = useState(false);
-  const activeTopic = TOPICS[activeIndex];
-
-  const handleClose = () => {
-    setShowHints(false);
-    onClose();
-  };
+  const activeTopic = activeIndex != null ? TOPICS[activeIndex] : null;
 
   return (
     <>
-      <Modal transparent animationType="fade" visible={visible} onRequestClose={handleClose}>
+      <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
         <View style={styles.overlay}>
           <View style={styles.content}>
             <ThemedText style={styles.title} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
@@ -62,8 +33,8 @@ export function TopicsHintsModal({ visible, onClose, locale }: Props) {
                 <TouchableOpacity
                   key={idx}
                   onPress={() => {
-                    setActiveIndex(idx);
                     setShowHints(false);
+                    onSelect(idx);
                   }}
                   style={[styles.circle, activeIndex === idx && styles.circleActive]}
                 >
@@ -74,63 +45,55 @@ export function TopicsHintsModal({ visible, onClose, locale }: Props) {
               ))}
             </View>
 
-            <View style={styles.topicBlock}>
-              <View style={styles.topicHeaderRow}>
-                <ThemedText
-                  style={styles.topicTitle}
-                  lightColor={GameColors.shadow}
-                  darkColor={GameColors.shadow}
-                >
-                  {t(activeTopic.titleKey, { locale })}
-                </ThemedText>
-                {activeTopic.hintKeys && (
-                  <TouchableOpacity
-                    onPress={() => setShowHints(true)}
-                    accessibilityLabel={t('game.ui.topicsHints.hintsButtonLabel', { locale })}
-                    style={styles.hintsTrigger}
-                  >
-                    <ThemedText style={styles.hintsTriggerText}>▶</ThemedText>
-                  </TouchableOpacity>
+            {activeTopic ? (
+              <View style={styles.topicBlock}>
+                <View style={styles.topicHeaderRow}>
+                  <ThemedText style={styles.topicTitle} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
+                    {t(activeTopic.titleKey, { locale })}
+                  </ThemedText>
+                  {activeTopic.hintKeys && (
+                    <TouchableOpacity
+                      onPress={() => setShowHints(true)}
+                      accessibilityLabel={t('game.ui.topicsHints.hintsButtonLabel', { locale })}
+                      style={styles.hintsTrigger}
+                    >
+                      <ThemedText style={styles.hintsTriggerText}>▶</ThemedText>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {activeTopic.questionKey && (
+                  <ThemedText style={styles.questionText} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
+                    {t(activeTopic.questionKey, { locale })}
+                  </ThemedText>
                 )}
+                <ThemedText style={styles.visibleNote}>
+                  {t('game.ui.topicsHints.visibleToEveryone', { locale })}
+                </ThemedText>
+                <TouchableOpacity onPress={onClear}>
+                  <ThemedText style={styles.clearButtonText}>
+                    {t('game.ui.topicsHints.hideButton', { locale })}
+                  </ThemedText>
+                </TouchableOpacity>
               </View>
-              {activeTopic.questionKey && (
-                <ThemedText style={styles.questionText} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
-                  {t(activeTopic.questionKey, { locale })}
-                </ThemedText>
-              )}
-            </View>
+            ) : (
+              <ThemedText style={styles.pickPrompt}>
+                {t('game.ui.topicsHints.pickPrompt', { locale })}
+              </ThemedText>
+            )}
 
-            <TouchableOpacity style={styles.doneButton} onPress={handleClose}>
+            <TouchableOpacity style={styles.doneButton} onPress={onClose}>
               <ThemedText style={styles.doneButtonText}>{t('common.done', { locale })}</ThemedText>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      <Modal
-        transparent
-        animationType="fade"
-        visible={visible && showHints && !!activeTopic.hintKeys}
-        onRequestClose={() => setShowHints(false)}
-      >
-        <View style={styles.overlay}>
-          <View style={styles.content}>
-            <ThemedText style={styles.title} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
-              {t('game.ui.topicsHints.hintsModalTitle', { locale })}
-            </ThemedText>
-            <View style={styles.hintsBlock}>
-              {(activeTopic.hintKeys ?? []).map((key, idx) => (
-                <ThemedText key={key} style={styles.questionText} lightColor={GameColors.shadow} darkColor={GameColors.shadow}>
-                  {HINT_LABELS[idx]}) {t(key, { locale })}
-                </ThemedText>
-              ))}
-            </View>
-            <TouchableOpacity style={styles.doneButton} onPress={() => setShowHints(false)}>
-              <ThemedText style={styles.doneButtonText}>{t('common.done', { locale })}</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <TopicHintsModal
+        visible={visible && showHints && !!activeTopic?.hintKeys}
+        hintKeys={activeTopic?.hintKeys ?? []}
+        onClose={() => setShowHints(false)}
+        locale={locale}
+      />
     </>
   );
 }
@@ -163,7 +126,9 @@ const styles = StyleSheet.create({
   hintsTrigger: { paddingHorizontal: 8, paddingVertical: 4 },
   hintsTriggerText: { fontSize: 16, color: GameColors.admin },
   questionText: { fontSize: 15, lineHeight: 21, marginTop: 8 },
-  hintsBlock: { gap: 8, marginBottom: 20 },
+  visibleNote: { fontSize: 12, opacity: 0.6, marginTop: 10 },
+  clearButtonText: { fontSize: 12, color: GameColors.danger, marginTop: 4 },
+  pickPrompt: { fontSize: 14, opacity: 0.7, textAlign: 'center', marginBottom: 20 },
   doneButton: { backgroundColor: GameColors.neutral, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   doneButtonText: { color: GameColors.white, fontWeight: '700', fontSize: 15 },
 });
