@@ -27,6 +27,7 @@ import { ShowFancyAlertFn } from '../GameHeader';
 import { ScrollIntoView } from '@/components/ui/scrollIntoView';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
+import { usePulsingOpacity } from '@/hooks/usePulsingOpacity';
 
 interface Props {
   game: Game;
@@ -66,6 +67,7 @@ export const WaitingPhase: React.FC<Props> = ({
 
   const clashSetupPulse = usePulseBorderOnChange(`clashSetup:${game.gameType}`, GameColors.admin);
   const waitingPulse = usePulseBorderOnChange(`${isAdmin}:${game.gameType ?? 'mirror'}`, GameColors.admin);
+  const statusBlink = usePulsingOpacity();
 
   const handleCopyGameId = async () => {
     await onCopyGameId();
@@ -222,13 +224,11 @@ export const WaitingPhase: React.FC<Props> = ({
       {/* Status */}
       <View style={styles.gameStatusContainer}>
         <ThemedText style={gameStyles.statusLabel}>{t('game.ui.statusLabel', { locale })}</ThemedText>
-        <View style={[gameStyles.statusBadge, { backgroundColor: StatusColors.waiting, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+        <Animated.View style={[gameStyles.statusBadge, { backgroundColor: StatusColors.waiting, flexDirection: 'row', alignItems: 'center', gap: 10 }, statusBlink]}>
           <ThemedText style={gameStyles.statusText}>
             {t('game.ui.statusWaiting', { locale })}
           </ThemedText>
-
-          {/* <LiquidLoaderAnimation /> */}
-        </View>
+        </Animated.View>
       </View>
 
       {/* Admin Settings Toggles */}

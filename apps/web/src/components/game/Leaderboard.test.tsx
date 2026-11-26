@@ -22,6 +22,7 @@ vi.mock('../../contexts/LanguageContext', () => ({
 
 const game = {
   adminId: 'admin-uid',
+  adminWritesComments: true,
   participants: [
     { userId: 'admin-uid', userName: 'Admin Adminson', userEmail: 'a@t.com', joinedAt: new Date('2024-01-01') },
     { userId: 'player-uid', userName: 'Player Playerson', userEmail: 'p@t.com', joinedAt: new Date('2024-01-02') },

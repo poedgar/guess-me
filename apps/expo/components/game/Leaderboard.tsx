@@ -26,6 +26,7 @@ export const Leaderboard: React.FC<Props> = ({
   scrollHeight = 200,
 }) => {
   const participantsWithScores = game.participants
+    .filter((p) => (game.adminWritesComments ?? false) || p.userId !== game.adminId)
     .map((p) => {
       const gamePoints = game.scores?.[p.userId] || 0;
       const guessPoints = game.guessResults?.[p.userId]?.correctGuesses || 0;

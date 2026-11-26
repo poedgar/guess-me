@@ -9,14 +9,14 @@ export const SoundToggle: React.FC = () => {
   return (
     <button type="button"
       onClick={toggleSound}
-      className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+      aria-label={isSoundEnabled ? t('common.soundOn') : t('common.soundOff')}
+      className={`px-3 py-2 rounded-lg font-semibold transition-all flex items-center justify-center ${
         isSoundEnabled
           ? 'bg-game-green text-white'
           : 'bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white'
       }`}
     >
       <span>{isSoundEnabled ? '🔊' : '🔇'}</span>
-      <span>{isSoundEnabled ? t('common.soundOn') : t('common.soundOff')}</span>
     </button>
   );
 };

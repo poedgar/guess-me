@@ -27,6 +27,7 @@ import { AdminRoundTools } from '@/components/game/AdminRoundTools';
 import { ScrollIntoView } from '@/components/ui/scrollIntoView';
 import { SCROLL_INSETS } from '@/constants/scroll';
 import { usePulseBorderOnChange } from '@/hooks/usePulseBorderOnChange';
+import { usePulsingOpacity } from '@/hooks/usePulsingOpacity';
 
 interface Props {
   game: Game;
@@ -285,6 +286,7 @@ export const ActivePhase: React.FC<Props> = ({
     `${game.currentRound?.roundNumber ?? 'none'}:other:${game.currentRound?.commentsVisible ?? false}:${activeComment?.id ?? 'none'}:${reviewFinished}`,
     GameColors.green,
   );
+  const statusBlink = usePulsingOpacity();
 
   const doStartNextRound = async () => {
     setIsStartingNextRound(true);
@@ -405,17 +407,19 @@ export const ActivePhase: React.FC<Props> = ({
                           {numbers[p.userId] ? `${numbers[p.userId]}.` : ''}
                         </ThemedText>
                         <ThemedText style={styles.checklistName}>{getDisplayName(p.userName)}</ThemedText>
-                        <ThemedText style={
-                          !comment ? styles.checklistStatusPending
-                            : comment.needsRevision ? styles.checklistStatusRevision
-                            : styles.checklistStatusDone
-                        }>
-                          {!comment
-                            ? `⏳ ${t('game.ui.pending', { locale })}`
-                            : comment.needsRevision
+                        {!comment ? (
+                          <Animated.View style={statusBlink}>
+                            <ThemedText style={styles.checklistStatusPending}>
+                              {`⏳ ${t('game.ui.pending', { locale })}`}
+                            </ThemedText>
+                          </Animated.View>
+                        ) : (
+                          <ThemedText style={comment.needsRevision ? styles.checklistStatusRevision : styles.checklistStatusDone}>
+                            {comment.needsRevision
                               ? `🔄 ${t('game.ui.sentBackForRevision', { locale })}`
                               : `✅ ${t('game.ui.submitted', { locale })}`}
-                        </ThemedText>
+                          </ThemedText>
+                        )}
                       </View>
                       {comment && !comment.needsRevision && (
                         <View style={styles.checklistCommentBlock}>
@@ -502,6 +506,9 @@ export const ActivePhase: React.FC<Props> = ({
               <View style={styles.commentsView}>
                 <ThemedText type="subtitle" style={styles.commentsTitle}>
                   {t('game.ui.commentsAboutYou', { locale })}
+                </ThemedText>
+                <ThemedText style={styles.reactionPointsSoFar}>
+                  {t('game.ui.yourReactionPointsSoFar', { locale, points: game.currentRound.targetPoints ?? 0 })}
                 </ThemedText>
                 {(game.currentRound.comments ?? []).map((comment: Comment) => {
                   const commentFullyRated = isCommentFullyRated(comment);
@@ -794,7 +801,8 @@ commentView: { marginBottom: 20 },
 waitingText: { textAlign: 'center', opacity: 0.7, fontSize: 16, marginVertical: 16, fontFamily: Fonts.sans },
 waitingSubtext: { opacity: 0.7, fontSize: 13, marginTop: 8, fontFamily: Fonts.sans },
 commentsView: { marginTop: 16 },
-commentsTitle: { marginBottom: 16, textAlign: 'center', fontFamily: Fonts.sans },
+commentsTitle: { marginBottom: 4, textAlign: 'center', fontFamily: Fonts.sans },
+reactionPointsSoFar: { marginBottom: 16, textAlign: 'center', fontSize: 14, fontWeight: '600', color: GameColors.green, fontFamily: Fonts.sans },
 commentCard: { padding: 16, borderRadius: 8, backgroundColor: GameColors.cardBg, marginBottom: 12 },
 commentText: { fontSize: 16, marginBottom: 12, lineHeight: 22, fontFamily: Fonts.sans },
 pointsGivenText: { fontSize: 14, fontWeight: '600', color: GameColors.green, marginTop: 8, fontFamily: Fonts.sans },

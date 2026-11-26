@@ -81,6 +81,9 @@ const startGuessing = () => startGuessingForm.post(route('games.start-guessing',
 
             <template v-else-if="!round.pointsGiven">
                 <h2 class="font-semibold">{{ $t('game.awardPointsToComments') }}</h2>
+                <p class="text-sm font-semibold text-green-700">
+                    {{ $t('game.yourReactionPointsSoFar', { points: round.targetPoints }) }}
+                </p>
                 <div v-for="comment in round.comments" :key="comment.id" class="rounded border p-3">
                     <p class="text-sm">{{ comment.text }}</p>
                     <div v-if="comment.points !== null" class="mt-2 text-sm text-gray-500">

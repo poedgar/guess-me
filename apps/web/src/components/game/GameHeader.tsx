@@ -2,6 +2,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import React from 'react';
 import { Game } from '@mirror/shared';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAlert } from '../../hooks/useAlert';
 import { LanguageSelector } from '../ui/LanguageSelector';
 import { SoundToggle } from '../ui/SoundToggle';
 
@@ -40,10 +41,19 @@ const statusLabelKeyMap: Record<string, string> = {
 export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { showAlert, AlertModal } = useAlert();
   const isAdmin = user?.uid === game.adminId;
+
+  const handleCopyGameId = () => {
+    const url = `${window.location.origin}/game/${game.id}`;
+    navigator.clipboard.writeText(url).then(() =>
+      showAlert(t('game.alerts.copiedTitle'), t('game.alerts.copiedMessage'))
+    );
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 mb-6 rounded-lg">
+      {AlertModal}
       <div className="flex items-center justify-end mb-4">
         <div className="flex gap-3">
           <LanguageSelector />
@@ -53,16 +63,23 @@ export const GameHeader: React.FC<GameHeaderProps> = ({ game, onLeave }) => {
 
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {game.id}
-          </h2>
+          <button
+            type="button"
+            onClick={handleCopyGameId}
+            title={t('game.ui.copyGameLink')}
+            className="font-mono text-2xl font-bold text-gray-900 dark:text-white hover:text-game-blue transition-colors text-left"
+          >
+            {game.id} 🔗
+          </button>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {t('game.admin') || 'Admin'}: {game.adminName}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <span
-            className={`${statusColorMap[game.status] || 'bg-gray-400'} text-white px-4 py-2 rounded-lg font-semibold text-sm capitalize`}
+            className={`${statusColorMap[game.status] || 'bg-gray-400'} text-white px-4 py-2 rounded-lg font-semibold text-sm capitalize ${
+              game.status === 'waiting' ? 'animate-pulse' : ''
+            }`}
           >
             {statusLabelKeyMap[game.status] ? t(statusLabelKeyMap[game.status]) : game.status.replace('_', ' ')}
           </span>

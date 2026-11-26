@@ -14,6 +14,15 @@ class GameResource extends JsonResource
         $userId = $request->user()->id;
         $currentRound = $this->rounds->sortByDesc('round_number')->first();
 
+        $requiredRaterIds = $currentRound ? $this->participants()
+            ->where('user_id', '!=', $currentRound->target_user_id)
+            ->when(! $this->admin_writes_comments, fn ($q) => $q->where('user_id', '!=', $this->admin_id))
+            ->pluck('user_id') : collect();
+
+        $roundComments = $currentRound
+            ? $currentRound->comments()->with(['author', 'reactionRatings'])->orderBy('display_order')->orderBy('id')->get()
+            : collect();
+
         return [
             'id' => $this->id,
             'code' => $this->code,
@@ -44,36 +53,33 @@ class GameResource extends JsonResource
                 'pointsGiven' => $currentRound->points_given,
                 'activeCommentId' => $currentRound->active_comment_id,
                 'guessesFinalized' => $currentRound->guesses_finalized,
-                'targetPoints' => $currentRound->target_points,
                 'targetCorrectGuesses' => $currentRound->target_correct_guesses,
-                'comments' => (function () use ($currentRound, $userId) {
-                    $requiredRaterIds = $this->participants()
-                        ->where('user_id', '!=', $currentRound->target_user_id)
-                        ->when(! $this->admin_writes_comments, fn ($q) => $q->where('user_id', '!=', $this->admin_id))
-                        ->pluck('user_id');
+                // Live count of reaction points the target has received so far this
+                // round — computed from the reaction ratings already loaded below,
+                // not the stale `target_points` column (never written by
+                // rateTargetReaction; GameScore::incrementFor is the source of truth
+                // for the cumulative game score instead).
+                'targetPoints' => $roundComments->sum(fn ($c) => $c->reactionRatings->where('rating', true)->count()),
+                'comments' => $roundComments
+                    ->map(function ($c) use ($currentRound, $userId, $requiredRaterIds) {
+                        $myRating = $c->reactionRatings->firstWhere('rater_id', $userId);
 
-                    return $currentRound->comments()->with(['author', 'reactionRatings'])
-                        ->orderBy('display_order')->orderBy('id')->get()
-                        ->map(function ($c) use ($currentRound, $userId, $requiredRaterIds) {
-                            $myRating = $c->reactionRatings->firstWhere('rater_id', $userId);
-
-                            return [
-                                'id' => $c->id,
-                                // Gated on guesses_finalized, not comments_visible: comments_visible flips
-                                // true as soon as the admin reveals comments (still in the comment-writing
-                                // phase) and stays true throughout guessing_phase. Using it here would hand
-                                // the target the answer key while they're actively guessing authorship.
-                                'authorId' => ($currentRound->guesses_finalized || $c->author_id === $userId || $this->admin_id === $userId) ? $c->author_id : null,
-                                'text' => ($currentRound->comments_visible || $c->author_id === $userId || $this->admin_id === $userId) ? $c->text : null,
-                                'points' => $c->points,
-                                // Viewer-scoped only — nobody else's individual reaction votes are
-                                // exposed, same privacy posture as guessedAuthorId/correct below.
-                                'myReactionRating' => $myRating ? (int) $myRating->rating : null,
-                                'reactionsComplete' => $requiredRaterIds->diff($c->reactionRatings->pluck('rater_id'))->isEmpty(),
-                                'needsRevision' => $c->needs_revision,
-                            ];
-                        });
-                })(),
+                        return [
+                            'id' => $c->id,
+                            // Gated on guesses_finalized, not comments_visible: comments_visible flips
+                            // true as soon as the admin reveals comments (still in the comment-writing
+                            // phase) and stays true throughout guessing_phase. Using it here would hand
+                            // the target the answer key while they're actively guessing authorship.
+                            'authorId' => ($currentRound->guesses_finalized || $c->author_id === $userId || $this->admin_id === $userId) ? $c->author_id : null,
+                            'text' => ($currentRound->comments_visible || $c->author_id === $userId || $this->admin_id === $userId) ? $c->text : null,
+                            'points' => $c->points,
+                            // Viewer-scoped only — nobody else's individual reaction votes are
+                            // exposed, same privacy posture as guessedAuthorId/correct below.
+                            'myReactionRating' => $myRating ? (int) $myRating->rating : null,
+                            'reactionsComplete' => $requiredRaterIds->diff($c->reactionRatings->pluck('rater_id'))->isEmpty(),
+                            'needsRevision' => $c->needs_revision,
+                        ];
+                    }),
                 'guessingPossibleAuthors' => $currentRound->guessing_possible_authors ?? [],
                 'guesses' => $currentRound->guesses->map(fn ($g) => [
                     'commentId' => $g->comment_id,
@@ -117,17 +123,21 @@ class GameResource extends JsonResource
             ? $liveGuessResults
             : collect($currentRound?->start_guess_results_snapshot ?? $liveGuessResults->all());
 
-        return $this->participants->map(function ($p) use ($displayedScores, $displayedGuessResults) {
-            $gamePoints = (int) ($displayedScores[(string) $p->user_id] ?? 0);
-            $guessPoints = (int) ($displayedGuessResults[(string) $p->user_id] ?? 0);
+        return $this->participants
+            ->filter(fn ($p) => $this->admin_writes_comments || $p->user_id !== $this->admin_id)
+            ->map(function ($p) use ($displayedScores, $displayedGuessResults) {
+                $gamePoints = (int) ($displayedScores[(string) $p->user_id] ?? 0);
+                $guessPoints = (int) ($displayedGuessResults[(string) $p->user_id] ?? 0);
 
-            return [
-                'userId' => $p->user_id,
-                'name' => $p->user->name,
-                'gamePoints' => $gamePoints,
-                'guessPoints' => $guessPoints,
-                'totalPoints' => $gamePoints + $guessPoints,
-            ];
-        })->sortByDesc('totalPoints')->values();
+                return [
+                    'userId' => $p->user_id,
+                    'name' => $p->user->name,
+                    'gamePoints' => $gamePoints,
+                    'guessPoints' => $guessPoints,
+                    'totalPoints' => $gamePoints + $guessPoints,
+                ];
+            })
+            ->sortByDesc('totalPoints')
+            ->values();
     }
 }

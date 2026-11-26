@@ -88,3 +88,34 @@ test('exposes the active comment id and the viewer\'s own reaction rating', func
         ->where('game.currentRound.comments.0.myReactionRating', 1)
     );
 });
+
+test('targetPoints reflects reaction ratings received so far this round, live', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'active']);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+    $target = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $target->id]);
+    $raterA = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $raterA->id]);
+    $raterB = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $raterB->id]);
+    $round = Round::factory()->create([
+        'game_id' => $game->id, 'round_number' => 1, 'target_user_id' => $target->id,
+        'comments_visible' => true,
+    ]);
+    $comment1 = Comment::factory()->create(['round_id' => $round->id]);
+    $comment2 = Comment::factory()->create(['round_id' => $round->id]);
+
+    // Stale legacy column — must NOT be what's returned.
+    $round->update(['target_points' => 999]);
+
+    \App\Models\CommentReactionRating::create(['comment_id' => $comment1->id, 'rater_id' => $raterA->id, 'rating' => true]);
+    \App\Models\CommentReactionRating::create(['comment_id' => $comment1->id, 'rater_id' => $raterB->id, 'rating' => false]);
+    \App\Models\CommentReactionRating::create(['comment_id' => $comment2->id, 'rater_id' => $raterA->id, 'rating' => true]);
+
+    $response = $this->actingAs($target)->get("/games/{$game->id}");
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('game.currentRound.targetPoints', 2)
+    );
+});

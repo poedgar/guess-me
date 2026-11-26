@@ -46,6 +46,7 @@
         "commentSentBackBanner": "Please revise your comment",
         "showComments": "Show Comments",
         "awardPointsToComments": "Award points to each comment",
+        "yourReactionPointsSoFar": "Your points so far this round: {points}",
         "finishAwarding": "Finish Awarding Points",
         "finishedAwardingPointsWaitAdmin": "You finished awarding points. Waiting for the admin's decision...",
         "givePoints": "Give Points",

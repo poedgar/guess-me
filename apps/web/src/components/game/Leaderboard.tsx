@@ -28,7 +28,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({
   const { user } = useAuth();
   const { t } = useLanguage();
 
-  const ranked = [...participants]
+  const ranked = participants
+    .filter(p => (game.adminWritesComments ?? false) || p.userId !== game.adminId)
     .map(p => {
       const gamePoints = scores?.[p.userId] ?? 0;
       const guessPoints = guessResults?.[p.userId]?.correctGuesses ?? 0;

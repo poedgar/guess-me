@@ -277,6 +277,7 @@
       "target": "Target",
       "waitingForCommentsAboutYou": "Waiting for others to write comments about you...",
       "commentsAboutYou": "Comments about you:",
+      "yourReactionPointsSoFar": "Your points so far this round: %{points}",
       "pointsAwarded": "Points awarded:",
       "finishedAwardingPointsWaitAdmin": "You finished awarding points. Waiting for the admin's decision...",
       "writeAnonymousCommentAbout": "Write an anonymous comment about %{name}:",

@@ -46,6 +46,7 @@
         "commentSentBackBanner": "Будь ласка, відредагуйте свій коментар",
         "showComments": "Показати коментарі",
         "awardPointsToComments": "Нарахуйте бали кожному коментарю",
+        "yourReactionPointsSoFar": "Ваші бали цього раунду: {points}",
         "finishAwarding": "Завершити нарахування балів",
         "finishedAwardingPointsWaitAdmin": "Ви завершили нарахування балів. Чекаємо рішення адміністратора...",
         "givePoints": "Нарахувати бали",

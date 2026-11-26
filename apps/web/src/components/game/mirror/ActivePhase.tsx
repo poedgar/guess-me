@@ -310,7 +310,7 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
                             </span>
                             <span
                               className={`text-xs font-semibold ${
-                                !comment ? 'text-gray-400' : comment.needsRevision ? 'text-game-orange' : 'text-game-green'
+                                !comment ? 'text-gray-400 animate-pulse' : comment.needsRevision ? 'text-game-orange' : 'text-game-green'
                               }`}
                             >
                               {!comment
@@ -379,6 +379,9 @@ export const ActivePhase: React.FC<ActivePhaseProps> = ({ game }) => {
               ) : !reviewFinished ? (
                 <div>
                   <p className="font-semibold text-center mb-1">{t('game.ui.commentsAboutYou')}</p>
+                  <p className="text-sm text-center text-game-green font-semibold mb-3" data-cy="target-reaction-points-so-far">
+                    {t('game.ui.yourReactionPointsSoFar', { points: currentRound.targetPoints ?? 0 })}
+                  </p>
                   <div className="space-y-3">
                     {(currentRound.comments ?? []).map((comment) => {
                       const commentFullyRated = isCommentFullyRated(comment);
