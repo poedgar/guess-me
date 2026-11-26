@@ -9,6 +9,7 @@ import { Leaderboard } from '../Leaderboard';
 import { useScrollIntoViewOnChange } from '../../../hooks/useScrollIntoViewOnChange';
 import { getDisplayName } from '../../../utils/displayName';
 import { TargetControlPanel } from './TargetControlPanel';
+import { IcebreakerQuestionsModal } from './IcebreakerQuestionsModal';
 import { PULSE_COLORS } from '../../../constants/pulseColors';
 
 
@@ -37,6 +38,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [showIcebreaker, setShowIcebreaker] = useState(false);
 
   const isAdmin = user?.uid === game.adminId;
   const isClashAdmin = isAdmin && game.gameType === 'clash';
@@ -142,7 +144,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
       <div className="space-y-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border-2 border-game-orange">
           {isAdmin && (
-            <div className="flex justify-center mb-4">
+            <div className="flex items-center justify-between mb-4">
               <div className="bg-white dark:bg-gray-700 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
                 <QRCodeSVG
                   value={`${window.location.origin}/game/${game.id}`}
@@ -150,8 +152,17 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
                   level="M"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setShowIcebreaker(true)}
+                data-cy="icebreaker-button"
+                className="text-sm font-semibold text-game-orange border border-game-orange/40 px-4 py-2 rounded-lg hover:bg-game-orange/10 transition-colors"
+              >
+                {t('game.ui.icebreaker.button')}
+              </button>
             </div>
           )}
+          {showIcebreaker && <IcebreakerQuestionsModal onClose={() => setShowIcebreaker(false)} />}
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {t('game.ui.participants')} ({visibleParticipants.length})

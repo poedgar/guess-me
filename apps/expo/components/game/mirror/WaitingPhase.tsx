@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { TargetControlPanel } from '@/components/ui/TargetControlPanel';
+import { IcebreakerQuestionsModal } from '@/components/ui/IcebreakerQuestionsModal';
 import { ClashSetupPanel } from '@/components/game/clash/ClashSetupPanel';
 import { Fonts, GameColors, StatusColors, themedInput } from '@/constants/theme';
 import { Game, Participant, useGame } from '@/contexts/GameContext';
@@ -62,6 +63,7 @@ export const WaitingPhase: React.FC<Props> = ({
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [showIcebreaker, setShowIcebreaker] = useState(false);
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
 
@@ -212,7 +214,7 @@ export const WaitingPhase: React.FC<Props> = ({
           </TouchableOpacity>
         </View>
         {isAdmin && (
-          <View style={styles.qrCodeContainer}>
+          <View style={[styles.qrCodeContainer, { flexDirection: 'row', gap: 12 }]}>
             <View style={[
               styles.qrCodeBox,
               isDark && styles.qrCodeBoxDark
@@ -224,9 +226,23 @@ export const WaitingPhase: React.FC<Props> = ({
                 backgroundColor={isDark ? GameColors.inputDark : GameColors.white}
               />
             </View>
+            <TouchableOpacity
+              onPress={() => setShowIcebreaker(true)}
+              style={styles.icebreakerButton}
+              accessibilityRole="button"
+            >
+              <ThemedText style={styles.icebreakerButtonText}>
+                {t('game.ui.icebreaker.button', { locale })}
+              </ThemedText>
+            </TouchableOpacity>
           </View>
         )}
       </View>
+      <IcebreakerQuestionsModal
+        visible={showIcebreaker}
+        onClose={() => setShowIcebreaker(false)}
+        locale={locale}
+      />
 
       {/* Status */}
       <View style={styles.gameStatusContainer}>
@@ -588,6 +604,20 @@ const styles = StyleSheet.create({
   },
   qrCodeBoxDark: {
     backgroundColor: GameColors.textDark,
+  },
+  icebreakerButton: {
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: GameColors.admin,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  icebreakerButtonText: {
+    color: GameColors.admin,
+    fontWeight: '600',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
   },
   gameStatusContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   toggleContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: 16, backgroundColor: GameColors.cardBg, borderRadius: 8 },

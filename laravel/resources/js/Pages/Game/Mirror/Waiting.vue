@@ -1,6 +1,7 @@
 <script setup>
 import { useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import IcebreakerQuestionsModal from '@/Components/IcebreakerQuestionsModal.vue';
 
 const props = defineProps({ game: Object });
 
@@ -29,6 +30,8 @@ const leave = () => leaveForm.post(route('games.leave', props.game.id));
 const isEditingName = ref(false);
 const nameForm = useForm({ name: '' });
 
+const showIcebreaker = ref(false);
+
 const startEditingName = (currentName) => {
     nameForm.clearErrors();
     nameForm.name = currentName;
@@ -56,7 +59,17 @@ const saveName = () => {
             </button>
         </div>
 
-        <p v-if="game.isAdmin" class="text-sm text-gray-500">{{ $t('game.youAreAdmin') }}</p>
+        <div v-if="game.isAdmin" class="flex items-center justify-between">
+            <p class="text-sm text-gray-500">{{ $t('game.youAreAdmin') }}</p>
+            <button
+                type="button"
+                class="rounded-lg border border-amber-600 px-4 py-2 text-sm font-semibold text-amber-600 hover:bg-amber-50"
+                @click="showIcebreaker = true"
+            >
+                {{ $t('game.icebreaker.button') }}
+            </button>
+        </div>
+        <IcebreakerQuestionsModal :show="showIcebreaker" @close="showIcebreaker = false" />
 
         <div>
             <h2 class="font-semibold">{{ $t('game.participants') }} ({{ visibleParticipants.length }})</h2>

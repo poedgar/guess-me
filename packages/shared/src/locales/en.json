@@ -448,7 +448,18 @@
         "finalLeaderboardTitle": "Top Ideas",
         "noIdeasYet": "No ideas yet."
       },
-      "copyGameLink": "Copy game link"
+      "copyGameLink": "Copy game link",
+      "icebreaker": {
+        "button": "Settings",
+        "modalTitle": "Question circles",
+        "instructions": "Give a brief answer to the question (no comments from other participants).",
+        "question1a": "What are you feeling, what are you thinking right at this moment?",
+        "question1b": "What topic has been on your mind lately?",
+        "question2a": "Which historical era would you like to visit? Why?",
+        "question2b": "Which historical figure, or figure from your own life, would you like to talk to? About what?",
+        "question3a": "Would you want to know your fate in detail in advance?",
+        "question3b": "Knowing it's inevitable, would you still try to change something?"
+      }
     },
     "joiningGame": "Joining game…"
   },
