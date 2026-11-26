@@ -34,7 +34,7 @@ jest.mock('@/contexts/LanguageContext', () => ({
   useLanguage: () => ({ locale: 'en', setLocale: jest.fn() }),
 }));
 jest.mock('@/contexts/SoundContext', () => ({
-  useSound: () => ({ playSound: jest.fn() }),
+  useSound: () => ({ playSound: jest.fn().mockResolvedValue(undefined) }),
 }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
@@ -111,6 +111,13 @@ describe('GameScreen — 4.1 useMemo for participantsByJoin and joinIndexById', 
   beforeEach(() => {
     mockCurrentGame = WAITING_GAME;
     mockSortParticipantsByJoin = jest.fn((arr: any[]) => [...arr]);
+    // jest.config's resetMocks wipes the module-level expo-haptics mock's
+    // configured resolved values before every test — re-apply them so the
+    // "eligible participant count crosses 2" notification effect (which
+    // awaits these) doesn't crash on a bare jest.fn() returning undefined.
+    const Haptics = require('expo-haptics');
+    Haptics.notificationAsync.mockResolvedValue(undefined);
+    Haptics.impactAsync.mockResolvedValue(undefined);
   });
 
   it('only calls sortParticipantsByJoin once when participants have not changed between renders', () => {

@@ -65,6 +65,13 @@ export const WaitingPhase: React.FC<Props> = ({
   const isMounted = useRef(true);
   useEffect(() => () => { isMounted.current = false; }, []);
 
+  // The admin only counts as a real participant (shown in the roster, counted
+  // toward the minimum needed to start) once they've opted in to writing
+  // comments — otherwise they're just running the game, not playing it.
+  const visibleParticipants = participantsByJoin.filter(
+    (p) => (game.adminWritesComments ?? false) || p.userId !== game.adminId,
+  );
+
   const clashSetupPulse = usePulseBorderOnChange(`clashSetup:${game.gameType}`, GameColors.admin);
   const waitingPulse = usePulseBorderOnChange(`${isAdmin}:${game.gameType ?? 'mirror'}`, GameColors.admin);
   const statusBlink = usePulsingOpacity();
@@ -101,15 +108,15 @@ export const WaitingPhase: React.FC<Props> = ({
     }
   };
 
-  const prevParticipantCount = useRef(game.participants.length);
+  const prevParticipantCount = useRef(visibleParticipants.length);
   useEffect(() => {
     const prev = prevParticipantCount.current;
-    prevParticipantCount.current = game.participants.length;
-    if (isAdmin && prev < 2 && game.participants.length >= 2) {
+    prevParticipantCount.current = visibleParticipants.length;
+    if (isAdmin && prev < 2 && visibleParticipants.length >= 2) {
       playSound('notification').catch(() => {});
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
-  }, [game.participants.length]);
+  }, [visibleParticipants.length]);
 
   const makeSettingToggler = <T,>(
     getNewValue: () => T,
@@ -432,11 +439,11 @@ export const WaitingPhase: React.FC<Props> = ({
       <View style={styles.participantsContainer}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <ThemedText type="subtitle" style={styles.participantsTitle}>
-            {t('game.ui.participants', { locale })} ({game.participants?.length || 0})
+            {t('game.ui.participants', { locale })} ({visibleParticipants.length})
           </ThemedText>
         </View>
         <ScrollView style={styles.participantsScroll} nestedScrollEnabled>
-          {participantsByJoin.map((participant: Participant, idx: number) => {
+          {visibleParticipants.map((participant: Participant, idx: number) => {
             const isSelf = participant.userId === user?.uid;
             return (
               <View
@@ -531,10 +538,10 @@ export const WaitingPhase: React.FC<Props> = ({
               style={[
                 styles.startGameButton,
                 { backgroundColor: GameColors.green, shadowColor: GameColors.shadow },
-                (loading || game.participants.length < 2) && gameStyles.buttonDisabled,
+                (loading || visibleParticipants.length < 2) && gameStyles.buttonDisabled,
               ]}
               onPress={handleStartGame}
-              disabled={loading || game.participants.length < 2}
+              disabled={loading || visibleParticipants.length < 2}
               activeOpacity={0.8}
               accessibilityLabel={t('game.ui.startGame', { locale })}
               accessibilityRole="button"

@@ -57,7 +57,10 @@ class GameLifecycleService
 
         $participants = $game->participants()->orderBy('joined_at')->orderBy('id')->get();
 
-        if ($participants->count() < 2) {
+        $eligibleCount = $participants
+            ->filter(fn ($p) => $game->admin_writes_comments || $p->user_id !== $game->admin_id)
+            ->count();
+        if ($eligibleCount < 2) {
             throw new \RuntimeException(__('Need at least 2 participants to start the game'));
         }
 

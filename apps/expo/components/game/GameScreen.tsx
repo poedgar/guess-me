@@ -316,6 +316,6 @@ export const GameScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, position: 'relative' as const },
   scrollContent: { padding: 20, paddingBottom: 40 },
-  leaveButton: { flexDirection: 'row', borderRadius: 999, borderWidth: 1, paddingVertical: 6, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', gap: 6, marginTop: 16 },
+  leaveButton: { flexDirection: 'row', borderRadius: 999, borderWidth: 1, paddingVertical: 6, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', gap: 6, marginTop: 16 },
   leaveButtonLabel: { fontWeight: '500', fontSize: 13 },
 });

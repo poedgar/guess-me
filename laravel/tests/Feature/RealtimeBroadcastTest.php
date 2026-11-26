@@ -13,6 +13,8 @@ test('starting a game broadcasts GameUpdated', function () {
     GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
     $other = User::factory()->create();
     GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $other->id]);
+    $another = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $another->id]);
 
     $this->actingAs($admin)->post("/games/{$game->id}/start");
 

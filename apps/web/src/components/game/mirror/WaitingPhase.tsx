@@ -41,6 +41,13 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
   const isAdmin = user?.uid === game.adminId;
   const isClashAdmin = isAdmin && game.gameType === 'clash';
 
+  // The admin only counts as a real participant (shown in the roster, counted
+  // toward the minimum needed to start) once they've opted in to writing
+  // comments — otherwise they're just running the game, not playing it.
+  const visibleParticipants = (game.participants ?? []).filter(
+    (p) => (game.adminWritesComments ?? false) || p.userId !== game.adminId,
+  );
+
   // Clash admins don't have actionable controls in this section — their
   // real controls (team assignment, leader selection, start button) live in
   // ClashSetupPanel, rendered separately below WaitingPhase. Auto-scrolling
@@ -147,10 +154,10 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
           )}
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            {t('game.ui.participants')} ({game.participants?.length ?? 0})
+            {t('game.ui.participants')} ({visibleParticipants.length})
           </p>
           <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
-            {game.participants?.map((p, idx) => {
+            {visibleParticipants.map((p, idx) => {
               const isSelf = p.userId === user?.uid;
               return (
                 <div
@@ -321,7 +328,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({ game }) => {
               <button
                 type="button"
                 onClick={handleStartGame}
-                disabled={game.participants.length < 2 || isStarting || loading}
+                disabled={visibleParticipants.length < 2 || isStarting || loading}
                 data-cy="start-game-button"
                 className="w-full bg-game-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
               >

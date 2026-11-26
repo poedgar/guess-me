@@ -763,7 +763,10 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
       throw new Error("Only the admin can start the game");
     }
 
-    if (currentGame.participants.length < 2) {
+    const eligibleParticipants = currentGame.participants.filter(
+      (p) => (currentGame.adminWritesComments ?? false) || p.userId !== currentGame.adminId,
+    );
+    if (eligibleParticipants.length < 2) {
       throw new Error("Need at least 2 participants to start the game");
     }
 

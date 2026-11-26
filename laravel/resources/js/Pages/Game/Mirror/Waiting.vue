@@ -1,11 +1,18 @@
 <script setup>
 import { useForm, usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({ game: Object });
 
 const page = usePage();
 const currentUserId = page.props.auth.user.id;
+
+// The admin only counts as a real participant (shown in the roster, counted
+// toward the minimum needed to start) once they've opted in to writing
+// comments — otherwise they're just running the game, not playing it.
+const visibleParticipants = computed(() => props.game.participants.filter(
+    (p) => props.game.settings.adminWritesComments || p.userId !== props.game.adminId,
+));
 
 const settingsForm = useForm({});
 
@@ -44,7 +51,7 @@ const saveName = () => {
     <div class="mx-auto max-w-2xl space-y-6 p-6">
         <div class="flex items-center justify-between">
             <h1 class="text-xl font-bold">{{ $t('game.waiting') }} — {{ game.code }}</h1>
-            <button type="button" class="text-sm text-red-600" @click="leave">
+            <button type="button" class="text-sm text-red-600 border border-red-300 px-3 py-1.5 rounded-full hover:bg-red-50" @click="leave">
                 {{ $t('game.leaveGame') }}
             </button>
         </div>
@@ -52,9 +59,9 @@ const saveName = () => {
         <p v-if="game.isAdmin" class="text-sm text-gray-500">{{ $t('game.youAreAdmin') }}</p>
 
         <div>
-            <h2 class="font-semibold">{{ $t('game.participants') }} ({{ game.participants.length }})</h2>
+            <h2 class="font-semibold">{{ $t('game.participants') }} ({{ visibleParticipants.length }})</h2>
             <ul class="mt-2 space-y-1">
-                <li v-for="p in game.participants" :key="p.userId" class="flex items-center gap-2 text-sm">
+                <li v-for="p in visibleParticipants" :key="p.userId" class="flex items-center gap-2 text-sm">
                     <template v-if="p.userId === currentUserId && isEditingName">
                         <input
                             v-model="nameForm.name"
@@ -148,7 +155,7 @@ const saveName = () => {
             <button
                 type="button"
                 class="w-full rounded bg-indigo-600 px-4 py-2 font-medium text-white disabled:opacity-25"
-                :disabled="game.participants.length < 2"
+                :disabled="visibleParticipants.length < 2"
                 @click="start"
             >
                 {{ $t('game.startGame') }}

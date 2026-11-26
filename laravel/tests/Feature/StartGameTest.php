@@ -39,6 +39,29 @@ test('starting a game with fewer than 2 participants throws', function () {
         ->toThrow(RuntimeException::class, 'Need at least 2 participants to start the game');
 });
 
+test('an admin who does not write comments does not count toward the minimum', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'admin_writes_comments' => false]);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+    $other = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $other->id]);
+
+    expect(fn () => app(GameLifecycleService::class)->startGame($game->fresh()))
+        ->toThrow(RuntimeException::class, 'Need at least 2 participants to start the game');
+});
+
+test('an admin who does write comments counts toward the minimum', function () {
+    $admin = User::factory()->create();
+    $game = Game::factory()->create(['admin_id' => $admin->id, 'admin_writes_comments' => true]);
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $admin->id]);
+    $other = User::factory()->create();
+    GameParticipant::factory()->create(['game_id' => $game->id, 'user_id' => $other->id]);
+
+    app(GameLifecycleService::class)->startGame($game->fresh());
+
+    expect($game->fresh()->status)->toBe('active');
+});
+
 test('starting a game that has already started throws', function () {
     $admin = User::factory()->create();
     $game = Game::factory()->create(['admin_id' => $admin->id, 'status' => 'active']);
