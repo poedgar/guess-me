@@ -3,6 +3,7 @@ import { useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import IcebreakerQuestionsModal from '@/Components/IcebreakerQuestionsModal.vue';
 import TopicsHintsModal from '@/Components/TopicsHintsModal.vue';
+import ActiveTopicBanner from '@/Components/ActiveTopicBanner.vue';
 
 const props = defineProps({ game: Object });
 
@@ -33,6 +34,14 @@ const nameForm = useForm({ name: '' });
 
 const showIcebreaker = ref(false);
 const showTopicsHints = ref(false);
+
+const topicForm = useForm({});
+const selectTopic = (index) => {
+    topicForm.transform(() => ({ value: index })).post(route('games.settings.active-topic', props.game.id), { preserveScroll: true });
+};
+const clearTopic = () => {
+    topicForm.transform(() => ({ value: null })).post(route('games.settings.active-topic', props.game.id), { preserveScroll: true });
+};
 
 const startEditingName = (currentName) => {
     nameForm.clearErrors();
@@ -81,7 +90,14 @@ const saveName = () => {
             </div>
         </div>
         <IcebreakerQuestionsModal :show="showIcebreaker" @close="showIcebreaker = false" />
-        <TopicsHintsModal :show="showTopicsHints" @close="showTopicsHints = false" />
+        <TopicsHintsModal
+            :show="showTopicsHints"
+            :active-index="game.activeTopicIndex"
+            @select="selectTopic"
+            @clear="clearTopic"
+            @close="showTopicsHints = false"
+        />
+        <ActiveTopicBanner :active-topic-index="game.activeTopicIndex" />
 
         <div>
             <h2 class="font-semibold">{{ $t('game.participants') }} ({{ visibleParticipants.length }})</h2>

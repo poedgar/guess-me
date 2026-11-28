@@ -40,6 +40,9 @@
         "topicsHints": {
             "button": "Topics & hints",
             "modalTitle": "Topics & hints",
+            "pickPrompt": "Pick a topic — it will appear on everyone's screen.",
+            "visibleToEveryone": "This topic is currently shown to all participants.",
+            "hideButton": "Remove topic from screen",
             "hintsButtonLabel": "Show hints",
             "hintsModalTitle": "Hints",
             "topic1Title": "\"Free-form statement\"",
